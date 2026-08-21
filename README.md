@@ -5,7 +5,6 @@ A .NET 8 WPF overlay for Elite Dangerous that displays trade routes sourced from
 ## Requirements
 
 - Windows 10 (1607+) or Windows 11
-- .NET 8 Desktop Runtime
 - Elite Dangerous (`EliteDangerous64.exe`)
 
 ## Features
@@ -30,8 +29,11 @@ A .NET 8 WPF overlay for Elite Dangerous that displays trade routes sourced from
 - Selectable side-panel appearance: Compact or Minimal
 - Global hotkeys: `Ctrl+5` visibility, `Ctrl+6` interaction, `Ctrl+7` unpin; configurable activity shortcuts default to `Ctrl+1`…`Ctrl+4`
 - Theme system with import/export
+<<<<<<< HEAD
 - Runtime UI language selection (Russian / English) under **Settings > Appearance**
 - JSON settings persistence in `%APPDATA%/ED_Inara_Overlay`
+=======
+>>>>>>> 5a4b18874f545042cfb0305fd982818d207fcafd
 
 ## Repository Layout
 
@@ -106,11 +108,11 @@ powershell -ExecutionPolicy Bypass -File Testing/QuickRegressionTest.ps1
 .\build_installer.ps1 -SkipBuild
 ```
 
-Installer output is written to `dist/`.
+Installer output is written to `Installer/`.
 
 ## Logging
 
-Runtime logs are written to `ED_Inara_Overlay/bin/<Configuration>/net8.0-windows/logs/`.
+Runtime logs are written to `...\Elite Dangerous Inara Overlay\logs/`.
 
 ## License
 
