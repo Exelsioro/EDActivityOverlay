@@ -6,6 +6,16 @@ namespace ED_Inara_Overlay.LayoutTests;
 
 public class OverlayLayoutHelperTests
 {
+    [Theory]
+    [InlineData("Compact", "Compact")]
+    [InlineData("Minimal", "Minimal")]
+    [InlineData("EliteHud", "Compact")]
+    [InlineData(null, "Compact")]
+    public void OverlayChrome_NormalizesAvailableStyles(string? style, string expected)
+    {
+        Assert.Equal(expected, OverlayChromeStyles.Normalize(style));
+    }
+
     [Fact]
     public void ComputeAdaptiveScale_ReturnsOneAtBaselineResolution()
     {
@@ -89,5 +99,32 @@ public class OverlayLayoutHelperTests
 
         Assert.Equal(110, left);
         Assert.Equal(230, top);
+    }
+
+    [Theory]
+    [InlineData("MiddleLeft", 110, 400)]
+    [InlineData("MiddleRight", 790, 400)]
+    [InlineData("TopCenter", 450, 210)]
+    [InlineData("BottomCenter", 450, 590)]
+    public void GetPinnedPosition_AnchorsInsideTarget(
+        string placement,
+        double expectedLeft,
+        double expectedTop)
+    {
+        var rect = new WindowsAPI.RECT { Left = 100, Top = 200, Right = 1100, Bottom = 800 };
+
+        var (left, top) = OverlayLayoutHelper.GetPinnedPosition(rect, 300, 200, placement, 10);
+
+        Assert.Equal(expectedLeft, left);
+        Assert.Equal(expectedTop, top);
+    }
+
+    [Theory]
+    [InlineData("MiddleLeft", "MiddleRight")]
+    [InlineData("MiddleRight", "MiddleLeft")]
+    [InlineData("TopCenter", "MiddleRight")]
+    public void GetOppositeSidePlacement_AvoidsOccupiedSide(string occupied, string expected)
+    {
+        Assert.Equal(expected, OverlayLayoutHelper.GetOppositeSidePlacement(occupied));
     }
 }

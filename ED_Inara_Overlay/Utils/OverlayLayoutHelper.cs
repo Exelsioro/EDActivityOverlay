@@ -56,6 +56,37 @@ namespace ED_Inara_Overlay.Utils
             return (left, top);
         }
 
+        public static (double Left, double Top) GetPinnedPosition(
+            WindowsAPI.RECT targetRect,
+            double overlayWidth,
+            double overlayHeight,
+            string? placement,
+            double margin = OverlayLayoutSettings.DefaultMargin)
+        {
+            double targetWidth = targetRect.Right - targetRect.Left;
+            double targetHeight = targetRect.Bottom - targetRect.Top;
+            return placement?.ToLowerInvariant() switch
+            {
+                "topcenter" => (
+                    targetRect.Left + ((targetWidth - overlayWidth) / 2),
+                    targetRect.Top + margin),
+                "middleright" => (
+                    targetRect.Right - overlayWidth - margin,
+                    targetRect.Top + ((targetHeight - overlayHeight) / 2)),
+                "bottomcenter" => (
+                    targetRect.Left + ((targetWidth - overlayWidth) / 2),
+                    targetRect.Bottom - overlayHeight - margin),
+                _ => (
+                    targetRect.Left + margin,
+                    targetRect.Top + ((targetHeight - overlayHeight) / 2))
+            };
+        }
+
+        public static string GetOppositeSidePlacement(string? occupiedPlacement) =>
+            occupiedPlacement?.Equals("MiddleRight", StringComparison.OrdinalIgnoreCase) == true
+                ? "MiddleLeft"
+                : "MiddleRight";
+
         public static (double Left, double Top) GetRelativePosition(WindowsAPI.RECT targetRect, double overlayWidth, double overlayHeight, RelativePosition position)
         {
             return position switch

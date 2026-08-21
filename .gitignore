@@ -11,7 +11,8 @@ out/
 
 # Visual Studio files
 .vs/
-*.vscode/
+.vscode/*
+!.vscode/settings.json
 *.vcxproj.filters
 *.vcxproj.user
 

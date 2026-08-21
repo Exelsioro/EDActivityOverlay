@@ -11,6 +11,10 @@ using ED_Inara_Overlay.Windows;
 using ED_Inara_Overlay.Services;
 using System.Diagnostics;
 using InaraTools;
+using ED_Inara_Overlay.Models;
+using ED_Inara_Overlay.Services.Journal;
+using ED_Inara_Overlay.Services.Notifications;
+using ED_Inara_Overlay.Services.Hardware;
 
 namespace ED_Inara_Overlay
 {
@@ -19,6 +23,8 @@ namespace ED_Inara_Overlay
     /// </summary>
     public partial class MainWindow : Window
     {
+        internal IntPtr TargetWindowHandle => targetWindow;
+
         private enum OverlayState { Waiting, ForceShow, Auto };
         
         private IntPtr targetWindow;
@@ -28,6 +34,10 @@ namespace ED_Inara_Overlay
         private TradeRouteWindow? tradeRouteWindow;
         private ResultsOverlayWindow? resultsOverlayWindow;
         private PinnedRouteOverlay? pinnedRouteOverlay;
+        private EngineeringWindow? engineeringOverlayWindow;
+        private NotificationOverlayWindow? notificationOverlayWindow;
+        private ShipStatusOverlayWindow? shipStatusOverlayWindow;
+        private readonly X52OverlayPointerController x52OverlayPointerController = new();
         private bool isToggleActive = false;
         private bool isResultsActive = false;
         private bool isPinnedRouteActive = false;
@@ -35,29 +45,46 @@ namespace ED_Inara_Overlay
         private bool restoreTradeVisible = false;
         private bool restoreResultsVisible = false;
         private bool restorePinnedVisible = false;
+        private bool restoreEngineeringVisible = false;
         private bool forceVisible = false; // Flag to ensure visibility after target detection
         private OverlayState currentState = OverlayState.Waiting;
         private const int HOTKEY_ID_TOGGLE = 9001;
         private const int HOTKEY_ID_INTERACTIVE = 9002;
         private const int HOTKEY_ID_UNPIN = 9003;
+        private const int HOTKEY_ID_TRADE = 9010;
+        private const int HOTKEY_ID_ENGINEERING = 9011;
+        private const int HOTKEY_ID_EXPLORATION = 9012;
+        private const int HOTKEY_ID_MINING = 9013;
         private HwndSource? hwndSource; // For handling Windows messages
+        private readonly Dictionary<int, long> hotkeyLastHandledAt = new();
         private uint toggleHotkeyModifiers = WindowsAPI.MOD_CONTROL;
         private uint toggleHotkeyVirtualKey = WindowsAPI.VK_5;
         private uint interactiveHotkeyModifiers = WindowsAPI.MOD_CONTROL;
         private uint interactiveHotkeyVirtualKey = WindowsAPI.VK_6;
         private uint unpinHotkeyModifiers = WindowsAPI.MOD_CONTROL;
         private uint unpinHotkeyVirtualKey = WindowsAPI.VK_7;
+        private uint tradeHotkeyModifiers = WindowsAPI.MOD_CONTROL;
+        private uint tradeHotkeyVirtualKey = WindowsAPI.VK_1;
+        private uint engineeringHotkeyModifiers = WindowsAPI.MOD_CONTROL;
+        private uint engineeringHotkeyVirtualKey = WindowsAPI.VK_2;
+        private uint explorationHotkeyModifiers = WindowsAPI.MOD_CONTROL;
+        private uint explorationHotkeyVirtualKey = WindowsAPI.VK_3;
+        private uint miningHotkeyModifiers = WindowsAPI.MOD_CONTROL;
+        private uint miningHotkeyVirtualKey = WindowsAPI.VK_4;
         private bool interactionModeEnabled = true;
         private bool interactiveModeActive;
         private bool returnOnFocusLoss = true;
         private bool showCursorWhenInteractive = true;
         private int autoReturnTimeoutSeconds = 8;
+        private bool exclusiveOverlayInteraction;
+        private bool interactionStateBeforeExclusiveOverlay;
         private DateTime interactiveModeEnteredAtUtc;
         private DateTime interactiveFocusLossGraceUntilUtc;
         private static readonly TimeSpan InteractiveFocusLossGracePeriod = TimeSpan.FromMilliseconds(1500);
         private readonly double baseWindowWidth;
         private readonly double baseWindowHeight;
         private double lastAppliedScale = 1.0;
+        private string chromeStyle = OverlayChromeStyles.Compact;
 
         public MainWindow(string processName = "notepad", Process? foundProcess = null)
         {
@@ -81,14 +108,23 @@ namespace ED_Inara_Overlay
                 FindTargetProcessWithRetry(processName);
             }
             SetupOverlay();
+            notificationOverlayWindow = new NotificationOverlayWindow(targetWindow);
+            shipStatusOverlayWindow = new ShipStatusOverlayWindow(targetWindow);
+            shipStatusOverlayWindow.SetContextSuppression(IsTradeSurfaceVisible);
             SetupUpdateTimer();
             LoadConfiguredSettings();
+            SetChromeStyle(SettingsService.Instance.Settings.OverlayChromeStyle);
             UpdateOverlayInteractionModes();
             UpdateInteractionStatusUi();
+            UpdateActivityNavigationUi();
             
             // Listen for theme changes
             ThemeManager.Instance.ThemeApplied += OnThemeApplied;
             SettingsService.Instance.SettingsChanged += OnSettingsChanged;
+            JournalMonitorService.Instance.StateChanged += OnJournalStateChanged;
+            X52IntegrationService.Instance.ControlRequested += OnX52ControlRequested;
+            X52IntegrationService.Instance.SetActivity(currentActivity);
+            UpdateJournalStatusUi(JournalMonitorService.Instance.Current);
             
             Logger.Logger.Info("MainWindow initialization complete - starting hidden");
         }
@@ -100,6 +136,8 @@ namespace ED_Inara_Overlay
             {
                 targetProcessId = (uint)process.Id;
                 targetWindow = WindowsAPI.FindWindowByPID(targetProcessId);
+                notificationOverlayWindow?.SetTargetWindow(targetWindow);
+                shipStatusOverlayWindow?.SetTargetWindow(targetWindow);
                 if (targetWindow != IntPtr.Zero)
                 {
                     Logger.Logger.Info($"Found target process {processName} with PID {targetProcessId} and window handle {targetWindow} immediately");
@@ -144,6 +182,8 @@ namespace ED_Inara_Overlay
             {
                 targetProcessId = (uint)process.Id;
                 targetWindow = WindowsAPI.FindWindowByPID(targetProcessId);
+                notificationOverlayWindow?.SetTargetWindow(targetWindow);
+                shipStatusOverlayWindow?.SetTargetWindow(targetWindow);
                 
                 if (targetWindow != IntPtr.Zero)
                 {
@@ -184,7 +224,7 @@ namespace ED_Inara_Overlay
                 try
                 {
                     WindowsAPI.SetupOverlayWindow(this);
-                    WindowsAPI.SetClickThrough(this, false); // Allow interaction with toggle button
+                    WindowsAPI.SetClickThrough(this, !(interactionModeEnabled && interactiveModeActive));
                     
                     // Position at a safe location initially on the target monitor (or primary monitor fallback)
                     var workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
@@ -225,7 +265,7 @@ namespace ED_Inara_Overlay
         {
             updateTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(33) // ~30 FPS
+                Interval = TimeSpan.FromMilliseconds(100)
             };
             updateTimer.Tick += UpdateTimer_Tick;
             updateTimer.Start();
@@ -322,14 +362,24 @@ namespace ED_Inara_Overlay
                         Logger.Logger.Info("Resetting forceVisible flag after successful show");
                     }
                     
-                    if (isToggleActive && tradeRouteWindow != null && !tradeRouteWindow.IsVisible)
+                    if (!activityHiddenByHotkey && !OverlayVisibilityState.SuppressActivity
+                        && isToggleActive && tradeRouteWindow != null && !tradeRouteWindow.IsVisible)
                     {
                         tradeRouteWindow.Show();
                     }
                     
-                    if (isResultsActive && resultsOverlayWindow != null && !resultsOverlayWindow.IsVisible)
+                    if (!activityHiddenByHotkey && !OverlayVisibilityState.SuppressActivity
+                        && isResultsActive && resultsOverlayWindow != null && !resultsOverlayWindow.IsVisible)
                     {
                         resultsOverlayWindow.Show();
+                    }
+
+                    if (!overlaysSuppressedByHotkey
+                        && !activityHiddenByHotkey
+                        && currentActivity == ActivityType.Engineering
+                        && engineeringOverlayWindow is { IsLoaded: true, IsVisible: false })
+                    {
+                        engineeringOverlayWindow.Show();
                     }
                 }
                 else if (!shouldBeVisible && this.IsVisible)
@@ -347,6 +397,11 @@ namespace ED_Inara_Overlay
                     {
                         resultsOverlayWindow.Hide();
                     }
+
+                    if (engineeringOverlayWindow?.IsVisible == true)
+                    {
+                        engineeringOverlayWindow.Hide();
+                    }
                 }
                 
                 if (currentState == OverlayState.ForceShow && this.IsVisible)
@@ -362,7 +417,7 @@ namespace ED_Inara_Overlay
 
         private void ApplyAdaptiveSizeForTarget()
         {
-            if (targetWindow == IntPtr.Zero || !WindowsAPI.GetWindowRect(targetWindow, out WindowsAPI.RECT targetRect))
+            if (targetWindow == IntPtr.Zero || !WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT targetRect))
             {
                 return;
             }
@@ -411,6 +466,24 @@ namespace ED_Inara_Overlay
                 interactiveHotkeyVirtualKey = WindowsAPI.VK_6;
                 Logger.Logger.Warning($"Invalid interactive hotkey ({settings.InteractiveHotkeyModifiers}+{settings.InteractiveHotkeyKey}). Falling back to Ctrl+D6.");
             }
+
+            ResolveActivityHotkey(settings.TradeHotkeyModifiers, settings.TradeHotkeyKey, WindowsAPI.VK_1,
+                out tradeHotkeyModifiers, out tradeHotkeyVirtualKey, "trade");
+            ResolveActivityHotkey(settings.EngineeringHotkeyModifiers, settings.EngineeringHotkeyKey, WindowsAPI.VK_2,
+                out engineeringHotkeyModifiers, out engineeringHotkeyVirtualKey, "engineering");
+            ResolveActivityHotkey(settings.ExplorationHotkeyModifiers, settings.ExplorationHotkeyKey, WindowsAPI.VK_3,
+                out explorationHotkeyModifiers, out explorationHotkeyVirtualKey, "exploration");
+            ResolveActivityHotkey(settings.MiningHotkeyModifiers, settings.MiningHotkeyKey, WindowsAPI.VK_4,
+                out miningHotkeyModifiers, out miningHotkeyVirtualKey, "mining");
+        }
+
+        private void ResolveActivityHotkey(string modifiersText, string keyText, uint fallbackKey,
+            out uint modifiers, out uint virtualKey, string activity)
+        {
+            if (TryResolveHotkey(modifiersText, keyText, out modifiers, out virtualKey)) return;
+            modifiers = WindowsAPI.MOD_CONTROL;
+            virtualKey = fallbackKey;
+            Logger.Logger.Warning($"Invalid {activity} hotkey ({modifiersText}+{keyText}); using its default Ctrl+number shortcut.");
         }
 
         private bool TryResolveHotkey(string modifiersText, string keyText, out uint modifiers, out uint virtualKey)
@@ -469,10 +542,28 @@ namespace ED_Inara_Overlay
                 hotkeysChanged = true;
             }
 
+            hotkeysChanged |= UpdateResolvedHotkey(e.Settings.TradeHotkeyModifiers, e.Settings.TradeHotkeyKey,
+                ref tradeHotkeyModifiers, ref tradeHotkeyVirtualKey);
+            hotkeysChanged |= UpdateResolvedHotkey(e.Settings.EngineeringHotkeyModifiers, e.Settings.EngineeringHotkeyKey,
+                ref engineeringHotkeyModifiers, ref engineeringHotkeyVirtualKey);
+            hotkeysChanged |= UpdateResolvedHotkey(e.Settings.ExplorationHotkeyModifiers, e.Settings.ExplorationHotkeyKey,
+                ref explorationHotkeyModifiers, ref explorationHotkeyVirtualKey);
+            hotkeysChanged |= UpdateResolvedHotkey(e.Settings.MiningHotkeyModifiers, e.Settings.MiningHotkeyKey,
+                ref miningHotkeyModifiers, ref miningHotkeyVirtualKey);
+
             interactionModeEnabled = e.Settings.EnableInteractionMode;
             autoReturnTimeoutSeconds = NormalizeAutoReturnTimeout(e.Settings.AutoReturnTimeoutSeconds);
             returnOnFocusLoss = e.Settings.ReturnOnFocusLoss;
             showCursorWhenInteractive = e.Settings.ShowCursorWhenInteractive;
+            pinnedRouteOverlay?.SetPlacement(e.Settings.PinnedRoutePosition);
+            engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
+            activityWorkspaceWindow?.SetPlacement(GetEngineeringOverlayPlacement());
+            pinnedRouteOverlay?.SetChromeStyle(e.Settings.OverlayChromeStyle);
+            tradeRouteWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
+            resultsOverlayWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
+            engineeringOverlayWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
+            activityWorkspaceWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
+            SetChromeStyle(e.Settings.OverlayChromeStyle);
 
             if (!interactionModeEnabled && interactiveModeActive)
             {
@@ -490,6 +581,44 @@ namespace ED_Inara_Overlay
             }
         }
 
+        private void OnJournalStateChanged(object? sender, GameStateChangedEventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() => UpdateJournalStatusUi(e.State)));
+        }
+
+        private bool UpdateResolvedHotkey(string modifiersText, string keyText, ref uint modifiers, ref uint virtualKey)
+        {
+            if (!TryResolveHotkey(modifiersText, keyText, out uint resolvedModifiers, out uint resolvedKey)
+                || (resolvedModifiers == modifiers && resolvedKey == virtualKey))
+            {
+                return false;
+            }
+            modifiers = resolvedModifiers;
+            virtualKey = resolvedKey;
+            return true;
+        }
+
+        private void UpdateJournalStatusUi(GameStateSnapshot state)
+        {
+            if (LocationStatusText == null)
+            {
+                return;
+            }
+            if (!state.JournalAvailable)
+            {
+                LocationStatusText.Text = Loc.Get("Loc_JOURNAL_NOT_FOUND");
+                return;
+            }
+
+            string system = string.IsNullOrWhiteSpace(state.StarSystem)
+                ? Loc.Get("Loc_WAITING_FOR_GAME")
+                : state.StarSystem.ToUpperInvariant();
+            string location = state.Docked && !string.IsNullOrWhiteSpace(state.Station)
+                ? $"  /  {state.Station.ToUpperInvariant()}"
+                : string.Empty;
+            LocationStatusText.Text = $"{(state.IsLive ? Loc.Get("Loc_LIVE") : Loc.Get("Loc_JOURNAL"))}  •  {system}{location}";
+        }
+
         private int NormalizeAutoReturnTimeout(int value)
         {
             return value switch
@@ -501,6 +630,11 @@ namespace ED_Inara_Overlay
 
         private void SetInteractiveMode(bool isActive, string reason)
         {
+            if (exclusiveOverlayInteraction && !isActive)
+            {
+                return;
+            }
+
             if (interactiveModeActive == isActive)
             {
                 return;
@@ -511,25 +645,41 @@ namespace ED_Inara_Overlay
             {
                 interactiveModeEnteredAtUtc = DateTime.UtcNow;
                 interactiveFocusLossGraceUntilUtc = interactiveModeEnteredAtUtc + InteractiveFocusLossGracePeriod;
-                FocusInteractiveOverlayWindow();
             }
 
             UpdateOverlayInteractionModes();
+            if (interactiveModeActive)
+            {
+                FocusInteractiveOverlayWindow();
+            }
             UpdateInteractionStatusUi();
             Logger.Logger.Info($"Interactive mode {(interactiveModeActive ? "ENABLED" : "DISABLED")} ({reason})");
         }
 
         private void UpdateOverlayInteractionModes()
         {
-            bool canInteract = interactionModeEnabled && interactiveModeActive;
+            bool canInteract = exclusiveOverlayInteraction || (interactionModeEnabled && interactiveModeActive);
+            bool showCursor = exclusiveOverlayInteraction || showCursorWhenInteractive;
+            AppSettings settings = SettingsService.Instance.Settings;
+            x52OverlayPointerController.Enabled = canInteract
+                                                   && settings.EnableX52Support
+                                                   && settings.EnableX52MfdControls;
 
-            tradeRouteWindow?.ApplyInteractionMode(canInteract, showCursorWhenInteractive);
-            resultsOverlayWindow?.ApplyInteractionMode(canInteract, showCursorWhenInteractive);
-            if (pinnedRouteOverlay != null)
+            tradeRouteWindow?.ApplyInteractionMode(canInteract, showCursor);
+            resultsOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
+            pinnedRouteOverlay?.ApplyInteractionMode(canInteract, showCursor);
+            engineeringOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
+            activityWorkspaceWindow?.ApplyInteractionMode(canInteract, showCursor);
+            shipStatusOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
+            WindowsAPI.SetClickThrough(this, !canInteract);
+            if (!canInteract || !showCursor)
             {
-                WindowsAPI.SetClickThrough(pinnedRouteOverlay, true);
+                WindowsAPI.RestoreCursorVisibility();
             }
-            if (canInteract == false)
+            bool overlaySettingsVisible = OperatingSystem.IsWindows()
+                && Application.Current is App app
+                && app.ActiveOverlaySettingsWindow?.IsVisible == true;
+            if (canInteract == false && !overlaySettingsVisible)
             {
                 WindowsAPI.TryActivateWindow(targetWindow);
             }
@@ -542,19 +692,28 @@ namespace ED_Inara_Overlay
                 return;
             }
 
-            bool canInteract = interactionModeEnabled && interactiveModeActive;
-            string stateText = canInteract ? "INTERACTIVE: ON" : "INTERACTIVE: OFF";
+            bool canInteract = exclusiveOverlayInteraction || (interactionModeEnabled && interactiveModeActive);
+            string stateText = canInteract ? Loc.Get("Loc_INTERACTIVE") : Loc.Get("Loc_PASSIVE");
             InteractionStatusBadge.Text = stateText;
 
-            InteractionStatusBadge.Background = canInteract
-                ? new SolidColorBrush(Color.FromArgb(180, 180, 95, 0))
-                : new SolidColorBrush(Color.FromArgb(120, 70, 25, 0));
+            InteractionStatusBadge.Background = chromeStyle == OverlayChromeStyles.Minimal
+                ? Brushes.Transparent
+                : canInteract
+                    ? new SolidColorBrush(Color.FromArgb(180, 180, 95, 0))
+                    : new SolidColorBrush(Color.FromArgb(120, 70, 25, 0));
 
             string interactionHotkeyText = FormatHotkeyDisplay(SettingsService.Instance.Settings.InteractiveHotkeyModifiers, SettingsService.Instance.Settings.InteractiveHotkeyKey);
             string toggleHotkeyText = FormatHotkeyDisplay(SettingsService.Instance.Settings.ToggleHotkeyModifiers, SettingsService.Instance.Settings.ToggleHotkeyKey);
-            string overlaysStateText = overlaysSuppressedByHotkey ? "hidden" : "visible";
+            string overlaysStateText = overlaysSuppressedByHotkey ? Loc.Get("Loc_HIDDEN") : ActivityOptions.First(option => option.Activity == currentActivity).Label;
             InteractionHintText.Text =
-                $"Overlays: {overlaysStateText} | Show/Hide: {toggleHotkeyText} | Interactive: {interactionHotkeyText} | Unpin: Ctrl+7";
+                Loc.Format("Loc_Main_Hint_Format", toggleHotkeyText, overlaysStateText, interactionHotkeyText);
+        }
+
+        private void SetChromeStyle(string? value)
+        {
+            chromeStyle = OverlayChromeStyles.Normalize(value);
+            OverlayChromeHelper.Apply(OverlayFrame, chromeStyle);
+            UpdateInteractionStatusUi();
         }
 
         private static string FormatHotkeyDisplay(string modifiers, string key)
@@ -569,13 +728,20 @@ namespace ED_Inara_Overlay
 
         private void EvaluateInteractiveAutoReturn(IntPtr foregroundWindow)
         {
-            if (!interactiveModeActive)
+            if (!interactiveModeActive || exclusiveOverlayInteraction)
             {
                 return;
             }
 
-            bool focusIsOnInteractiveOverlay = IsWindowFocused(tradeRouteWindow, foregroundWindow)
-                || IsWindowFocused(resultsOverlayWindow, foregroundWindow);
+            bool focusIsOnInteractiveOverlay = IsWindowFocused(this, foregroundWindow)
+                || IsWindowFocused(tradeRouteWindow, foregroundWindow)
+                || IsWindowFocused(resultsOverlayWindow, foregroundWindow)
+                || IsWindowFocused(pinnedRouteOverlay, foregroundWindow)
+                || IsWindowFocused(engineeringOverlayWindow, foregroundWindow)
+                || IsWindowFocused(activityWorkspaceWindow, foregroundWindow)
+                || (OperatingSystem.IsWindows()
+                    && Application.Current is App app
+                    && IsWindowFocused(app.ActiveOverlaySettingsWindow, foregroundWindow));
 
             bool gracePeriodActive = DateTime.UtcNow < interactiveFocusLossGraceUntilUtc;
             if (returnOnFocusLoss && !gracePeriodActive && !focusIsOnInteractiveOverlay)
@@ -589,6 +755,45 @@ namespace ED_Inara_Overlay
             {
                 SetInteractiveMode(false, $"timeout {autoReturnTimeoutSeconds}s");
             }
+        }
+
+        public void BeginExclusiveOverlayInteraction()
+        {
+            if (exclusiveOverlayInteraction)
+            {
+                return;
+            }
+
+            interactionStateBeforeExclusiveOverlay = interactiveModeActive;
+            exclusiveOverlayInteraction = true;
+            interactiveModeActive = true;
+            interactiveModeEnteredAtUtc = DateTime.UtcNow;
+            interactiveFocusLossGraceUntilUtc = DateTime.MaxValue;
+            UpdateOverlayInteractionModes();
+            UpdateInteractionStatusUi();
+            engineeringOverlayWindow?.Activate();
+            Logger.Logger.Info("Exclusive overlay interaction enabled for a full overlay assistant.");
+        }
+
+        public void EndExclusiveOverlayInteraction()
+        {
+            if (!exclusiveOverlayInteraction)
+            {
+                return;
+            }
+
+            bool restoreInteractive = interactionStateBeforeExclusiveOverlay;
+            exclusiveOverlayInteraction = false;
+            interactiveModeActive = restoreInteractive;
+            interactiveModeEnteredAtUtc = DateTime.UtcNow;
+            interactiveFocusLossGraceUntilUtc = interactiveModeEnteredAtUtc + InteractiveFocusLossGracePeriod;
+            UpdateOverlayInteractionModes();
+            UpdateInteractionStatusUi();
+            if (!restoreInteractive)
+            {
+                WindowsAPI.TryActivateWindow(targetWindow);
+            }
+            Logger.Logger.Info($"Exclusive overlay interaction ended; restored interactive={restoreInteractive}.");
         }
 
         private static bool IsWindowFocused(Window? window, IntPtr foregroundWindow)
@@ -606,6 +811,12 @@ namespace ED_Inara_Overlay
         {
             try
             {
+                if (IsVisible)
+                {
+                    Activate();
+                    return;
+                }
+
                 if (resultsOverlayWindow?.IsVisible == true)
                 {
                     resultsOverlayWindow.Activate();
@@ -615,6 +826,18 @@ namespace ED_Inara_Overlay
                 if (tradeRouteWindow?.IsVisible == true)
                 {
                     tradeRouteWindow.Activate();
+                    return;
+                }
+
+                if (pinnedRouteOverlay?.IsVisible == true)
+                {
+                    pinnedRouteOverlay.Activate();
+                    return;
+                }
+
+                if (engineeringOverlayWindow?.IsVisible == true)
+                {
+                    engineeringOverlayWindow.Activate();
                 }
             }
             catch (Exception ex)

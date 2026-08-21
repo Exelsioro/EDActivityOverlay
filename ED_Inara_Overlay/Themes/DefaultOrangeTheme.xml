@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Theme Name="A Default Orange" Description="Default Orange Elite Dangerous theme" Author="ED Inara Overlay Team" Version="1.0">
+<Theme Name="Default Orange" Description="Default orange Elite Dangerous theme" Author="ED Inara Overlay Team" Version="1.0">
   <Colors>
-    <Color Key="PrimaryBackgroundColor" Value="#11111111" Description="Primary background color"/>
-    <Color Key="SecondaryBackgroundColor" Value="#11111111" Description="Secondary background color"/>
-    <Color Key="HighlightBackgroundColor" Value="#0FFF8000" Description="Highlight background color"/>
-    <Color Key="BorderColor" Value="#FF8000" Description="Border color"/>
-    <Color Key="ButtonBackgroundColor" Value="#11111111" Description="Button background color"/>
+    <Color Key="PrimaryBackgroundColor" Value="#E60B0704" Description="Primary background color"/>
+    <Color Key="SecondaryBackgroundColor" Value="#D9140B05" Description="Secondary background color"/>
+    <Color Key="HighlightBackgroundColor" Value="#552F1605" Description="Highlight background color"/>
+    <Color Key="BorderColor" Value="#FFFF8A18" Description="Border color"/>
+    <Color Key="ButtonBackgroundColor" Value="#CC1C0E05" Description="Button background color"/>
     <Color Key="PrimaryColor" Value="#FFFF8000" Description="Primary accent color"/>
     <Color Key="AccentColor" Value="#FFFF8000" Description="Accent color"/>
-    <Color Key="SuccessColor" Value="#FF00FF00" Description="Success color"/>
-    <Color Key="FailureColor" Value="#FFFF0000" Description="Failure color"/>
-    <Color Key="SecondaryTextColor" Value="#FF8000" Description="Secondary text color"/>
-    <Color Key="MutedTextColor" Value="#FFB0B0B0" Description="Muted text color"/>
-    <Color Key="PrimaryTextColor" Value="#FF8000" Description="Primary text color"/>
+    <Color Key="SuccessColor" Value="#FFB6D875" Description="Success color"/>
+    <Color Key="FailureColor" Value="#FFFF5F45" Description="Failure color"/>
+    <Color Key="SecondaryTextColor" Value="#FFFFB45C" Description="Secondary text color"/>
+    <Color Key="MutedTextColor" Value="#FFC08A58" Description="Muted text color"/>
+    <Color Key="PrimaryTextColor" Value="#FFFF941F" Description="Primary text color"/>
   </Colors>
   <Fonts>
     <Font Key="HeaderFont" Family="Segoe UI" Size="16" Weight="Bold" Description="Header font"/>

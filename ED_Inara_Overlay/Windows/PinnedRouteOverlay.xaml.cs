@@ -1,270 +1,350 @@
-using System;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
-using System.Windows.Interop;
-using System.Windows.Media;
-using InaraTools;
+using ED_Inara_Overlay.Services.Journal;
+using ED_Inara_Overlay.Services;
+using ED_Inara_Overlay.Services.Navigation;
 using ED_Inara_Overlay.Utils;
-using ED_Inara_Overlay.UserControls;
+using InaraTools;
 
-namespace ED_Inara_Overlay.Windows
+namespace ED_Inara_Overlay.Windows;
+
+public partial class PinnedRouteOverlay : Window
 {
-    /// <summary>
-    /// Pinned Route Overlay Window - displays a single pinned trade route at the top center of the screen
-    /// </summary>
-    public partial class PinnedRouteOverlay : Window
+    private IntPtr targetWindow;
+    private uint targetProcessId;
+    private readonly DispatcherTimer updateTimer;
+    private TradeRouteProgressTracker? progressTracker;
+    private TradeRoute? currentRoute;
+    private readonly MainWindow? parentWindow;
+    private string placement = "MiddleLeft";
+    private bool interactive;
+    private bool showCursorWhenInteractive;
+    private bool hasManualPosition;
+    private double manualXRatio;
+    private double manualYRatio;
+    private bool disposed;
+    private string fromSystem = string.Empty;
+    private string fromStation = string.Empty;
+    private string toSystem = string.Empty;
+    private string toStation = string.Empty;
+    private string chromeStyle = OverlayChromeStyles.Compact;
+    private CancellationTokenSource? navigationCancellation;
+    private TradeRouteProgress currentProgress = new();
+
+    public PinnedRouteOverlay(MainWindow? parentWindow = null)
     {
-        private IntPtr targetWindow;
-        private uint targetProcessId;
-        private DispatcherTimer? updateTimer;
-        private bool disposed = false;
-        private MainWindow? parentMainWindow;
-        private TradeRouteCard? currentPinnedCard;
-
-        public PinnedRouteOverlay(MainWindow? parentWindow = null)
+        this.parentWindow = parentWindow;
+        InitializeComponent();
+        SetChromeStyle(Services.SettingsService.Instance.Settings.OverlayChromeStyle);
+        Loaded += (_, _) =>
         {
-            parentMainWindow = parentWindow;
-            Logger.Logger.Info("Initializing PinnedRouteOverlay");
-            
-            InitializeComponent();
-            SetupOverlay();
-            SetupUpdateTimer();
-            
-            Logger.Logger.Info("PinnedRouteOverlay initialization complete");
-        }
-
-        private void SetupOverlay()
-        {
-            // Set up overlay behavior when window is loaded
-            this.Loaded += (s, e) =>
-            {
-                WindowsAPI.SetupOverlayWindow(this);
-                WindowsAPI.SetClickThrough(this, true);
-                
-                // Position at top center of screen initially
-                PositionOverlay();
-            };
-        }
-
-        private void SetupUpdateTimer()
-        {
-            updateTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(33) // ~30 FPS
-            };
-            updateTimer.Tick += UpdateTimer_Tick;
-            updateTimer.Start();
-        }
-
-        private void UpdateTimer_Tick(object? sender, EventArgs e)
-        {
-            if (disposed || updateTimer == null)
-                return;
-
-            if (OverlayVisibilityState.SuppressAll)
-            {
-                if (this.IsVisible)
-                {
-                    this.Hide();
-                }
-                return;
-            }
-
-            // If form is not visible, we still need to update position for when it becomes visible
-            if (targetWindow != IntPtr.Zero)
-            {
-                // Check if target window still exists
-                if (!WindowsAPI.IsWindow(targetWindow))
-                {
-                    this.Hide();
-                    this.Close();
-                    return;
-                }
-
-                // Always update overlay position to match target window (positioned at top center)
-                PositionOverlay();
-
-                // Check if target window has focus
-                IntPtr foregroundWindow = WindowsAPI.GetForegroundWindow();
-                bool targetHasFocus = (foregroundWindow == targetWindow);
-                bool overlayHasFocus = WindowsAPI.IsOverlayWindow(foregroundWindow);
-
-                // Check if target window is minimized or not visible
-                bool targetMinimized = WindowsAPI.IsIconic(targetWindow);
-                bool targetVisible = WindowsAPI.IsWindowVisible(targetWindow);
-
-                // Determine if overlay should be visible based on target window state and focus
-                // Should be visible if target has focus OR any overlay window has focus
-                bool shouldBeVisible = targetVisible && !targetMinimized && (targetHasFocus || overlayHasFocus);
-                
-                // Set topmost only when target or overlay has focus
-                bool shouldBeTopmost = targetHasFocus || overlayHasFocus;
-
-                if (shouldBeVisible && !this.IsVisible)
-                {
-                    Logger.Logger.Info("PinnedRouteOverlay showing - target window has focus and is visible");
-                    this.Show();
-                }
-                else if (!shouldBeVisible && this.IsVisible)
-                {
-                    Logger.Logger.Info("PinnedRouteOverlay hiding - target window lost focus or is not visible");
-                    this.Hide();
-                }
-                
-                // Apply topmost state conditionally using WindowInteropHelper
-                if (this.IsVisible && this.IsLoaded)
-                {
-                    WindowsAPI.SetTopmost(this, shouldBeTopmost);
-                }
-
-                if (updateTimer != null)
-                {
-                    updateTimer.Tag = ((int?)updateTimer.Tag ?? 0) + 1;
-                }
-            }
-        }
-
-        private void PositionOverlay()
-        {
-            if (targetWindow != IntPtr.Zero && WindowsAPI.GetWindowRect(targetWindow, out WindowsAPI.RECT rect))
-            {
-                Rect workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
-
-                // Position pinned overlay at top center of the target window
-                int targetWidth = rect.Right - rect.Left;
-                int overlayWidth = Math.Min(
-                    (int)(workArea.Width * OverlayLayoutSettings.PinnedWidthByMonitor),
-                    Math.Min(OverlayLayoutSettings.PinnedMaxWidth, (int)(targetWidth * OverlayLayoutSettings.PinnedWidthByTarget)));
-                
-                // Calculate dynamic height based on content, with minimum and maximum bounds
-                int overlayHeight = CalculateRequiredHeight();
-
-                // Center horizontally, position at very top of window
-                var (centerX, topY) = OverlayLayoutHelper.GetTopCenteredPosition(rect, overlayWidth, OverlayLayoutSettings.PinnedTopOffset);
-                OverlayLayoutHelper.ClampPosition(
-                    ref centerX,
-                    ref topY,
-                    overlayWidth,
-                    overlayHeight,
-                    workArea,
-                    OverlayLayoutSettings.DefaultMargin,
-                    OverlayLayoutSettings.PinnedClampMarginY);
-                
-                this.Left = centerX;
-                this.Top = topY;
-                this.Width = overlayWidth;
-                this.Height = overlayHeight;
-            }
-            else
-            {
-                // Fallback to screen center top if no target window
-                var workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
-                
-                this.Left = workArea.Left + ((workArea.Width - this.Width) / 2);
-                this.Top = workArea.Top + OverlayLayoutSettings.PinnedFallbackTopOffset;
-            }
-        }
-
-        public void SetTargetWindow(IntPtr windowHandle, uint processId)
-        {
-            if (disposed)
-                throw new ObjectDisposedException(nameof(PinnedRouteOverlay));
-                
-            targetWindow = windowHandle;
-            targetProcessId = processId;
-
-            if (windowHandle != IntPtr.Zero)
-            {
-                PositionOverlay();
-            }
-        }
-
-        private int CalculateRequiredHeight()
-        {
-            if (currentPinnedCard != null && PinnedRouteContainer.Children.Count > 0)
-            {
-                // Force a layout update to get accurate measurements
-                currentPinnedCard.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                
-                // Use the desired height of the card plus margin
-                double cardHeight = currentPinnedCard.DesiredSize.Height;
-                if (cardHeight > 0)
-                {
-                    int requiredHeight = (int)Math.Ceiling(cardHeight + OverlayLayoutSettings.PinnedContentMargin);
-                    return Math.Max(OverlayLayoutSettings.PinnedMinHeight, Math.Min(OverlayLayoutSettings.PinnedMaxHeight, requiredHeight));
-                }
-            }
-            
-            return OverlayLayoutSettings.PinnedMinHeight;
-        }
-
-        public void PinTradeRoute(TradeRoute tradeRoute)
-        {
-            if (disposed)
-                throw new ObjectDisposedException(nameof(PinnedRouteOverlay));
-
-            Logger.Logger.Info($"Pinning trade route: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
-
-            // Clear any existing pinned card
-            PinnedRouteContainer.Children.Clear();
-
-            // Create a new card for the pinned route
-            currentPinnedCard = new TradeRouteCard(tradeRoute);
-            
-            // Ensure card stretches to fill available width
-            currentPinnedCard.HorizontalAlignment = HorizontalAlignment.Stretch;
-            
-            // Adjust card for pinned display (more compact)
-            currentPinnedCard.MinHeight = tradeRoute.IsRoundTrip ? 180 : 120;
-            
-            // Hide the pin button on the pinned card (avoid recursive pinning)
-            if (currentPinnedCard.FindName("PinRouteButton") is System.Windows.Controls.Button pinButton)
-            {
-                pinButton.Visibility = Visibility.Collapsed;
-            }
-
-            PinnedRouteContainer.Children.Add(currentPinnedCard);
-            
-            // Force immediate layout update to get accurate measurements
-            currentPinnedCard.UpdateLayout();
-            this.UpdateLayout();
-            
-            // Position the overlay with the correct size
+            WindowsAPI.SetupOverlayWindow(this);
+            ApplyInteractionMode(interactive, showCursorWhenInteractive);
             PositionOverlay();
-            
-            // Show the overlay
-            this.Show();
-            
-            Logger.Logger.LogUserAction($"Trade route pinned successfully: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
+        };
+
+        updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        updateTimer.Tick += UpdateTimer_Tick;
+        updateTimer.Start();
+    }
+
+    public void SetPlacement(string? value)
+    {
+        placement = string.IsNullOrWhiteSpace(value) ? "MiddleLeft" : value;
+        hasManualPosition = false;
+        ApplyChrome();
+        PositionOverlay();
+    }
+
+    public void SetChromeStyle(string? value)
+    {
+        chromeStyle = OverlayChromeStyles.Normalize(value);
+        ApplyChrome();
+    }
+
+    private void ApplyChrome() => OverlayChromeHelper.Apply(
+        OverlayFrame,
+        chromeStyle);
+
+    public void ApplyInteractionMode(bool enabled, bool showCursor)
+    {
+        interactive = enabled;
+        showCursorWhenInteractive = showCursor;
+        WindowsAPI.SetClickThrough(this, !enabled);
+        UnpinButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        CopyFromStationButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        CopyToStationButton.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
+        InteractionHint.Text = enabled ? Loc.Get("Loc_DRAG_TO_MOVE") : Loc.Get("Loc_CTRL_6_INTERACT");
+        DragHandle.Cursor = enabled ? Cursors.SizeAll : Cursors.Arrow;
+        if (enabled && showCursor && IsVisible)
+        {
+            WindowsAPI.EnsureCursorVisibleOnWindow(this);
+        }
+        UpdateNavigationControls();
+    }
+
+    public void SetTargetWindow(IntPtr windowHandle, uint processId)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        targetWindow = windowHandle;
+        targetProcessId = processId;
+        PositionOverlay();
+    }
+
+    public void PinTradeRoute(TradeRoute tradeRoute)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        currentRoute = tradeRoute;
+        fromSystem = tradeRoute.CardHeader.FromStation.System;
+        fromStation = tradeRoute.CardHeader.FromStation.Name;
+        toSystem = tradeRoute.CardHeader.ToStation.System;
+        toStation = tradeRoute.CardHeader.ToStation.Name;
+        ApplyRouteEndpoints();
+        progressTracker?.Dispose();
+        progressTracker = new TradeRouteProgressTracker(tradeRoute);
+        progressTracker.ProgressChanged += OnProgressChanged;
+        ApplyProgress(progressTracker.Current);
+        PositionOverlay();
+        Show();
+
+        Logger.Logger.LogUserAction(
+            $"Trade route pinned: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
+    }
+
+    private void OnProgressChanged(object? sender, TradeRouteProgressChangedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() => ApplyProgress(e.Progress)));
+    }
+
+    private void ApplyProgress(TradeRouteProgress progress)
+    {
+        currentProgress = progress;
+        LegText.Text = Loc.Format("Loc_Leg_Format", progress.LegNumber, progress.LegCount);
+        ActionText.Text = progress.Action;
+        CommodityText.Text = progress.Quantity > 0
+            ? Loc.Format("Loc_Cargo_Format", progress.Quantity, progress.Commodity.ToUpperInvariant())
+            : progress.Commodity.ToUpperInvariant();
+        JumpsText.Text = progress.RemainingJumps > 0
+            ? Loc.Format("Loc_Jumps_Format", progress.RemainingJumps)
+            : Loc.Get("Loc_DESTINATION");
+
+        long plannedProfit = currentRoute?.TotalProfitPerTrip ?? 0;
+        ProfitText.Text = progress.Stage == TradeRouteStage.Completed
+            ? Loc.Format("Loc_Actual_Profit_Format", progress.ActualProfit)
+            : Loc.Format("Loc_Planned_Profit_Format", plannedProfit);
+        NoteText.Text = progress.Note;
+        NoteText.Foreground = progress.IsInDanger
+            ? (System.Windows.Media.Brush)FindResource("FailureColorBrush")
+            : (System.Windows.Media.Brush)FindResource("MutedTextColorBrush");
+        UpdateNavigationControls();
+    }
+
+    private void UpdateNavigationControls()
+    {
+        bool flying = currentProgress.Stage is TradeRouteStage.FlyToBuy or TradeRouteStage.FlyToSell
+                      && !string.IsNullOrWhiteSpace(currentProgress.System)
+                      && !string.Equals(JournalMonitorService.Instance.Current.StarSystem,
+                          currentProgress.System, StringComparison.OrdinalIgnoreCase);
+        NavigationPanel.Visibility = interactive && flying ? Visibility.Visible : Visibility.Collapsed;
+        Height = interactive && flying ? 226 : 184;
+        AutomaticNavigationButton.IsEnabled = SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
+        AutomaticNavigationButton.ToolTip = AutomaticNavigationButton.IsEnabled
+            ? null : Loc.Get("Loc_NAVIGATION_AUTO_DISABLED");
+    }
+
+    public void RefreshLocalization()
+    {
+        ApplyRouteEndpoints();
+        if (progressTracker != null)
+        {
+            ApplyProgress(progressTracker.Current);
+        }
+    }
+
+    private void UpdateTimer_Tick(object? sender, EventArgs e)
+    {
+        if (disposed || targetWindow == IntPtr.Zero)
+        {
+            return;
+        }
+        if (OverlayVisibilityState.SuppressAll || OverlayVisibilityState.SuppressActivity)
+        {
+            if (IsVisible) Hide();
+            return;
+        }
+        if (!WindowsAPI.IsWindow(targetWindow))
+        {
+            Close();
+            return;
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        PositionOverlay();
+        IntPtr foreground = WindowsAPI.GetForegroundWindow();
+        bool focused = foreground == targetWindow || WindowsAPI.IsOverlayWindow(foreground);
+        bool visible = WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow) && focused;
+        if (visible && !IsVisible) Show();
+        else if (!visible && IsVisible) Hide();
+        if (IsVisible && IsLoaded) WindowsAPI.SetTopmost(this, focused);
+    }
+
+    private void PositionOverlay()
+    {
+        if (targetWindow == IntPtr.Zero || !WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT rect))
         {
-            Logger.Logger.Info("Pinned route overlay close button clicked");
-            Logger.Logger.LogUserAction("Pinned route overlay closed by user");
-            
-            // Clear the pinned route
-            PinnedRouteContainer.Children.Clear();
-            currentPinnedCard = null;
-            
-            this.Close();
+            return;
         }
 
-        public new void Close()
+        Rect workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
+        int targetWidth = rect.Right - rect.Left;
+        int placementMaxWidth = placement.Equals("TopCenter", StringComparison.OrdinalIgnoreCase)
+            || placement.Equals("BottomCenter", StringComparison.OrdinalIgnoreCase)
+            ? OverlayLayoutSettings.PinnedMaxWidth
+            : 400;
+        int width = Math.Min(
+            (int)(workArea.Width * OverlayLayoutSettings.PinnedWidthByMonitor),
+            Math.Min(placementMaxWidth, (int)(targetWidth * OverlayLayoutSettings.PinnedWidthByTarget)));
+        int height = (int)Height;
+        double left;
+        double top;
+        if (hasManualPosition)
         {
-            if (!disposed)
+            left = rect.Left + (Math.Max(0, targetWidth - width) * manualXRatio);
+            top = rect.Top + (Math.Max(0, rect.Bottom - rect.Top - height) * manualYRatio);
+        }
+        else
+        {
+            (left, top) = OverlayLayoutHelper.GetPinnedPosition(rect, width, height, placement);
+        }
+        OverlayLayoutHelper.ClampPosition(
+            ref left,
+            ref top,
+            width,
+            height,
+            workArea,
+            OverlayLayoutSettings.DefaultMargin,
+            OverlayLayoutSettings.PinnedClampMarginY);
+        Left = left;
+        Top = top;
+        Width = width;
+    }
+
+    private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!interactive || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+            if (targetWindow != IntPtr.Zero && WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT rect))
             {
-                disposed = true;
-                updateTimer?.Stop();
-                updateTimer = null;
-                
-                PinnedRouteContainer.Children.Clear();
-                currentPinnedCard = null;
-                
-                Logger.Logger.Info("PinnedRouteOverlay disposed");
+                double availableX = Math.Max(1, rect.Right - rect.Left - ActualWidth);
+                double availableY = Math.Max(1, rect.Bottom - rect.Top - ActualHeight);
+                manualXRatio = Math.Clamp((Left - rect.Left) / availableX, 0, 1);
+                manualYRatio = Math.Clamp((Top - rect.Top) / availableY, 0, 1);
+                hasManualPosition = true;
+                ApplyChrome();
             }
-            
-            base.Close();
         }
+        catch (InvalidOperationException)
+        {
+            // The mouse may have been released between the event and DragMove.
+        }
+    }
+
+    private void UnpinButton_Click(object sender, RoutedEventArgs e) => parentWindow?.UnpinRouteOverlay();
+
+    private void FromPointText_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) =>
+        CopyRoutePoint(fromSystem, "origin system");
+
+    private void CopyFromStationButton_Click(object sender, RoutedEventArgs e) => CopyRoutePoint(fromStation, "origin station");
+
+    private void ToPointText_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) =>
+        CopyRoutePoint(toSystem, "destination system");
+
+    private void CopyToStationButton_Click(object sender, RoutedEventArgs e) => CopyRoutePoint(toStation, "destination station");
+
+    private async void PrepareNavigationButton_Click(object sender, RoutedEventArgs e) =>
+        await NavigateToTradeSystemAsync(false);
+
+    private async void AutomaticNavigationButton_Click(object sender, RoutedEventArgs e) =>
+        await NavigateToTradeSystemAsync(true);
+
+    private async Task NavigateToTradeSystemAsync(bool confirmAutomatically)
+    {
+        string target = currentProgress.System;
+        if (string.IsNullOrWhiteSpace(target)) return;
+        navigationCancellation?.Cancel();
+        navigationCancellation?.Dispose();
+        navigationCancellation = new CancellationTokenSource();
+        Clipboard.SetText(target);
+        RouteNavigationStatusText.Text = Loc.Format("Loc_NAVIGATION_PREPARING", target);
+        WindowsAPI.SetClickThrough(this, true);
+        try
+        {
+            await Task.Yield();
+            EliteNavigationResult result = await EliteRouteNavigationService.Instance.PrepareAsync(
+                target, targetWindow, confirmAutomatically, navigationCancellation.Token);
+            RouteNavigationStatusText.Text = string.IsNullOrWhiteSpace(result.Detail)
+                ? Loc.Format(result.MessageKey, result.TargetSystem)
+                : Loc.Format(result.MessageKey, result.TargetSystem, result.Detail);
+        }
+        finally
+        {
+            ApplyInteractionMode(interactive, showCursorWhenInteractive);
+        }
+    }
+
+    private void ApplyRouteEndpoints()
+    {
+        FromPointText.Text = FormatRoutePoint(fromSystem, fromStation);
+        ToPointText.Text = FormatRoutePoint(toSystem, toStation);
+        CopyFromStationButton.IsEnabled = !string.IsNullOrWhiteSpace(fromStation);
+        CopyToStationButton.IsEnabled = !string.IsNullOrWhiteSpace(toStation);
+    }
+
+    private static string FormatRoutePoint(string system, string station)
+    {
+        string normalizedSystem = system.Trim().ToUpperInvariant();
+        string normalizedStation = station.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(normalizedStation)) return normalizedSystem;
+        if (string.IsNullOrWhiteSpace(normalizedSystem)) return normalizedStation;
+        return $"{normalizedSystem}  /  {normalizedStation}";
+    }
+
+    private static void CopyRoutePoint(string value, string kind)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        try
+        {
+            Clipboard.SetText(value);
+            Logger.Logger.Info($"Pinned route {kind} copied: {value}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Logger.Warning($"Unable to copy pinned route {kind}: {ex.Message}");
+        }
+    }
+
+    public new void Close()
+    {
+        if (!disposed)
+        {
+            disposed = true;
+            updateTimer.Stop();
+            if (progressTracker != null)
+            {
+                progressTracker.ProgressChanged -= OnProgressChanged;
+                progressTracker.Dispose();
+                progressTracker = null;
+            }
+            navigationCancellation?.Cancel();
+            navigationCancellation?.Dispose();
+            navigationCancellation = null;
+        }
+        base.Close();
     }
 }

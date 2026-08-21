@@ -1,56 +1,47 @@
 <Window x:Class="ED_Inara_Overlay.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        Title="ED Inara Overlay"
-        Height="120"
-        Width="124"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
-        Topmost="True"
-        ShowInTaskbar="False"
-        ResizeMode="NoResize">
-    <Border Margin="6"
-            BorderThickness="1"
-            BorderBrush="{DynamicResource PrimaryTextColorBrush}"
-            Background="#550B0400">
-        <StackPanel Margin="8,6,8,6">
-            <TextBlock Text="Overlay Control"
-                       FontWeight="Bold"
-                       FontSize="12"
-                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-            <Border Background="#78491900" Padding="4,1,4,1" Margin="0,6,0,0" HorizontalAlignment="Left">
-                <TextBlock x:Name="InteractionStatusBadge"
-                           Foreground="{DynamicResource PrimaryTextColorBrush}"
-                           FontSize="10"
-                           FontWeight="Bold"
-                           Text="INTERACTIVE: OFF"/>
-            </Border>
-            <TextBlock x:Name="InteractionHintText"
-                       FontSize="10"
-                       TextWrapping="Wrap"
-                       Foreground="{DynamicResource PrimaryTextColorBrush}" Height="13"
-                       Text="Overlays: visible"
-                       />
-            <TextBlock x:Name="InteractionHintText_Copy"
-                FontSize="10"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource PrimaryTextColorBrush}" Height="15"
-                       ><Run Text="Show/Hide: Ctrl+5"/><LineBreak/></TextBlock>
-            <TextBlock x:Name="InteractionHintText_Copy2"
-                FontSize="10"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource PrimaryTextColorBrush}" Height="15"
-                       ><Run Text="Interactive: Ctrl+6"/><LineBreak/><Run/></TextBlock>
-            <TextBlock x:Name="InteractionHintText_Copy1"
-                FontSize="10"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource PrimaryTextColorBrush}" Height="15"
-                       Text="Unpin: Ctrl+7"
-                       />
-        </StackPanel>
+        Title="ED Inara Overlay" Height="166" Width="235"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize">
+    <Border x:Name="OverlayFrame" Margin="4" Padding="10,7" BorderThickness="1"
+            BorderBrush="{DynamicResource BorderColorBrush}"
+            Background="{DynamicResource PrimaryBackgroundColorBrush}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{DynamicResource Loc_ED_ASSISTANT}" FontWeight="Bold" FontSize="13"
+                           Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                <Border Grid.Column="1" Background="{DynamicResource HighlightBackgroundBrush}" Padding="6,1">
+                    <TextBlock x:Name="InteractionStatusBadge" Text="{DynamicResource Loc_PASSIVE}"
+                               Foreground="{DynamicResource AccentColorBrush}" FontSize="10" FontWeight="Bold"/>
+                </Border>
+            </Grid>
+            <TextBlock x:Name="LocationStatusText" Grid.Row="1" Text="{DynamicResource Loc_JOURNAL_WAITING}"
+                       Margin="0,5,0,0" Foreground="{DynamicResource SecondaryTextColorBrush}"
+                       FontSize="11" TextTrimming="CharacterEllipsis"/>
+            <ComboBox x:Name="ActivitySelector" Grid.Row="2" Height="27" FontSize="10"
+                          Margin="0,7,0,0" HorizontalAlignment="Stretch"
+                          Style="{DynamicResource ComboBoxStyle}"
+                          DisplayMemberPath="Label"
+                          SelectionChanged="ActivitySelector_SelectionChanged"/>
+            <Button x:Name="ActivitySettingsButton" Grid.Row="3" Content="{DynamicResource Loc_SETTINGS_2}"
+                    Height="27" Margin="0,6,0,0" FontSize="9"
+                    Click="ActivitySettingsButton_Click"/>
+            <TextBlock x:Name="InteractionHintText" Grid.Row="4"
+                       Text="{DynamicResource Loc_Ctrl_5_visibility_Ctrl_6_cursor_Ctrl_1_4_section}"
+                       Margin="0,5,0,0" Foreground="{DynamicResource MutedTextColorBrush}"
+                       FontSize="9" TextWrapping="Wrap"/>
+        </Grid>
     </Border>
 </Window>

@@ -202,8 +202,20 @@ namespace ED_Inara_Overlay.Services
                     try
                     {
                         var colorValue = (Color)ColorConverter.ConvertFromString(color.Value);
-                        resources[color.Key] = colorValue;
-                        resources[color.Key + "Brush"] = new SolidColorBrush(colorValue);
+                        // "ButtonBackground" was used by early exported themes;
+                        // normalize it to the resource name used by current XAML.
+                        string resourceKey = color.Key.Equals("ButtonBackground", StringComparison.OrdinalIgnoreCase)
+                            ? "ButtonBackgroundColor"
+                            : color.Key;
+                        var brush = new SolidColorBrush(colorValue);
+                        resources[resourceKey] = colorValue;
+                        resources[resourceKey + "Brush"] = brush;
+                        if (resourceKey.Equals("HighlightBackgroundColor", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // UIStyles historically exposes this brush without
+                            // the Color suffix. Keep both names synchronized.
+                            resources["HighlightBackgroundBrush"] = brush;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -361,7 +373,7 @@ namespace ED_Inara_Overlay.Services
                 new ThemeColor("SecondaryBackgroundColor", "#FF2A2A2A", "Secondary background color"),
                 new ThemeColor("HighlightBackgroundColor", "#FF3A3A3A", "Highlight background color"),
                 new ThemeColor("BorderColor", "#FF404040", "Border color"),
-                new ThemeColor("ButtonBackground", "#FF404040", "Button background color"),
+                new ThemeColor("ButtonBackgroundColor", "#FF404040", "Button background color"),
                 new ThemeColor("PrimaryColor", "#FF8000", "Primary accent color"),
                 new ThemeColor("AccentColor", "#FFCC00", "Accent color"),
                 new ThemeColor("SuccessColor", "#00FF00", "Success color"),

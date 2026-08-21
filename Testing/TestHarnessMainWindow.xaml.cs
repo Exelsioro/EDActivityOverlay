@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Automation;
@@ -14,6 +15,7 @@ using WinForms = System.Windows.Forms;
 
 namespace OverlayTestHarness
 {
+    [SupportedOSPlatform("windows6.1")]
     public partial class TestHarnessMainWindow : Window
     {
         private Form? mockTargetWindow;

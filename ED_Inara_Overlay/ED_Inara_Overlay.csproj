@@ -14,6 +14,15 @@
     <SignAssembly>True</SignAssembly>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <PackageIcon>Resources\app.ico</PackageIcon>
+    <!-- WPF's package-aware markup pass creates a randomly named *_wpftmp.csproj
+         beside this project. C# Dev Kit discovers that transient file as a real
+         project and retains a failed entry after WPF deletes it. This project
+         does not use markup-time source generators, so the stable legacy pass
+         is both sufficient and invisible to project discovery. -->
+    <IncludePackageReferencesDuringMarkupCompilation>false</IncludePackageReferencesDuringMarkupCompilation>
+    <!-- Keep generated WPF sources out of implicit Compile globs in the
+         temporary markup project as well as in normal design-time builds. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\obj\**\*;$(MSBuildProjectDirectory)\bin\**\*</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,12 +33,20 @@
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.12.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.29" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="Themes\*.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Content Include="Resources\ExobiologyBioforge\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Documentation\X52_CONTROL_CHEATSHEET_RU.md" Link="Documentation\X52_CONTROL_CHEATSHEET_RU.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

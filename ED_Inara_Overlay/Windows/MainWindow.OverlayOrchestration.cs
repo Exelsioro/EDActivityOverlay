@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
+using ED_Inara_Overlay.Models;
 using ED_Inara_Overlay.Services;
+using ED_Inara_Overlay.Services.Journal;
 using ED_Inara_Overlay.Utils;
 using ED_Inara_Overlay.Windows;
 using InaraTools;
@@ -10,6 +12,11 @@ namespace ED_Inara_Overlay
 {
     public partial class MainWindow
     {
+        private bool IsTradeSurfaceVisible() =>
+            tradeRouteWindow?.IsVisible == true
+            || resultsOverlayWindow?.IsVisible == true
+            || pinnedRouteOverlay?.IsVisible == true;
+
         private void SetupGlobalHotkeys()
         {
             try
@@ -20,9 +27,14 @@ namespace ED_Inara_Overlay
                     bool toggleRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_TOGGLE, toggleHotkeyModifiers, toggleHotkeyVirtualKey);
                     bool interactiveRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_INTERACTIVE, interactiveHotkeyModifiers, interactiveHotkeyVirtualKey);
                     bool unpinRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_UNPIN, unpinHotkeyModifiers, unpinHotkeyVirtualKey);
-                    if (toggleRegistered || interactiveRegistered || unpinRegistered)
+                    bool tradeRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_TRADE, tradeHotkeyModifiers, tradeHotkeyVirtualKey);
+                    bool engineeringRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_ENGINEERING, engineeringHotkeyModifiers, engineeringHotkeyVirtualKey);
+                    bool explorationRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_EXPLORATION, explorationHotkeyModifiers, explorationHotkeyVirtualKey);
+                    bool miningRegistered = WindowsAPI.RegisterHotKey(helper.Handle, HOTKEY_ID_MINING, miningHotkeyModifiers, miningHotkeyVirtualKey);
+                    if (toggleRegistered || interactiveRegistered || unpinRegistered || tradeRegistered
+                        || engineeringRegistered || explorationRegistered || miningRegistered)
                     {
-                        Logger.Logger.Info($"Global hotkeys registration: toggle={toggleRegistered}, interactive={interactiveRegistered}, unpin={unpinRegistered}");
+                        Logger.Logger.Info($"Global hotkeys registration: toggle={toggleRegistered}, interactive={interactiveRegistered}, unpin={unpinRegistered}, activities={tradeRegistered}/{engineeringRegistered}/{explorationRegistered}/{miningRegistered}");
                         hwndSource = HwndSource.FromHwnd(helper.Handle);
                         hwndSource?.AddHook(HwndHook);
                     }
@@ -47,6 +59,14 @@ namespace ED_Inara_Overlay
             if (msg == WindowsAPI.WM_HOTKEY)
             {
                 int hotkeyId = wParam.ToInt32();
+                long now = Environment.TickCount64;
+                if (hotkeyLastHandledAt.TryGetValue(hotkeyId, out long previous) && now - previous < 350)
+                {
+                    hotkeyLastHandledAt[hotkeyId] = now;
+                    handled = true;
+                    return IntPtr.Zero;
+                }
+                hotkeyLastHandledAt[hotkeyId] = now;
                 if (hotkeyId == HOTKEY_ID_TOGGLE)
                 {
                     Logger.Logger.Info("Global hotkey detected - triggering toggle action");
@@ -61,6 +81,26 @@ namespace ED_Inara_Overlay
                 else if (hotkeyId == HOTKEY_ID_UNPIN)
                 {
                     Dispatcher.BeginInvoke(new Action(UnpinRouteOverlay));
+                    handled = true;
+                }
+                else if (hotkeyId == HOTKEY_ID_ENGINEERING)
+                {
+                    Dispatcher.BeginInvoke(new Action(() => ToggleActivityFromHotkey(ActivityType.Engineering)));
+                    handled = true;
+                }
+                else if (hotkeyId == HOTKEY_ID_TRADE)
+                {
+                    Dispatcher.BeginInvoke(new Action(() => ToggleActivityFromHotkey(ActivityType.Trade)));
+                    handled = true;
+                }
+                else if (hotkeyId == HOTKEY_ID_EXPLORATION)
+                {
+                    Dispatcher.BeginInvoke(new Action(() => ToggleActivityFromHotkey(ActivityType.Exploration)));
+                    handled = true;
+                }
+                else if (hotkeyId == HOTKEY_ID_MINING)
+                {
+                    Dispatcher.BeginInvoke(new Action(() => ToggleActivityFromHotkey(ActivityType.Mining)));
                     handled = true;
                 }
             }
@@ -78,6 +118,10 @@ namespace ED_Inara_Overlay
                     WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_TOGGLE);
                     WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_INTERACTIVE);
                     WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_UNPIN);
+                    WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_TRADE);
+                    WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_ENGINEERING);
+                    WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_EXPLORATION);
+                    WindowsAPI.UnregisterHotKey(helper.Handle, HOTKEY_ID_MINING);
                     Logger.Logger.Info("Global hotkeys unregistered");
                 }
 
@@ -97,11 +141,14 @@ namespace ED_Inara_Overlay
                 restoreTradeVisible = tradeRouteWindow?.IsVisible == true;
                 restoreResultsVisible = resultsOverlayWindow?.IsVisible == true;
                 restorePinnedVisible = pinnedRouteOverlay?.IsVisible == true;
+                restoreEngineeringVisible = engineeringOverlayWindow?.IsVisible == true;
+                restoreActivityWorkspaceVisible = activityWorkspaceWindow?.IsVisible == true;
 
-                bool anyOverlayVisible = restoreTradeVisible || restoreResultsVisible || restorePinnedVisible;
+                bool anyOverlayVisible = restoreTradeVisible || restoreResultsVisible || restorePinnedVisible
+                    || restoreEngineeringVisible || restoreActivityWorkspaceVisible;
                 if (!anyOverlayVisible)
                 {
-                    ToggleTradeRouteWindowLegacy();
+                    SelectActivity(currentActivity);
                     return;
                 }
 
@@ -173,6 +220,21 @@ namespace ED_Inara_Overlay
             {
                 pinnedRouteOverlay.Hide();
             }
+
+            if (engineeringOverlayWindow != null && engineeringOverlayWindow.IsVisible)
+            {
+                engineeringOverlayWindow.Hide();
+            }
+
+            if (activityWorkspaceWindow != null && activityWorkspaceWindow.IsVisible)
+            {
+                activityWorkspaceWindow.Hide();
+            }
+
+            if (shipStatusOverlayWindow != null && shipStatusOverlayWindow.IsVisible)
+            {
+                shipStatusOverlayWindow.Hide();
+            }
         }
 
         private void RestoreOverlaysAfterHotkey()
@@ -191,7 +253,33 @@ namespace ED_Inara_Overlay
             {
                 pinnedRouteOverlay.Show();
             }
+
+            if (restoreEngineeringVisible && engineeringOverlayWindow != null)
+            {
+                engineeringOverlayWindow.Show();
+            }
+
+            if (restoreActivityWorkspaceVisible && activityWorkspaceWindow != null)
+            {
+                activityWorkspaceWindow.Show();
+            }
+
+            if (shipStatusOverlayWindow != null && SettingsService.Instance.Settings.EnableShipStatusWidget)
+            {
+                shipStatusOverlayWindow.Show();
+            }
         }
+
+        public void CloseEngineeringOverlay()
+        {
+            engineeringOverlayWindow?.Close();
+            engineeringOverlayWindow = null;
+        }
+
+        public void OnEngineeringOverlayClosed() => engineeringOverlayWindow = null;
+
+        private string GetEngineeringOverlayPlacement() =>
+            OverlayLayoutHelper.GetOppositeSidePlacement(SettingsService.Instance.Settings.PinnedRoutePosition);
 
         private void UpdateToggleButtonState()
         {
@@ -220,7 +308,10 @@ namespace ED_Inara_Overlay
             }
 
             pinnedRouteOverlay.SetTargetWindow(targetWindow, targetProcessId);
+            pinnedRouteOverlay.SetPlacement(SettingsService.Instance.Settings.PinnedRoutePosition);
+            pinnedRouteOverlay.ApplyInteractionMode(interactionModeEnabled && interactiveModeActive, showCursorWhenInteractive);
             pinnedRouteOverlay.PinTradeRoute(tradeRoute);
+            engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
             isPinnedRouteActive = true;
             CloseOverlayWindows();
             Logger.Logger.Info("Route pinned successfully, closing other overlays");
@@ -252,8 +343,8 @@ namespace ED_Inara_Overlay
             if (tradeRouteWindow != null && tradeRouteWindow.IsVisible)
             {
                 Logger.Logger.Info("Closing TradeRouteWindow");
-                tradeRouteWindow.StopUpdateTimer();
-                tradeRouteWindow.Hide();
+                tradeRouteWindow.Close();
+                tradeRouteWindow = null;
                 isToggleActive = false;
                 UpdateToggleButtonState();
             }
@@ -261,9 +352,7 @@ namespace ED_Inara_Overlay
             if (resultsOverlayWindow != null && resultsOverlayWindow.IsVisible)
             {
                 Logger.Logger.Info("Closing ResultsOverlayWindow");
-                resultsOverlayWindow.StopUpdateTimer();
-                resultsOverlayWindow.Dispose();
-                resultsOverlayWindow.Hide();
+                resultsOverlayWindow.Close();
                 isResultsActive = false;
                 resultsOverlayWindow = null;
                 Logger.Logger.Info("ResultsOverlayWindow closed and state reset");
@@ -367,6 +456,32 @@ namespace ED_Inara_Overlay
                     pinnedRouteOverlay = null;
                 }
 
+                if (engineeringOverlayWindow != null)
+                {
+                    Logger.Logger.Info("Closing Engineering Assistant overlay");
+                    engineeringOverlayWindow.Close();
+                    engineeringOverlayWindow = null;
+                }
+
+                if (activityWorkspaceWindow != null)
+                {
+                    Logger.Logger.Info("Closing activity workspace overlay");
+                    activityWorkspaceWindow.Close();
+                    activityWorkspaceWindow = null;
+                }
+
+                if (notificationOverlayWindow != null)
+                {
+                    notificationOverlayWindow.Close();
+                    notificationOverlayWindow = null;
+                }
+
+                if (shipStatusOverlayWindow != null)
+                {
+                    shipStatusOverlayWindow.Close();
+                    shipStatusOverlayWindow = null;
+                }
+
                 isToggleActive = false;
                 isResultsActive = false;
                 isPinnedRouteActive = false;
@@ -455,6 +570,9 @@ namespace ED_Inara_Overlay
             CloseAllOverlayWindows();
             ThemeManager.Instance.ThemeApplied -= OnThemeApplied;
             SettingsService.Instance.SettingsChanged -= OnSettingsChanged;
+            JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
+            Services.Hardware.X52IntegrationService.Instance.ControlRequested -= OnX52ControlRequested;
+            x52OverlayPointerController.Dispose();
             Logger.Logger.Info("MainWindow closed and all resources cleaned up");
             base.OnClosed(e);
         }

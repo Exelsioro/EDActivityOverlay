@@ -17,7 +17,7 @@
             Padding="0">
 
         <!-- Inner highlight border -->
-        <Border BorderBrush="{DynamicResource BorderColorBrush}" 
+        <Border x:Name="InnerBorder" BorderBrush="{DynamicResource BorderColorBrush}"
                 BorderThickness="1" 
                 CornerRadius="0" 
                 Opacity="0.7"
@@ -31,7 +31,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- Header strip -->
-                <Border Grid.Row="0" 
+                <Border x:Name="HeaderStrip" Grid.Row="0"
                         Background="{DynamicResource HighlightBackgroundBrush}"
                         BorderBrush="{DynamicResource BorderColorBrush}"
                         BorderThickness="0,0,0,1"
@@ -46,7 +46,7 @@
                         <!-- Route type indicator -->
                         <TextBlock x:Name="RouteTypeLabel" 
                                  Grid.Column="0"
-                                 Text="TRADE ROUTE"
+                                 Text="{DynamicResource Loc_TRADE_ROUTE}"
                                  Foreground="{DynamicResource PrimaryTextColorBrush}" 
                                  FontSize="10"
                                  FontWeight="Bold"
@@ -63,7 +63,7 @@
                                      FontSize="10" 
                                      Margin="0,0,4,0"/>
                             <TextBlock x:Name="DistanceLabel" 
-                                     Text="0.0 LY"
+                                           Text="{DynamicResource Loc_0_0_Ly}"
                                      Foreground="{DynamicResource AccentColorBrush}" 
                                      FontSize="10"
                                      FontFamily="Segoe UI"
@@ -72,8 +72,8 @@
 
                         <!-- Pin Route Button -->
                         <Button x:Name="PinRouteButton"
-                              Grid.Column="1"
-                              Content="PIN"
+                              Grid.Column="2"
+                              Content="{DynamicResource Loc_PIN}"
                               Foreground="{DynamicResource AccentColorBrush}" 
                               Background="Transparent"
                               BorderBrush="{DynamicResource AccentColorBrush}"
@@ -84,30 +84,7 @@
                               Padding="6,2"
                               VerticalAlignment="Bottom"
                               Cursor="Hand"
-                              Click="PinRouteButton_Click" Grid.ColumnSpan="2" Margin="51,0,0,0">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        CornerRadius="0">
-                                                    <ContentPresenter HorizontalAlignment="Center" 
-                                                                      VerticalAlignment="Center"/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource AccentColorBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBackgroundColorBrush}"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
+                              Click="PinRouteButton_Click" Margin="8,0,0,0">
                         </Button>
                     </Grid>
                 </Border>
@@ -124,7 +101,7 @@
                 </StackPanel>
 
                 <!-- Footer strip -->
-                <Border Grid.Row="2" 
+                <Border x:Name="FooterStrip" Grid.Row="2"
                         Background="{DynamicResource HighlightBackgroundBrush}"
                         BorderBrush="{DynamicResource BorderColorBrush}"
                         BorderThickness="0,1,0,0"
@@ -138,7 +115,7 @@
                         <!-- Last update info -->
                         <TextBlock x:Name="LastUpdateLabel" 
                                  Grid.Column="0"
-                                 Text="Last updated: --"
+                                 Text="{DynamicResource Loc_Last_updated}"
                                  Foreground="#FF808080"
                                  FontSize="9"
                                  FontFamily="Segoe UI"
@@ -147,7 +124,7 @@
                         <!-- Total profit -->
                         <TextBlock x:Name="TotalProfitLabel" 
                                  Grid.Column="1"
-                                 Text="0 CR"
+                                           Text="{DynamicResource Loc_0_CR}"
                                  Foreground="{DynamicResource SuccessColorBrush}" 
                                  FontSize="12"
                                  FontWeight="Bold"

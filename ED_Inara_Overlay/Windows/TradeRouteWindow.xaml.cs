@@ -7,6 +7,9 @@ using InaraTools;
 using ED_Inara_Overlay.Utils;
 using System.Windows.Interop;
 using System.Windows.Media;
+using ED_Inara_Overlay.Models;
+using ED_Inara_Overlay.Services.Journal;
+using ED_Inara_Overlay.Services;
 
 namespace ED_Inara_Overlay.Windows
 {
@@ -24,12 +27,17 @@ namespace ED_Inara_Overlay.Windows
         private bool isSearchInProgress;
         private bool interactiveModeEnabled;
         private bool showCursorWhenInteractive;
+        private bool applyingJournalValues;
+        private bool systemOverridden;
+        private bool cargoOverridden;
+        private string chromeStyle = OverlayChromeStyles.Compact;
 
         public TradeRouteWindow(Window owner)
         {
             Owner = owner;
             InitializeComponent();
             baseWindowWidth = Width;
+            SetChromeStyle(Services.SettingsService.Instance.Settings.OverlayChromeStyle);
 
 #if DEBUG
             TestDataButton.Visibility = Visibility.Visible;
@@ -39,15 +47,66 @@ namespace ED_Inara_Overlay.Windows
 
             SetupOverlay();
             SetupUpdateTimer();
-            IsVisibleChanged += (s, e) =>
+            NearStarSystemTextBox.TextChanged += (_, _) =>
             {
-                if (IsVisible)
-                {
-                    WindowsAPI.EnsureCursorVisibleOnWindow(this);
-                }
+                if (!applyingJournalValues) systemOverridden = true;
             };
-            
+            CargoCapacityTextBox.TextChanged += (_, _) =>
+            {
+                if (!applyingJournalValues) cargoOverridden = true;
+            };
+            JournalMonitorService.Instance.StateChanged += OnJournalStateChanged;
+            ApplyJournalState(JournalMonitorService.Instance.Current);
             Logger.Logger.Info("TradeRouteWindow constructor completed");
+        }
+
+        private void OnJournalStateChanged(object? sender, GameStateChangedEventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() => ApplyJournalState(e.State)));
+        }
+
+        private void ApplyJournalState(GameStateSnapshot state, bool force = false)
+        {
+            if (!state.JournalAvailable)
+            {
+                JournalSourceText.Text = Loc.Get("Loc_JOURNAL_NOT_FOUND");
+                JournalDetailsText.Text = Loc.Get("Loc_Check_the_Journal_directory_in_Settings");
+                return;
+            }
+
+            JournalSourceText.Text = state.IsLive ? Loc.Get("Loc_JOURNAL_LIVE") : Loc.Get("Loc_JOURNAL_CONNECTED");
+            string ship = string.IsNullOrWhiteSpace(state.ShipName) ? state.Ship : state.ShipName;
+            string location = string.IsNullOrWhiteSpace(state.StarSystem) ? Loc.Get("Loc_waiting_for_location") : state.StarSystem;
+            string cargo = state.CargoCapacity > 0
+                ? Loc.Format("Loc_Free_Cargo_Format", state.FreeCargo, state.CargoCapacity)
+                : Loc.Get("Loc_cargo_unknown");
+            JournalDetailsText.Text = $"{location}  •  {(string.IsNullOrWhiteSpace(ship) ? Loc.Get("Loc_ship_unknown") : ship)}  •  {cargo}";
+
+            applyingJournalValues = true;
+            try
+            {
+                if ((force || !systemOverridden) && !string.IsNullOrWhiteSpace(state.StarSystem))
+                {
+                    NearStarSystemTextBox.Text = state.StarSystem;
+                }
+                if ((force || !cargoOverridden) && state.CargoCapacity > 0)
+                {
+                    CargoCapacityTextBox.Text = state.FreeCargo.ToString();
+                }
+            }
+            finally
+            {
+                applyingJournalValues = false;
+            }
+        }
+
+        public void RefreshLocalization() => ApplyJournalState(JournalMonitorService.Instance.Current, force: true);
+
+        private void UseJournalValuesButton_Click(object sender, RoutedEventArgs e)
+        {
+            systemOverridden = false;
+            cargoOverridden = false;
+            ApplyJournalState(JournalMonitorService.Instance.Current, force: true);
         }
         
         private void SetupOverlay()
@@ -73,11 +132,17 @@ namespace ED_Inara_Overlay.Windows
             }
         }
 
+        public void SetChromeStyle(string? value)
+        {
+            chromeStyle = OverlayChromeStyles.Normalize(value);
+            OverlayChromeHelper.Apply(OverlayFrame, chromeStyle);
+        }
+
         private void SetupUpdateTimer()
         {
             updateTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(33) // ~30 FPS for smoother CPU usage
+                Interval = TimeSpan.FromMilliseconds(100)
             };
             updateTimer.Tick += UpdateTimer_Tick;
             updateTimer.Start();
@@ -88,7 +153,7 @@ namespace ED_Inara_Overlay.Windows
             if (disposed || updateTimer == null)
                 return;
 
-            if (OverlayVisibilityState.SuppressAll)
+            if (OverlayVisibilityState.SuppressAll || OverlayVisibilityState.SuppressActivity)
             {
                 if (this.IsVisible)
                 {
@@ -110,7 +175,7 @@ namespace ED_Inara_Overlay.Windows
                 // Update position to follow target window at right center
                 try
                 {
-                    if (WindowsAPI.GetWindowRect(targetWindow, out WindowsAPI.RECT targetRect))
+                    if (WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT targetRect))
                     {
                         ApplyAdaptiveSizeForTarget(targetRect);
                         var workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
@@ -164,14 +229,20 @@ namespace ED_Inara_Overlay.Windows
 
             if (!int.TryParse(CargoCapacityTextBox.Text, out int cargoCapacity) || cargoCapacity <= 0)
             {
-                StatusText.Text = "Cargo capacity must be a positive integer.";
+                StatusText.Text = Loc.Get("Loc_Cargo_capacity_must_be_a_positive_integer");
                 Logger.Logger.Warning($"Invalid cargo capacity input: '{CargoCapacityTextBox.Text}'");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(NearStarSystemTextBox.Text))
+            {
+                StatusText.Text = Loc.Get("Loc_Enter_a_star_system_or_sync_it_from_Journal");
                 return;
             }
 
             isSearchInProgress = true;
             SetSearchControlsEnabled(false);
-            StatusText.Text = "Searching...";
+            StatusText.Text = Loc.Get("Loc_Searching");
             Logger.Logger.Info("Initiating trade route search...");
 
             // Unpin any existing pinned route overlay before showing new results
@@ -185,8 +256,8 @@ namespace ED_Inara_Overlay.Windows
             {
                 NearStarSystem = NearStarSystemTextBox.Text,
                 CargoCapacity = cargoCapacity,
-                MaxRouteDistance = MaxRouteDistanceComboBox.Text,
-                MaxPriceAge = MaxPriceAgeComboBox.Text,
+                MaxRouteDistance = GetMaxRouteDistanceApiValue(),
+                MaxPriceAge = GetMaxPriceAgeApiValue(),
                 IncludeRoundTrips = IncludeRoundTripsCheckBox.IsChecked == true,
                 DisplayPowerplayBonuses = DisplayPowerplayBonusesCheckBox.IsChecked == true,
                 // Additional filters
@@ -203,7 +274,7 @@ namespace ED_Inara_Overlay.Windows
             try
             {
                 var tradeRoutes = await InaraCommunicator.SearchInaraTradeRoutes(searchParams);
-                StatusText.Text = $"Found {tradeRoutes.Count} routes";
+                StatusText.Text = Loc.Format("Loc_Found_Routes_Format", tradeRoutes.Count);
                 Logger.Logger.Info($"Found {tradeRoutes.Count} trade routes.");
                 
                 // Show results in overlay window
@@ -218,16 +289,16 @@ namespace ED_Inara_Overlay.Windows
                 {
                     if (httpEx.Message.Contains("Retry-After", StringComparison.OrdinalIgnoreCase))
                     {
-                        StatusText.Text = "INARA rate-limited requests. Retry later (up to ~1 hour).";
+                        StatusText.Text = Loc.Get("Loc_INARA_rate_limited_requests_Retry_later_up_to_1_hour");
                     }
                     else
                     {
-                        StatusText.Text = "INARA temporarily unavailable (503). Try again in 1-2 minutes.";
+                        StatusText.Text = Loc.Get("Loc_INARA_is_temporarily_unavailable_503_Try_again_in_12_minutes");
                     }
                 }
                 else
                 {
-                    StatusText.Text = "Error during search.";
+                    StatusText.Text = Loc.Get("Loc_Error_during_route_search");
                 }
                 Logger.Logger.Error($"Error searching trade routes: {ex.Message}");
             }
@@ -245,7 +316,7 @@ namespace ED_Inara_Overlay.Windows
                 return;
             }
 
-            StatusText.Text = "Loading test data...";
+            StatusText.Text = Loc.Get("Loc_Loading_test_data");
             Logger.Logger.Info("Loading test data for trade routes...");
 
             // Unpin any existing pinned route overlay before showing new results
@@ -258,7 +329,7 @@ namespace ED_Inara_Overlay.Windows
             try
             {
                 var testRoutes = TestDataGenerator.GenerateTestData();
-                StatusText.Text = $"Loaded {testRoutes.Count} test routes";
+                StatusText.Text = Loc.Format("Loc_Loaded_Test_Routes_Format", testRoutes.Count);
                 Logger.Logger.Info($"Loaded {testRoutes.Count} test trade routes.");
                 
                 // Show results in overlay window
@@ -266,7 +337,7 @@ namespace ED_Inara_Overlay.Windows
             }
             catch (Exception ex)
             {
-                StatusText.Text = "Error loading test data.";
+                StatusText.Text = Loc.Get("Loc_Error_loading_test_data");
                 Logger.Logger.Error($"Error loading test data: {ex.Message}");
             }
         }
@@ -283,27 +354,25 @@ namespace ED_Inara_Overlay.Windows
             if (AdditionalFiltersGroupBox.Visibility == Visibility.Collapsed)
             {
                 AdditionalFiltersGroupBox.Visibility = Visibility.Visible;
-                ShowFiltersButton.Content = "Hide Additional Filters";
+                ShowFiltersButton.Content = Loc.Get("Loc_ADVANCED_FILTERS_OPEN");
                 Logger.Logger.Info("Additional filters shown");
             }
             else
             {
                 AdditionalFiltersGroupBox.Visibility = Visibility.Collapsed;
-                ShowFiltersButton.Content = "Show Additional Filters";
+                ShowFiltersButton.Content = Loc.Get("Loc_ADVANCED_FILTERS");
                 Logger.Logger.Info("Additional filters hidden");
             }
         }
         
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            StopUpdateTimer();
-            this.Hide();
-            
             // Notify main window if owner is set
             if (Owner is MainWindow mainWindow)
             {
                 mainWindow.OnTradeRouteWindowClosed();
             }
+            Close();
         }
 
         public void SetTargetWindow(IntPtr window, uint pid)
@@ -339,7 +408,7 @@ namespace ED_Inara_Overlay.Windows
                 {
                     try
                     {
-                        if (WindowsAPI.GetWindowRect(targetWindow, out WindowsAPI.RECT targetRect))
+                        if (WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT targetRect))
                         {
                             ApplyAdaptiveSizeForTarget(targetRect);
                             PositionAtTargetRightCenter(targetRect, workArea, allowLeftFallbackWhenOverflow: true, logDetails: true);
@@ -360,6 +429,18 @@ namespace ED_Inara_Overlay.Windows
         public void StopUpdateTimer()
         {
             updateTimer?.Stop();
+        }
+
+        private string GetMaxRouteDistanceApiValue()
+        {
+            int distance = (Math.Clamp(MaxRouteDistanceComboBox.SelectedIndex, 0, 7) + 1) * 10;
+            return $"{distance} Ly";
+        }
+
+        private string GetMaxPriceAgeApiValue()
+        {
+            string[] values = ["8 hours", "16 hours", "1 day", "2 days", "3 days"];
+            return values[Math.Clamp(MaxPriceAgeComboBox.SelectedIndex, 0, values.Length - 1)];
         }
 
         private int GetComboBoxIndex(ComboBox comboBox)
@@ -442,6 +523,7 @@ namespace ED_Inara_Overlay.Windows
         {
             disposed = true;
             updateTimer?.Stop();
+            JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
             base.OnClosed(e);
         }
     }

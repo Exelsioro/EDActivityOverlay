@@ -7,7 +7,125 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Activities and notifications
+
+- Added a full in-game exploration system catalog opened from the compact
+  widget, with search, notable/value/biology/mapping/landing filters, body
+  details and separate copy-system/copy-body actions.
+- Added explicit Journal-only, scanned-body enrichment and full-catalog spoiler
+  modes. Community data can no longer be mistaken for personal Scan/DSS state.
+- Added background, idempotent import of closed Journal files into the shared
+  SQLite companion database. Current-system rows now distinguish current-visit
+  scans from the commander's earlier Scan, DSS and organic history.
+- Combined Exploration and Exobiology into one journal-backed workspace.
+- Added surface telemetry from `Status.json`, including coordinates, heading,
+  body radius, gravity and on-foot/SRV state.
+- Added persistent species-specific exobiology sampling with live colony-spacing
+  distance, offline Canonn Bioforge value ranges and biological target summaries.
+- Added scoopability and neutron/white-dwarf warnings for the active navigation route.
+- Added independent Spansh current-system enrichment with optional EDSM fallback,
+  per-system disk caching, explicit source status and known high-value mapping targets.
+- Added a standalone Universal Cartographics value estimator adapted from
+  EliteDangerousCore. Journal scans and incomplete provider records now receive
+  local scan/mapping estimates without requiring EDDiscovery.
+- Added exploration-provider controls to Settings; no EDDiscovery installation or
+  full-galaxy database is required.
+- Replaced the fourth activity with Mining, including prospector composition, asteroid cores and refinery session counters.
+- Added a reusable localized notification pipeline for flight, combat, anti-xeno and mining events.
+- Added optional Logitech X52 Pro support through the installed DirectOutput
+  driver: three-line MFD status, journal-driven LEDs, activity switching from
+  the MFD wheel, connection diagnostics and independent feature toggles.
+- Added offline Canonn Bioforge exobiology prediction using atmosphere,
+  temperature, pressure, gravity and volcanism, plus a colony-range escape radar.
+- Added persistent import and journal-driven advancement for official Spansh
+  Road to Riches, travel and neutron-route CSV/JSON exports.
+- Added a scrollable full-route view with current/next/completed state,
+  per-system copy actions and all Spansh body scan/DSS targets and values.
+- Replaced native WPF check boxes with a runtime theme-aware template so text,
+  hover, checked and disabled states remain readable in every theme.
+- Unified buttons, text inputs, combo items, scroll viewers and scroll bars on
+  shared runtime theme resources; native hover chrome can no longer leak into
+  scrollbar page areas.
+- Added clickable system-name text across exploration route/log summaries,
+  pinned trade endpoints and trade cards.
+- Added independently persistent folding for the Spansh form and imported route;
+  successful imports reveal the route automatically.
+- Added disk-usage reporting and safe cache maintenance. Commander history is
+  deduplicated and preserved, while reproducible exploration cache files expire.
+- Moved DSS probe guidance to a dedicated tab with a larger 460 px aiming diagram.
+- Added observed-consumption fuel assessment with scoopable-star and emergency
+  reserve warnings for the active `NavRoute.json` route.
+- Added cached nearest-POI lookup from EDAstro GEC and Canonn Guardian/Thargoid
+  datasets; provider failures are isolated so one source can survive the other.
+- Added theme-aware numbered DSS probe layouts for efficiency targets 2–12 and
+  retained `ProbesUsed`/`EfficiencyTarget` results per mapped body.
+- Made the complete compact exploration body vertically scrollable and added
+  an explicit no-route state instead of silently omitting route information.
+- Added full-view overview, system catalog, persistent exploration log/findings
+  and direct-route tabs, including manual bookmarks for notable bodies.
+- Added background reconstruction of estimated unsold Universal Cartographics
+  and Vista Genomics values across Journal files with sale-event resets.
+- Added direct Spansh Road to Riches validation, background job polling and
+  automatic checked-result import without requiring the browser.
+
+### Localization
+
+- Added runtime-selectable Russian and English UI catalogs, persisted in application settings.
+- Replaced window and code-behind UI literals with dynamic resources, including Engineering acquisition advice.
+- Language changes now refresh open overlays, route cards, the tray menu, and Engineering wishlist calculations without restarting.
+- Kept Coriolis recipes in their canonical form and localize display names on demand, preventing cached data from being locked to the startup language.
+- Added catalog parity and duplicate-key regression tests.
+
+### Tooling
+
+- Prevented WPF markup compilation from generating random `*_wpftmp.csproj` files that C# Dev Kit cached as failed projects.
+- Excluded generated `bin`/`obj` content from project discovery and pinned VS Code to the repository solution.
+
+### Activity navigation
+
+- Added a persistent Trade / Engineering / Exploration / Exobiology activity bar to the in-game HUD.
+- Reduced the activity selector width and made its selected label refresh immediately after a language change.
+- Engineering activity now opens a compact deficit/destination widget; the full assistant is reachable only from that widget while in-game.
+- Opening the full Engineering Assistant now captures overlay interaction and the cursor automatically; timeout and focus-loss return are suspended until the panel closes, then the previous interaction state is restored.
+- Replaced native GroupBox chrome in route filters with the orange application border style.
+- Replaced native WPF tabs in Settings with theme-aware headers, hover states, selected indicators, and content borders.
+- Converted shared control colors, font sizes, shadows, and list chrome to dynamic theme resources; added compatibility for legacy `ButtonBackground` theme files and automated theme-style coverage tests.
+- Applied the theme-aware tab templates to the full Engineering Assistant, removing native white hover and selected states.
+- Reworked the main HUD into a narrow vertical control stack and made it the sole in-game entry point for Settings.
+- Added explicit copy-system actions and an expandable per-material acquisition guide with every known method, destination, instructions, and external source.
+- Exposed copy-system and help actions for every missing material directly in the compact Engineering widget; its scrollable in-widget guide no longer requires opening the full assistant.
+- Added concrete per-material Elite Dangerous Wiki links, persistent standalone material tracking, and help/track actions to the full inventory table.
+- Replaced the Engineer progress-only table with an offline directory of all 38 ship and Odyssey Engineers, localized discovery/invitation/unlock stages, live Journal status, locations, copy-system actions, and individual Wiki pages.
+- Styled Engineering table hover/selection rows with theme resources and moved catalog loading/parsing off the UI thread with duplicate-refresh protection.
+- Removed the Engineering shortcut from the startup window and narrowed the vertical main HUD further; Engineering is now entered through activity navigation.
+- Activity selection now owns the primary workspace lifecycle, preventing route and Engineering windows from competing for visibility and placement.
+- Pinned trade routes remain visible while switching activities.
+- Pinned routes now show both origin and destination at all stages and expose separate copy-system and copy-station actions for each endpoint.
+- Added journal-backed starter workspaces for Exploration and Exobiology.
+- Added selectable Compact and Minimal chrome for side panels. The experimental perspective frame was removed after in-game evaluation.
+- Extended Minimal chrome to the main HUD, trade search, route results, and individual trade-route cards, including live updates after Apply.
+- Reorganized every user setting into Appearance, Overlay, Hotkeys, and Journal tabs.
+- Settings opened from the HUD now use a dedicated centered in-game overlay window.
+- Applying a theme no longer shows a blocking system confirmation dialog.
+
 ### Added
+- **Engineering Assistant foundation**
+  - Modular journal event hub for independent gameplay-domain consumers
+  - SQLite persistence for commander inventory, engineer progress, and wishlist
+  - Horizons, Backpack, and Ship Locker material tracking
+  - Coriolis blueprint/experimental recipe catalog with offline cache and starter fallback
+  - Wishlist requirement and deficit calculation
+  - Material acquisition guidance with specific HGE, mission, scanning, surface, and trader strategies
+  - Engineering window available from startup and tray menus
+  - Full in-game Engineering Assistant with live wishlist deficits (configurable, `Ctrl+2` by default)
+  - Pinned routes now participate in interactive mode, expose an unpin button, and support dragging
+  - Configurable pinned-route placement; middle-left is the new HUD-safe default
+  - Debounced global hotkeys so a held activity shortcut cannot immediately reopen its overlay
+  - Opposite-side docking when route and Engineering overlays are visible together
+  - Separate copy-system and copy-station actions on pinned routes
+  - Settings access from both compact overlays
+  - Concrete farming destinations for targeted raw and encoded materials, with fixed manufactured fallback sites
+  - Isolated test-project build directories to remove parallel MSBuild apphost races
 - **Global Hotkey System**: Ctrl+5 hotkey support for system-wide overlay control
   - Windows API RegisterHotKey implementation for system-wide hotkey registration
   - Ctrl+5 hotkey triggers the same toggle action as clicking the toggle button
@@ -208,3 +326,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coverage for both test scenarios and real Elite Dangerous integration
 
 
+# 2026-08-21 — Galaxy Map route handoff
+
+- Added a semi-automatic route action: copy the next imported waypoint, focus Elite, open Galaxy Map, select navigation search and paste the system; the player retains the final confirmation.
+- Added opt-in experimental automatic confirmation with focus-loss aborts and destination verification through `NavRoute.json`.
+- Active Galaxy Map, panel navigation and UI-select keys are detected from `StartPreset.4.start` and the matching `.binds` file, including Unicode preset names.
+- Added theme-aware settings for the experimental mode and conservative UI timing delays. Experimental automation is disabled by default.

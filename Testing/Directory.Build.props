@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Test projects share the Testing directory; isolate build artifacts so parallel
+         solution builds cannot overwrite each other's apphost and generated files. -->
+    <BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin\$(MSBuildProjectName)\</BaseOutputPath>
+    <DefaultItemExcludes>
+      $(DefaultItemExcludes);$(MSBuildThisFileDirectory)**\obj\**;$(MSBuildThisFileDirectory)**\bin\**
+    </DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

@@ -6,7 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ED_Inara_Overlay.Windows"
         mc:Ignorable="d"
-        Title="Trade Route Results" 
+        Title="{DynamicResource Loc_Route_search_results}"
         Height="500" Width="800"
         WindowStyle="None" 
         AllowsTransparency="True" 
@@ -20,7 +20,7 @@
 
     
     <!-- Main container with dark background and transparency -->
-    <Border Style="{StaticResource WindowBorderStyle}" Padding="6,4,6,6">
+    <Border x:Name="OverlayFrame" Style="{StaticResource WindowBorderStyle}" Padding="6,4,6,6">
         <Grid Margin="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -30,14 +30,14 @@
             <!-- Title Bar -->
             <Grid Grid.Row="0" Margin="0,0,0,4" Height="24">
                 <TextBlock x:Name="TitleLabel" 
-                          Text="Trade Route Results" 
+                          Text="{DynamicResource Loc_ROUTES_INARA}"
                           Style="{StaticResource HeaderTextStyle}"
                           FontSize="14"
                           Margin="0"
                           VerticalAlignment="Center"
                           HorizontalAlignment="Left"/>
                 <Button x:Name="CloseButton" 
-                       Content="x" 
+                       Content="×"
                        Width="24" Height="24"
                        HorizontalAlignment="Right"
                        Background="{DynamicResource ButtonBackgroundColorBrush}" 
@@ -48,7 +48,7 @@
             </Grid>
 
             <!-- Results Container -->
-            <Border Grid.Row="1" 
+            <Border x:Name="ResultsFrame" Grid.Row="1"
                    Background="{DynamicResource SecondaryBackgroundColorBrush}" 
                    BorderBrush="{DynamicResource BorderColorBrush}" 
                    BorderThickness="1" 
@@ -57,7 +57,7 @@
                              Style="{DynamicResource CustomScrollViewerStyle}"
                              VerticalScrollBarVisibility="Auto" 
                              HorizontalScrollBarVisibility="Disabled"
-                             Background="#550B0400">
+                             Background="{DynamicResource SecondaryBackgroundColorBrush}">
                     <StackPanel x:Name="ResultsPanel" 
                                Orientation="Vertical" 
                                Margin="8,6,8,40"/>

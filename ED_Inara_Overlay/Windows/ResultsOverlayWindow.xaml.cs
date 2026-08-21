@@ -6,6 +6,7 @@ using System.Windows.Media;
 using InaraTools;
 using Logger;
 using ED_Inara_Overlay.Utils;
+using ED_Inara_Overlay.Services;
 using ED_Inara_Overlay.UserControls;
 
 namespace ED_Inara_Overlay.Windows
@@ -24,6 +25,8 @@ namespace ED_Inara_Overlay.Windows
         private List<UserControl> tradeRouteControls = new List<UserControl>();
         private bool interactiveModeEnabled;
         private bool showCursorWhenInteractive;
+        private string chromeStyle = OverlayChromeStyles.Compact;
+        private List<TradeRoute> currentTradeRoutes = new();
 
         public ResultsOverlayWindow(MainWindow? parentWindow = null)
         {
@@ -31,16 +34,9 @@ namespace ED_Inara_Overlay.Windows
             Logger.Logger.Info("Initializing ResultsOverlayWindow");
             
             InitializeComponent();
+            SetChromeStyle(Services.SettingsService.Instance.Settings.OverlayChromeStyle);
             SetupOverlay();
             SetupUpdateTimer();
-            IsVisibleChanged += (s, e) =>
-            {
-                if (IsVisible)
-                {
-                    WindowsAPI.EnsureCursorVisibleOnWindow(this);
-                }
-            };
-            
             Logger.Logger.Info("ResultsOverlayWindow initialization complete");
         }
 
@@ -66,11 +62,29 @@ namespace ED_Inara_Overlay.Windows
             }
         }
 
+        public void SetChromeStyle(string? value)
+        {
+            chromeStyle = OverlayChromeStyles.Normalize(value);
+            OverlayChromeHelper.Apply(OverlayFrame, chromeStyle);
+            bool minimal = chromeStyle == OverlayChromeStyles.Minimal;
+            ResultsFrame.Background = minimal
+                ? Brushes.Transparent
+                : (Brush)FindResource("SecondaryBackgroundColorBrush");
+            ResultsFrame.BorderThickness = minimal ? new Thickness(0) : new Thickness(1);
+            ResultsScrollViewer.Background = minimal
+                ? Brushes.Transparent
+                : (Brush)FindResource("SecondaryBackgroundColorBrush");
+            foreach (TradeRouteCard card in tradeRouteControls.OfType<TradeRouteCard>())
+            {
+                card.SetChromeStyle(chromeStyle);
+            }
+        }
+
         private void SetupUpdateTimer()
         {
             updateTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(33) // ~30 FPS
+                Interval = TimeSpan.FromMilliseconds(100)
             };
             updateTimer.Tick += UpdateTimer_Tick;
             updateTimer.Start();
@@ -81,7 +95,7 @@ namespace ED_Inara_Overlay.Windows
             if (disposed || updateTimer == null)
                 return;
 
-            if (OverlayVisibilityState.SuppressAll)
+            if (OverlayVisibilityState.SuppressAll || OverlayVisibilityState.SuppressActivity)
             {
                 if (this.IsVisible)
                 {
@@ -146,7 +160,7 @@ namespace ED_Inara_Overlay.Windows
 
         private void PositionOverlay()
         {
-            if (!WindowsAPI.GetWindowRect(targetWindow, out WindowsAPI.RECT rect))
+            if (!WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT rect))
                 return;
 
             Rect workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
@@ -204,23 +218,7 @@ namespace ED_Inara_Overlay.Windows
         {
             Logger.Logger.Info("Results overlay close button clicked");
             Logger.Logger.LogUserAction("Results overlay closed by user");
-            
-            // Stop the update timer
-            if (updateTimer != null)
-            {
-                updateTimer.Stop();
-            }
-            
-            // Clear all trade route controls and their events
-            ClearTradeRouteControls();
-            
-            // Hide the window first
-            this.Hide();
-            
-            // Notify parent window that results are no longer active
-            parentMainWindow?.OnResultsWindowClosed();
-            
-            Logger.Logger.Info("Results overlay window properly closed");
+            Close();
         }
 
         public void DisplayTradeRoutes(List<TradeRoute> tradeRoutes)
@@ -228,11 +226,18 @@ namespace ED_Inara_Overlay.Windows
             if (disposed)
                 throw new ObjectDisposedException(nameof(ResultsOverlayWindow));
                 
+            currentTradeRoutes = tradeRoutes.ToList();
             ClearTradeRouteControls();
+
+            int displayCount = Math.Min(6, tradeRoutes.Count);
+            TitleLabel.Text = tradeRoutes.Count > displayCount
+                ? Loc.Format("Loc_Routes_Limited_Format", displayCount, tradeRoutes.Count)
+                : Loc.Format("Loc_Routes_Count_Format", tradeRoutes.Count);
 
             foreach (var tradeRoute in tradeRoutes.Take(6)) // Limit to 6 routes for performance
             {
                 var tradeRouteCard = new TradeRouteCard(tradeRoute);
+                tradeRouteCard.SetChromeStyle(chromeStyle);
                 
                 // Ensure card stretches to fill available width
                 tradeRouteCard.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -251,6 +256,14 @@ namespace ED_Inara_Overlay.Windows
             ResultsPanel.UpdateLayout();
             
             Logger.Logger.Info($"Displayed {tradeRouteControls.Count} trade routes in results overlay");
+        }
+
+        public void RefreshLocalization()
+        {
+            if (!disposed)
+            {
+                DisplayTradeRoutes(currentTradeRoutes);
+            }
         }
         
         private void OnPinRouteRequested(object? sender, TradeRoute tradeRoute)
@@ -316,9 +329,5 @@ namespace ED_Inara_Overlay.Windows
             }
         }
 
-        ~ResultsOverlayWindow()
-        {
-            Dispose();
-        }
     }
 }

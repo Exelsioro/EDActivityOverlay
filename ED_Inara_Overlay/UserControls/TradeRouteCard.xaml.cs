@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using InaraTools;
 using ED_Inara_Overlay.Utils;
+using ED_Inara_Overlay.Services;
 
 namespace ED_Inara_Overlay.UserControls
 {
@@ -20,6 +21,7 @@ namespace ED_Inara_Overlay.UserControls
     public partial class TradeRouteCard : UserControl
     {
         private TradeRoute? tradeRoute;
+        private string chromeStyle = OverlayChromeStyles.Compact;
         
         // Event for when pin route is clicked
         public event EventHandler<TradeRoute>? PinRouteRequested;
@@ -44,6 +46,23 @@ namespace ED_Inara_Overlay.UserControls
             this.TradeRoute = tradeRoute;
         }
 
+        public void SetChromeStyle(string? value)
+        {
+            chromeStyle = OverlayChromeStyles.Normalize(value);
+            bool minimal = chromeStyle == OverlayChromeStyles.Minimal;
+            OverlayChromeHelper.Apply(MainBorder, chromeStyle);
+            InnerBorder.BorderThickness = minimal ? new Thickness(0) : new Thickness(1);
+            InnerBorder.Margin = minimal ? new Thickness(0) : new Thickness(2);
+            InnerBorder.Opacity = minimal ? 1 : 0.7;
+            HeaderStrip.Background = minimal ? Brushes.Transparent : (Brush)FindResource("HighlightBackgroundBrush");
+            FooterStrip.Background = minimal ? Brushes.Transparent : (Brush)FindResource("HighlightBackgroundBrush");
+            HeaderStrip.BorderThickness = minimal ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 0, 1);
+            FooterStrip.BorderThickness = minimal ? new Thickness(0, 1, 0, 0) : new Thickness(0, 1, 0, 0);
+            ApplyDynamicChrome(ContentStackPanel);
+        }
+
+        public void RefreshLocalization() => PopulateContent();
+
         private void PopulateContent()
         {
             if (tradeRoute == null)
@@ -62,14 +81,15 @@ namespace ED_Inara_Overlay.UserControls
             this.MinHeight = tradeRoute.IsRoundTrip ? 220 : 140;
 
             // Add first leg
-            ContentStackPanel.Children.Add(BuildEliteDangerousLegSection(tradeRoute.FirstRoute, tradeRoute.CardHeader.FromStation, tradeRoute.CardHeader.ToStation, "PRIMARY ROUTE", true));
+            ContentStackPanel.Children.Add(BuildEliteDangerousLegSection(tradeRoute.FirstRoute, tradeRoute.CardHeader.FromStation, tradeRoute.CardHeader.ToStation, Loc.Get("Loc_Primary_Route"), true));
 
             // Add round trip leg if exists
             if (tradeRoute.IsRoundTrip && tradeRoute.SecondRoute != null)
             {
                 ContentStackPanel.Children.Add(CreateEliteDangerousSpacer());
-                ContentStackPanel.Children.Add(BuildEliteDangerousLegSection(tradeRoute.SecondRoute, tradeRoute.CardHeader.ToStation, tradeRoute.CardHeader.FromStation, "RETURN ROUTE", false));
+                ContentStackPanel.Children.Add(BuildEliteDangerousLegSection(tradeRoute.SecondRoute, tradeRoute.CardHeader.ToStation, tradeRoute.CardHeader.FromStation, Loc.Get("Loc_Return_Route"), false));
             }
+            ApplyDynamicChrome(ContentStackPanel);
         }
 
         #region Elite Dangerous Inspired UI Methods
@@ -79,18 +99,18 @@ namespace ED_Inara_Overlay.UserControls
             if (tradeRoute == null) return;
 
             // Update route type
-            RouteTypeLabel.Text = tradeRoute.IsRoundTrip ? "ROUND TRIP ROUTE" : "ONE-WAY ROUTE";
+            RouteTypeLabel.Text = tradeRoute.IsRoundTrip ? Loc.Get("Loc_Round_Trip_Route") : Loc.Get("Loc_One_Way_Route");
 
             // Update distance
-            DistanceLabel.Text = $"{tradeRoute.TotalRouteDistance:F1} LY";
+            DistanceLabel.Text = Loc.Format("Loc_Distance_Ly_Format", tradeRoute.TotalRouteDistance);
 
             // Update last update
             LastUpdateLabel.Text = string.IsNullOrEmpty(tradeRoute.LastUpdate) ? 
-                "Last updated: Unknown" : 
-                $"Last updated: {tradeRoute.LastUpdate}";
+                Loc.Get("Loc_Last_Updated_Unknown") :
+                Loc.Format("Loc_Last_Updated_Format", tradeRoute.LastUpdate);
 
             // Update total profit
-            TotalProfitLabel.Text = $"{tradeRoute.TotalProfitPerTrip:N0} CR";
+            TotalProfitLabel.Text = Loc.Format("Loc_Credits_Format", tradeRoute.TotalProfitPerTrip);
         }
 
         private UIElement BuildEliteDangerousLegSection(TradeLeg leg, Station fromStation, Station toStation, string routeTitle, bool isPrimary)
@@ -123,6 +143,7 @@ namespace ED_Inara_Overlay.UserControls
           
             var border = new Border
             {
+                Tag = "SectionHeader",
                 BorderThickness = new Thickness(0, 0, 0, 2),
                 Padding = new Thickness(6, 3, 6, 3),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -146,6 +167,7 @@ namespace ED_Inara_Overlay.UserControls
         {
             var border = new Border
             {
+                Tag = "DetailSurface",
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(8),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -159,7 +181,7 @@ namespace ED_Inara_Overlay.UserControls
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Destination
 
             // From station
-            var fromPanel = CreateStationPanel("ORIGIN", fromStation, true);
+            var fromPanel = CreateStationPanel(Loc.Get("Loc_Origin"), fromStation, true);
             Grid.SetColumn(fromPanel, 0);
             grid.Children.Add(fromPanel);
 
@@ -179,7 +201,7 @@ namespace ED_Inara_Overlay.UserControls
             grid.Children.Add(arrow);
 
             // To station  
-            var toPanel = CreateStationPanel("DESTINATION", toStation, false);
+            var toPanel = CreateStationPanel(Loc.Get("Loc_Destination"), toStation, false);
             Grid.SetColumn(toPanel, 2);
             grid.Children.Add(toPanel);
 
@@ -237,7 +259,7 @@ namespace ED_Inara_Overlay.UserControls
             // Distance from star
             var distanceText = new TextBlock
             {
-                Text = $"{station.DistanceFromStar:F0} LS",
+                Text = Loc.Format("Loc_Distance_Ls_Format", station.DistanceFromStar),
                 FontSize = 10,
                 FontFamily = new FontFamily("Segoe UI"),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -266,17 +288,7 @@ namespace ED_Inara_Overlay.UserControls
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Cursor = Cursors.Hand
             };
-            textBlock.SetResourceReference(TextBlock.ForegroundProperty, "SuccessColorBrush");
-
-            // Add hover effect
-            textBlock.MouseEnter += (s, e) => {
-                textBlock.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xB4, 0xFF));
-                textBlock.TextDecorations = TextDecorations.Underline;
-            };
-            textBlock.MouseLeave += (s, e) => {
-                textBlock.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x00));
-                textBlock.TextDecorations = null;
-            };
+            textBlock.SetResourceReference(FrameworkElement.StyleProperty, "ClickableTextStyle");
 
             // Add click handler for clipboard
             textBlock.MouseLeftButtonUp += (s, e) => CopyToClipboard(systemName);
@@ -288,6 +300,7 @@ namespace ED_Inara_Overlay.UserControls
         {
             var border = new Border
             {
+                Tag = "DetailSurface",
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(8),
                 Margin = new Thickness(0, 0, 0, 6)
@@ -301,28 +314,56 @@ namespace ED_Inara_Overlay.UserControls
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             // Commodity name
-            var commodityPanel = CreateInfoField("COMMODITY", leg.BuyCommodity.Name, Color.FromRgb(0xFF, 0xFF, 0xFF));
+            var commodityPanel = CreateInfoField(Loc.Get("Loc_Commodity"), leg.BuyCommodity.Name, Color.FromRgb(0xFF, 0xFF, 0xFF));
             Grid.SetColumn(commodityPanel, 0);
             grid.Children.Add(commodityPanel);
 
             // Buy price
-            var buyPricePanel = CreateInfoField("BUY", $"{leg.BuyCommodity.Price:N0} CR", Color.FromRgb(0xFF, 0x80, 0x80));
+            var buyPricePanel = CreateInfoField(Loc.Get("Loc_Buy"), Loc.Format("Loc_Credits_Format", leg.BuyCommodity.Price), Color.FromRgb(0xFF, 0x80, 0x80));
             Grid.SetColumn(buyPricePanel, 1);
             grid.Children.Add(buyPricePanel);
 
             // Sell price
-            var sellPricePanel = CreateInfoField("SELL", $"{leg.SellCommodity.Price:N0} CR", Color.FromRgb(0x80, 0xFF, 0x80));
+            var sellPricePanel = CreateInfoField(Loc.Get("Loc_Sell"), Loc.Format("Loc_Credits_Format", leg.SellCommodity.Price), Color.FromRgb(0x80, 0xFF, 0x80));
             Grid.SetColumn(sellPricePanel, 2);
             grid.Children.Add(sellPricePanel);
 
             // Profit
             var profit = leg.SellCommodity.Price - leg.BuyCommodity.Price;
-            var profitPanel = CreateInfoField("PROFIT", $"{profit:N0} CR", Color.FromRgb(0x00, 0xFF, 0x00));
+            var profitPanel = CreateInfoField(Loc.Get("Loc_Profit"), Loc.Format("Loc_Credits_Format", profit), Color.FromRgb(0x00, 0xFF, 0x00));
             Grid.SetColumn(profitPanel, 3);
             grid.Children.Add(profitPanel);
 
             border.Child = grid;
             return border;
+        }
+
+        private void ApplyDynamicChrome(DependencyObject root)
+        {
+            bool minimal = chromeStyle == OverlayChromeStyles.Minimal;
+            for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(root, index);
+                if (child is Border border && border.Tag is string role)
+                {
+                    if (minimal)
+                    {
+                        border.Background = Brushes.Transparent;
+                        border.BorderThickness = role == "SectionHeader"
+                            ? new Thickness(0, 0, 0, 1)
+                            : new Thickness(0);
+                    }
+                    else
+                    {
+                        border.SetResourceReference(Border.BackgroundProperty,
+                            role == "SectionHeader" ? "PrimaryBackgroundColorBrush" : "SecondaryBackgroundColorBrush");
+                        border.BorderThickness = role == "SectionHeader"
+                            ? new Thickness(0, 0, 0, 2)
+                            : new Thickness(1);
+                    }
+                }
+                ApplyDynamicChrome(child);
+            }
         }
 
         private UIElement CreateInfoField(string label, string value, Color valueColor)
@@ -427,7 +468,7 @@ namespace ED_Inara_Overlay.UserControls
                 if (button != null)
                 {
                     var originalContent = button.Content;
-                    button.Content = "✓ PINNED";
+                    button.Content = Loc.Get("Loc_Pinned_Check");
                     button.IsEnabled = false;
                     
                     // Reset after brief delay

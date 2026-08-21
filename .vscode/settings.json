@@ -1,0 +1,17 @@
+{
+    "dotnet.defaultSolution": "ED_Inara_Overlay/ED_Inara_Overlay.sln",
+    "files.watcherExclude": {
+        "**/bin/**": true,
+        "**/obj/**": true,
+        "**/*_wpftmp.csproj": true
+    },
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/*_wpftmp.csproj": true
+    },
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true
+    }
+}

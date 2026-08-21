@@ -6,6 +6,11 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!-- The default catalog is declared here so Visual Studio's XAML
+                     designer and IntelliSense can resolve Loc_* resources. At
+                     runtime LocalizationService replaces it with the language
+                     selected in Settings. -->
+                <ResourceDictionary Source="Resources/Localization.ru-RU.xaml"/>
                 <ResourceDictionary Source="Resources/UIStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

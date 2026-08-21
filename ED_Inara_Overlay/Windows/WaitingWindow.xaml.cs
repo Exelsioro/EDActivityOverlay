@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using ED_Inara_Overlay.Utils;
+using ED_Inara_Overlay.Services;
 
 namespace ED_Inara_Overlay.Windows
 {
@@ -127,9 +128,8 @@ namespace ED_Inara_Overlay.Windows
             // Show different status based on target process availability
             if (targetProcessRunning)
             {
-                StatusText.Text = "Elite Dangerous detected! Ready to start overlay.";
-                StatusText.Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0, 255, 0)); // Green
+                StatusText.Text = Loc.Get("Loc_Elite_Dangerous_detected_The_overlay_is_ready");
+                StatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessColorBrush");
             }
             else
             {
@@ -143,9 +143,8 @@ namespace ED_Inara_Overlay.Windows
                     _ => "..."
                 };
                 
-                StatusText.Text = $"Welcome, commander{dots}";
-                StatusText.Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(255, 255, 255)); // White
+                StatusText.Text = Loc.Format("Loc_Welcome_Commander_Format", dots);
+                StatusText.Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextColorBrush");
             }
         }
         
@@ -153,15 +152,16 @@ namespace ED_Inara_Overlay.Windows
         {
             if (startRequested)
             {
-                StatusText.Text = "Target application found! Starting overlay...";
+                StatusText.Text = Loc.Get("Loc_Game_found_Starting_overlay");
             }
             else
             {
-                StatusText.Text = "Target application found! Click 'Start Overlay' to proceed.";
+                StatusText.Text = Loc.Get("Loc_Game_found_Click_Start_to_continue");
             }
-            StatusText.Foreground = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0, 255, 0)); // Green
+            StatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessColorBrush");
         }
+
+        public void RefreshLocalization() => UpdateStatus();
         
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
@@ -183,8 +183,10 @@ namespace ED_Inara_Overlay.Windows
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            var settingsWindow = new SettingsWindow();
-            settingsWindow.ShowDialog();
+            if (Application.Current is App app)
+            {
+                app.ShowSettingsWindow();
+            }
         }
 
         private void KofiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -221,9 +223,8 @@ namespace ED_Inara_Overlay.Windows
                 return;
             }
 
-            StatusText.Text = "Waiting for target process. Overlay will start automatically.";
-            StatusText.Foreground = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(255, 255, 255));
+            StatusText.Text = Loc.Get("Loc_Waiting_for_the_game_The_overlay_will_start_automatically");
+            StatusText.Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextColorBrush");
 
             if (Application.Current is App app)
             {

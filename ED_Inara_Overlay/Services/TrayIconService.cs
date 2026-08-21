@@ -14,10 +14,12 @@ namespace ED_Inara_Overlay.Services
     {
         private TaskbarIcon? taskbarIcon;
         private MenuItem? openItem;
+        private MenuItem? engineeringItem;
         private MenuItem? settingsItem;
         private MenuItem? exitItem;
 
         public event EventHandler? OpenRequested;
+        public event EventHandler? EngineeringRequested;
         public event EventHandler? SettingsRequested;
         public event EventHandler? ExitRequested;
 
@@ -28,17 +30,21 @@ namespace ED_Inara_Overlay.Services
                 return;
             }
 
-            openItem = new MenuItem { Header = "Open Control Window" };
+            openItem = new MenuItem { Header = Loc.Get("Loc_Open_control_window") };
             openItem.Click += OpenItem_Click;
 
-            settingsItem = new MenuItem { Header = "Settings" };
+            engineeringItem = new MenuItem { Header = Loc.Get("Loc_Engineering_assistant") };
+            engineeringItem.Click += EngineeringItem_Click;
+
+            settingsItem = new MenuItem { Header = Loc.Get("Loc_Settings") };
             settingsItem.Click += SettingsItem_Click;
 
-            exitItem = new MenuItem { Header = "Exit" };
+            exitItem = new MenuItem { Header = Loc.Get("Loc_Exit") };
             exitItem.Click += ExitItem_Click;
 
             var menu = new ContextMenu();
             menu.Items.Add(openItem);
+            menu.Items.Add(engineeringItem);
             menu.Items.Add(settingsItem);
             menu.Items.Add(new Separator());
             menu.Items.Add(exitItem);
@@ -61,8 +67,16 @@ namespace ED_Inara_Overlay.Services
 
             taskbarIcon.ShowBalloonTip(
                 "ED Inara Overlay",
-                "Overlay is running in tray. If the game is not detected yet, it keeps waiting. Use tray menu to exit.",
+                Loc.Get("Loc_The_overlay_is_running_in_the_tray_and_is_waiting_for_the_game_Use_the_tray_menu_to_exit"),
                 BalloonIcon.Info);
+        }
+
+        public void RefreshLocalization()
+        {
+            if (openItem != null) openItem.Header = Loc.Get("Loc_Open_control_window");
+            if (engineeringItem != null) engineeringItem.Header = Loc.Get("Loc_Engineering_assistant");
+            if (settingsItem != null) settingsItem.Header = Loc.Get("Loc_Settings");
+            if (exitItem != null) exitItem.Header = Loc.Get("Loc_Exit");
         }
 
         public void Dispose()
@@ -78,6 +92,12 @@ namespace ED_Inara_Overlay.Services
             {
                 openItem.Click -= OpenItem_Click;
                 openItem = null;
+            }
+
+            if (engineeringItem != null)
+            {
+                engineeringItem.Click -= EngineeringItem_Click;
+                engineeringItem = null;
             }
 
             if (exitItem != null)
@@ -139,6 +159,11 @@ namespace ED_Inara_Overlay.Services
         private void SettingsItem_Click(object? sender, EventArgs e)
         {
             SettingsRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void EngineeringItem_Click(object? sender, EventArgs e)
+        {
+            EngineeringRequested?.Invoke(this, EventArgs.Empty);
         }
     }
 }

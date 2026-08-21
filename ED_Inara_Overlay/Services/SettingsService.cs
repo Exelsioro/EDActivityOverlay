@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using ED_Inara_Overlay.Models;
+using ED_Inara_Overlay.Utils;
 
 namespace ED_Inara_Overlay.Services
 {
@@ -47,6 +48,20 @@ namespace ED_Inara_Overlay.Services
                     var settings = JsonSerializer.Deserialize<AppSettings>(json);
                     if (settings != null)
                     {
+                        using JsonDocument legacy = JsonDocument.Parse(json);
+                        JsonElement root = legacy.RootElement;
+                        if (!root.TryGetProperty(nameof(AppSettings.MiningHotkeyModifiers), out _)
+                            && root.TryGetProperty("ExobiologyHotkeyModifiers", out JsonElement oldModifiers))
+                        {
+                            settings.MiningHotkeyModifiers = oldModifiers.GetString() ?? settings.MiningHotkeyModifiers;
+                        }
+                        if (!root.TryGetProperty(nameof(AppSettings.MiningHotkeyKey), out _)
+                            && root.TryGetProperty("ExobiologyHotkeyKey", out JsonElement oldKey))
+                        {
+                            settings.MiningHotkeyKey = oldKey.GetString() ?? settings.MiningHotkeyKey;
+                        }
+                        settings.OverlayChromeStyle = OverlayChromeStyles.Normalize(settings.OverlayChromeStyle);
+                        settings.ExplorationSpoilerMode = ExplorationSpoilerModes.Normalize(settings.ExplorationSpoilerMode);
                         Logger.Logger.Info($"Settings loaded from {_settingsFilePath}");
                         return settings;
                     }
@@ -150,6 +165,32 @@ namespace ED_Inara_Overlay.Services
             return (_settings.InteractiveHotkeyModifiers, _settings.InteractiveHotkeyKey);
         }
 
+        public void SetActivityHotkeys(
+            string tradeModifiers, string tradeKey,
+            string engineeringModifiers, string engineeringKey,
+            string explorationModifiers, string explorationKey,
+            string miningModifiers, string miningKey)
+        {
+            if (_settings.TradeHotkeyModifiers == tradeModifiers && _settings.TradeHotkeyKey == tradeKey
+                && _settings.EngineeringHotkeyModifiers == engineeringModifiers && _settings.EngineeringHotkeyKey == engineeringKey
+                && _settings.ExplorationHotkeyModifiers == explorationModifiers && _settings.ExplorationHotkeyKey == explorationKey
+                && _settings.MiningHotkeyModifiers == miningModifiers && _settings.MiningHotkeyKey == miningKey)
+            {
+                return;
+            }
+
+            _settings.TradeHotkeyModifiers = tradeModifiers;
+            _settings.TradeHotkeyKey = tradeKey;
+            _settings.EngineeringHotkeyModifiers = engineeringModifiers;
+            _settings.EngineeringHotkeyKey = engineeringKey;
+            _settings.ExplorationHotkeyModifiers = explorationModifiers;
+            _settings.ExplorationHotkeyKey = explorationKey;
+            _settings.MiningHotkeyModifiers = miningModifiers;
+            _settings.MiningHotkeyKey = miningKey;
+            SaveSettings();
+            Logger.Logger.Info("Activity selection hotkeys updated");
+        }
+
         /// <summary>
         /// Update interactive mode behavior settings.
         /// </summary>
@@ -176,6 +217,181 @@ namespace ED_Inara_Overlay.Services
                 $"Interaction settings updated: enabled={enableInteractionMode}, timeout={autoReturnTimeoutSeconds}s, returnOnFocusLoss={returnOnFocusLoss}, showCursor={showCursorWhenInteractive}");
         }
 
+        public void SetNotificationSettings(bool enabled, int durationSeconds)
+        {
+            durationSeconds = Math.Clamp(durationSeconds, 2, 30);
+            if (_settings.EnableOverlayNotifications == enabled
+                && _settings.NotificationDurationSeconds == durationSeconds)
+            {
+                return;
+            }
+
+            _settings.EnableOverlayNotifications = enabled;
+            _settings.NotificationDurationSeconds = durationSeconds;
+            SaveSettings();
+            Logger.Logger.Info($"Notification settings updated: enabled={enabled}, duration={durationSeconds}s");
+        }
+
+        public void SetShipStatusWidgetSettings(bool enabled, string position)
+        {
+            position = string.IsNullOrWhiteSpace(position) ? "TopCenter" : position;
+            if (_settings.EnableShipStatusWidget == enabled
+                && string.Equals(_settings.ShipStatusWidgetPosition, position, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            _settings.EnableShipStatusWidget = enabled;
+            _settings.ShipStatusWidgetPosition = position;
+            SaveSettings();
+            Logger.Logger.Info($"Ship status widget settings updated: enabled={enabled}, position={position}");
+        }
+
+        public void SetPinnedRoutePosition(string position)
+        {
+            if (string.Equals(_settings.PinnedRoutePosition, position, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.PinnedRoutePosition = position;
+            SaveSettings();
+            Logger.Logger.Info($"Pinned route position updated to: {position}");
+        }
+
+        public void SetOverlayChromeStyle(string style)
+        {
+            string normalized = OverlayChromeStyles.Normalize(style);
+            if (string.Equals(_settings.OverlayChromeStyle, normalized, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _settings.OverlayChromeStyle = normalized;
+            SaveSettings();
+            Logger.Logger.Info($"Overlay chrome style updated to: {normalized}");
+        }
+
+        public void SetJournalSettings(bool enabled, string directory)
+        {
+            directory = directory?.Trim() ?? string.Empty;
+            if (_settings.EnableJournalIntegration == enabled
+                && string.Equals(_settings.JournalDirectory, directory, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.EnableJournalIntegration = enabled;
+            _settings.JournalDirectory = directory;
+            SaveSettings();
+            Logger.Logger.Info($"Journal settings updated: enabled={enabled}, customDirectory={!string.IsNullOrWhiteSpace(directory)}");
+        }
+
+        public void SetExplorationDataSettings(
+            bool enabled,
+            bool edsmFallback,
+            int cacheHours,
+            string spoilerMode,
+            bool poiEnabled,
+            int poiMinRating)
+        {
+            cacheHours = Math.Clamp(cacheHours, 1, 720);
+            poiMinRating = Math.Clamp(poiMinRating, 0, 10);
+            spoilerMode = ExplorationSpoilerModes.Normalize(spoilerMode);
+            if (_settings.EnableOnlineExplorationData == enabled
+                && _settings.EnableEdsmFallback == edsmFallback
+                && _settings.ExplorationCacheHours == cacheHours
+                && _settings.ExplorationSpoilerMode == spoilerMode
+                && _settings.EnableExplorationPoiData == poiEnabled
+                && _settings.ExplorationPoiMinRating == poiMinRating)
+            {
+                return;
+            }
+            _settings.EnableOnlineExplorationData = enabled;
+            _settings.EnableEdsmFallback = edsmFallback;
+            _settings.ExplorationCacheHours = cacheHours;
+            _settings.ExplorationSpoilerMode = spoilerMode;
+            _settings.EnableExplorationPoiData = poiEnabled;
+            _settings.ExplorationPoiMinRating = poiMinRating;
+            SaveSettings();
+            Logger.Logger.Info($"Exploration data settings updated: enabled={enabled}, edsmFallback={edsmFallback}, cacheHours={cacheHours}, spoilers={spoilerMode}, poi={poiEnabled}, poiRating={poiMinRating}");
+        }
+
+        public void SetDssGuidanceSettings(int efficiencyTarget)
+        {
+            efficiencyTarget = Math.Clamp(efficiencyTarget, 2, 12);
+            if (_settings.DssEfficiencyTarget == efficiencyTarget)
+            {
+                return;
+            }
+            _settings.DssEfficiencyTarget = efficiencyTarget;
+            SaveSettings();
+            Logger.Logger.Info($"DSS guidance settings updated: target={efficiencyTarget}");
+        }
+
+        public void SetExplorationRoutePanelState(bool formCollapsed, bool routeCollapsed)
+        {
+            if (_settings.ExplorationRouteFormCollapsed == formCollapsed
+                && _settings.ExplorationRouteListCollapsed == routeCollapsed)
+            {
+                return;
+            }
+            _settings.ExplorationRouteFormCollapsed = formCollapsed;
+            _settings.ExplorationRouteListCollapsed = routeCollapsed;
+            SaveSettings();
+        }
+
+        public void SetRouteAutomationSettings(bool experimentalEnabled, string bindingsPreset, int mapDelayMs, int stepDelayMs, int verificationSeconds)
+        {
+            bindingsPreset = bindingsPreset?.Trim() ?? string.Empty;
+            mapDelayMs = Math.Clamp(mapDelayMs, 3000, 15000);
+            stepDelayMs = Math.Clamp(stepDelayMs, 100, 2000);
+            verificationSeconds = Math.Clamp(verificationSeconds, 5, 30);
+            if (_settings.EnableExperimentalRouteAutomation == experimentalEnabled
+                && string.Equals(_settings.EliteBindingsPreset, bindingsPreset, StringComparison.OrdinalIgnoreCase)
+                && _settings.RouteAutomationMapDelayMs == mapDelayMs
+                && _settings.RouteAutomationStepDelayMs == stepDelayMs
+                && _settings.RouteAutomationVerificationSeconds == verificationSeconds)
+            {
+                return;
+            }
+            _settings.EnableExperimentalRouteAutomation = experimentalEnabled;
+            _settings.EliteBindingsPreset = bindingsPreset;
+            _settings.RouteAutomationMapDelayMs = mapDelayMs;
+            _settings.RouteAutomationStepDelayMs = stepDelayMs;
+            _settings.RouteAutomationVerificationSeconds = verificationSeconds;
+            SaveSettings();
+            Logger.Logger.Info($"Route automation settings updated: experimental={experimentalEnabled}, preset={bindingsPreset}, mapDelay={mapDelayMs}, stepDelay={stepDelayMs}, verify={verificationSeconds}");
+        }
+
+        public void SetX52Settings(bool enabled, bool mfd, bool leds, bool mfdControls)
+        {
+            if (_settings.EnableX52Support == enabled
+                && _settings.EnableX52Mfd == mfd
+                && _settings.EnableX52LedState == leds
+                && _settings.EnableX52MfdControls == mfdControls)
+            {
+                return;
+            }
+            _settings.EnableX52Support = enabled;
+            _settings.EnableX52Mfd = mfd;
+            _settings.EnableX52LedState = leds;
+            _settings.EnableX52MfdControls = mfdControls;
+            SaveSettings();
+            Logger.Logger.Info($"X52 settings updated: enabled={enabled}, mfd={mfd}, leds={leds}, controls={mfdControls}");
+        }
+
+        public void SetLanguage(string language)
+        {
+            string normalized = LocalizationService.Normalize(language);
+            if (string.Equals(_settings.Language, normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.Language = normalized;
+            SaveSettings();
+        }
+
         /// <summary>
         /// Reset settings to default values
         /// </summary>
@@ -193,9 +409,14 @@ namespace ED_Inara_Overlay.Services
     public class AppSettings
     {
         /// <summary>
+        /// UI culture loaded from Resources/Localization.&lt;culture&gt;.xaml.
+        /// </summary>
+        public string Language { get; set; } = "ru-RU";
+
+        /// <summary>
         /// Currently selected theme name
         /// </summary>
-        public string SelectedTheme { get; set; } = "Default";
+        public string SelectedTheme { get; set; } = "Default Orange";
 
         /// <summary>
         /// Application version when settings were last saved
@@ -246,6 +467,101 @@ namespace ED_Inara_Overlay.Services
         /// Interactive mode hotkey key value.
         /// </summary>
         public string InteractiveHotkeyKey { get; set; } = "D6";
+
+        public string TradeHotkeyModifiers { get; set; } = "Ctrl";
+        public string TradeHotkeyKey { get; set; } = "D1";
+        public string EngineeringHotkeyModifiers { get; set; } = "Ctrl";
+        public string EngineeringHotkeyKey { get; set; } = "D2";
+        public string ExplorationHotkeyModifiers { get; set; } = "Ctrl";
+        public string ExplorationHotkeyKey { get; set; } = "D3";
+        public string MiningHotkeyModifiers { get; set; } = "Ctrl";
+        public string MiningHotkeyKey { get; set; } = "D4";
+
+        /// <summary>Displays non-interactive journal notifications over the game.</summary>
+        public bool EnableOverlayNotifications { get; set; } = true;
+
+        /// <summary>Lifetime of an overlay notification in seconds.</summary>
+        public int NotificationDurationSeconds { get; set; } = 6;
+
+        /// <summary>Shows persistent route context and active ship advisories.</summary>
+        public bool EnableShipStatusWidget { get; set; } = true;
+
+        /// <summary>Placement of the shared ship status widget.</summary>
+        public string ShipStatusWidgetPosition { get; set; } = "TopCenter";
+
+        /// <summary>
+        /// Placement of the compact pinned route relative to the game window.
+        /// </summary>
+        public string PinnedRoutePosition { get; set; } = "MiddleLeft";
+
+        /// <summary>
+        /// Visual shell used by compact in-game panels: Compact or Minimal.
+        /// </summary>
+        public string OverlayChromeStyle { get; set; } = OverlayChromeStyles.Compact;
+
+        /// <summary>
+        /// Reads the local Elite Dangerous Player Journal and companion files.
+        /// </summary>
+        public bool EnableJournalIntegration { get; set; } = true;
+
+        /// <summary>
+        /// Optional custom Journal directory. Empty uses the Windows Saved Games folder.
+        /// </summary>
+        public string JournalDirectory { get; set; } = string.Empty;
+
+        /// <summary>Enriches the current system from public community APIs.</summary>
+        public bool EnableOnlineExplorationData { get; set; } = true;
+
+        /// <summary>Uses EDSM when Spansh has no data or is unavailable.</summary>
+        public bool EnableEdsmFallback { get; set; } = true;
+
+        /// <summary>Lifetime of a successful current-system response in the local cache.</summary>
+        public int ExplorationCacheHours { get; set; } = 168;
+
+        /// <summary>Controls whether community data may reveal bodies not personally scanned.</summary>
+        public string ExplorationSpoilerMode { get; set; } = ExplorationSpoilerModes.EnrichScanned;
+
+        /// <summary>Shows nearby curated Galactic Exploration Catalog locations.</summary>
+        public bool EnableExplorationPoiData { get; set; } = true;
+
+        /// <summary>Minimum EDAstro GEC explorer rating accepted for nearby POIs.</summary>
+        public int ExplorationPoiMinRating { get; set; } = 4;
+
+        /// <summary>Manual efficiency target shown by the in-game DSS HUD.</summary>
+        public int DssEfficiencyTarget { get; set; } = 6;
+
+        /// <summary>Remembers whether the Spansh input form is folded in the full workspace.</summary>
+        public bool ExplorationRouteFormCollapsed { get; set; }
+
+        /// <summary>Remembers whether the imported route list is folded in the full workspace.</summary>
+        public bool ExplorationRouteListCollapsed { get; set; }
+
+        /// <summary>Allows the app to select a Galaxy Map result and hold UI Select to plot it.</summary>
+        public bool EnableExperimentalRouteAutomation { get; set; }
+
+        /// <summary>Optional controls preset override. Empty follows StartPreset.4.start.</summary>
+        public string EliteBindingsPreset { get; set; } = string.Empty;
+
+        /// <summary>Wait after opening Galaxy Map before navigating its UI.</summary>
+        public int RouteAutomationMapDelayMs { get; set; } = 6000;
+
+        /// <summary>Wait between Galaxy Map UI input steps.</summary>
+        public int RouteAutomationStepDelayMs { get; set; } = 350;
+
+        /// <summary>Maximum wait for the requested destination to appear in NavRoute.json.</summary>
+        public int RouteAutomationVerificationSeconds { get; set; } = 15;
+
+        /// <summary>Enables optional Logitech X52 Pro DirectOutput integration.</summary>
+        public bool EnableX52Support { get; set; }
+
+        /// <summary>Shows journal and activity state on the X52 Pro MFD.</summary>
+        public bool EnableX52Mfd { get; set; } = true;
+
+        /// <summary>Reflects ship state on the X52 Pro LEDs.</summary>
+        public bool EnableX52LedState { get; set; } = true;
+
+        /// <summary>Uses the MFD wheel to switch and toggle activity widgets.</summary>
+        public bool EnableX52MfdControls { get; set; } = true;
     }
 
     /// <summary>

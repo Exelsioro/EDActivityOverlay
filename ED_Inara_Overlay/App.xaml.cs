@@ -3,6 +3,11 @@ using System.Windows;
 using ED_Inara_Overlay.Windows;
 using ED_Inara_Overlay.Utils;
 using ED_Inara_Overlay.Services;
+using ED_Inara_Overlay.Services.Engineering;
+using ED_Inara_Overlay.Services.Exploration;
+using ED_Inara_Overlay.Services.Journal;
+using ED_Inara_Overlay.Services.Notifications;
+using ED_Inara_Overlay.Services.Hardware;
 using System.Runtime.Versioning;
 using System.Windows.Threading;
 
@@ -18,6 +23,11 @@ namespace ED_Inara_Overlay
         private WaitingWindow? waitingWindow;
         private MainWindow? mainWindow;
         private TrayIconService? trayIconService;
+        private EngineeringWindow? engineeringWindow;
+        private SettingsWindow? settingsWindow;
+
+        internal SettingsWindow? ActiveOverlaySettingsWindow =>
+            settingsWindow is { IsLoaded: true, IsOverlayMode: true } ? settingsWindow : null;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -29,7 +39,24 @@ namespace ED_Inara_Overlay
             }
 
             Logger.Logger.Info($"Application starting with target process: {targetProcessName}");
+            LocalizationService.Instance.Initialize(SettingsService.Instance.Settings.Language);
             InitializeTrayIcon();
+
+            var settings = SettingsService.Instance.Settings;
+            EngineeringService.Instance.Start();
+            NotificationCenterService.Instance.Start();
+            ExplorationDataService.Instance.Start();
+            ExplorationHistoryService.Instance.Start(settings.JournalDirectory);
+            ExplorationEarningsService.Instance.Start(settings.JournalDirectory);
+            ExplorationLogService.Instance.Start();
+            ExplorationRouteService.Instance.Start();
+            ExplorationPoiService.Instance.Start();
+            X52IntegrationService.Instance.Start();
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+            if (settings.EnableJournalIntegration)
+            {
+                JournalMonitorService.Instance.Start(settings.JournalDirectory);
+            }
 
             // Initialize theme system
             try
@@ -123,8 +150,8 @@ namespace ED_Inara_Overlay
                 
                 // Show error message and shutdown
                 MessageBox.Show(
-                    $"Failed to start overlay: {ex.Message}", 
-                    "ED Inara Overlay Error", 
+                    Loc.Format("Loc_Failed_to_start_overlay_0", ex.Message),
+                    Loc.Get("Loc_ED_Inara_Overlay_Error"),
                     MessageBoxButton.OK, 
                     MessageBoxImage.Error);
                 
@@ -154,14 +181,39 @@ namespace ED_Inara_Overlay
                     mainWindow = null;
                 }
 
+                if (engineeringWindow != null)
+                {
+                    engineeringWindow.Close();
+                    engineeringWindow = null;
+                }
+
+                if (settingsWindow != null)
+                {
+                    settingsWindow.Close();
+                    settingsWindow = null;
+                }
+
                 if (trayIconService != null)
                 {
                     trayIconService.OpenRequested -= OnTrayOpenRequested;
+                    trayIconService.EngineeringRequested -= OnTrayEngineeringRequested;
                     trayIconService.SettingsRequested -= OnTraySettingsRequested;
                     trayIconService.ExitRequested -= OnTrayExitRequested;
                     trayIconService.Dispose();
                     trayIconService = null;
                 }
+
+                EngineeringService.Instance.Dispose();
+                NotificationCenterService.Instance.Dispose();
+                ExplorationDataService.Instance.Dispose();
+                ExplorationHistoryService.Instance.Dispose();
+                ExplorationEarningsService.Instance.Dispose();
+                ExplorationLogService.Instance.Dispose();
+                ExplorationRouteService.Instance.Dispose();
+                ExplorationPoiService.Instance.Dispose();
+                X52IntegrationService.Instance.Dispose();
+                JournalMonitorService.Instance.Dispose();
+                LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
                 
                 Logger.Logger.Info("Application exit cleanup completed");
             }
@@ -176,6 +228,7 @@ namespace ED_Inara_Overlay
         {
             trayIconService = new TrayIconService();
             trayIconService.OpenRequested += OnTrayOpenRequested;
+            trayIconService.EngineeringRequested += OnTrayEngineeringRequested;
             trayIconService.SettingsRequested += OnTraySettingsRequested;
             trayIconService.ExitRequested += OnTrayExitRequested;
             trayIconService.Initialize();
@@ -196,13 +249,101 @@ namespace ED_Inara_Overlay
             Shutdown();
         }
 
+        private void OnLanguageChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                EngineeringService.Instance.RefreshLocalization();
+                trayIconService?.RefreshLocalization();
+                waitingWindow?.RefreshLocalization();
+                mainWindow?.RefreshLocalization();
+                engineeringWindow?.RefreshLocalization();
+            });
+        }
+
+        private void OnTrayEngineeringRequested(object? sender, EventArgs e)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(ShowEngineeringWindow));
+        }
+
+        public void ShowEngineeringWindow()
+        {
+            if (mainWindow is { IsLoaded: true }
+                && mainWindow.TargetWindowHandle != IntPtr.Zero
+                && WindowsAPI.IsWindow(mainWindow.TargetWindowHandle))
+            {
+                mainWindow.SelectActivity(Models.ActivityType.Engineering);
+                return;
+            }
+
+            if (engineeringWindow is { IsLoaded: true })
+            {
+                if (!engineeringWindow.IsVisible)
+                {
+                    engineeringWindow.Show();
+                }
+                if (engineeringWindow.WindowState == WindowState.Minimized)
+                {
+                    engineeringWindow.WindowState = WindowState.Normal;
+                }
+                engineeringWindow.Activate();
+                return;
+            }
+
+            engineeringWindow = new EngineeringWindow();
+            engineeringWindow.Closed += (_, _) => engineeringWindow = null;
+            engineeringWindow.Show();
+            engineeringWindow.Activate();
+        }
+
         private void OnTraySettingsRequested(object? sender, EventArgs e)
         {
-            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(ShowSettingsWindow));
+        }
+
+        public void ShowSettingsWindow()
+        {
+            ShowSettingsWindowCore(false, IntPtr.Zero);
+        }
+
+        public void ShowOverlaySettingsWindow()
+        {
+            IntPtr targetWindow = mainWindow?.TargetWindowHandle ?? IntPtr.Zero;
+            ShowSettingsWindowCore(targetWindow != IntPtr.Zero, targetWindow);
+        }
+
+        internal void CloseOverlaySettingsWindow()
+        {
+            if (settingsWindow is { IsLoaded: true, IsOverlayMode: true })
             {
-                var settingsWindow = new SettingsWindow();
-                settingsWindow.ShowDialog();
-            }));
+                settingsWindow.Close();
+                settingsWindow = null;
+            }
+        }
+
+        private void ShowSettingsWindowCore(bool overlayMode, IntPtr targetWindow)
+        {
+            if (settingsWindow is { IsLoaded: true })
+            {
+                if (settingsWindow.IsOverlayMode != overlayMode)
+                {
+                    settingsWindow.Close();
+                    settingsWindow = null;
+                }
+            }
+
+            if (settingsWindow is { IsLoaded: true })
+            {
+                if (!settingsWindow.IsVisible) settingsWindow.Show();
+                if (settingsWindow.WindowState == WindowState.Minimized) settingsWindow.WindowState = WindowState.Normal;
+                settingsWindow.Activate();
+                return;
+            }
+
+            settingsWindow = new SettingsWindow(overlayMode, targetWindow);
+            settingsWindow.Closed += (_, _) => settingsWindow = null;
+            settingsWindow.Show();
+            settingsWindow.Activate();
         }
 
         public void ShowTrayWaitingHint()

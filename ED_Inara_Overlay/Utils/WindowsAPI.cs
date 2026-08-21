@@ -8,6 +8,8 @@ namespace ED_Inara_Overlay.Utils
 {
     public static class WindowsAPI
     {
+        private static readonly object CursorVisibilitySync = new();
+        private static int forcedCursorIncrements;
         #region Windows API Constants
         
         public const int GWL_EXSTYLE = -20;
@@ -64,6 +66,12 @@ namespace ED_Inara_Overlay.Utils
         public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
+        private static extern uint GetDpiForWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool PhysicalToLogicalPointForPerMonitorDPI(IntPtr hWnd, ref POINT point);
+
+        [DllImport("user32.dll")]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
         [DllImport("user32.dll")]
@@ -83,6 +91,15 @@ namespace ED_Inara_Overlay.Utils
 
         [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
 
         [DllImport("user32.dll")]
         public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
@@ -139,6 +156,13 @@ namespace ED_Inara_Overlay.Utils
         }
 
         [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         public struct MONITORINFO
         {
             public int cbSize;
@@ -152,6 +176,64 @@ namespace ED_Inara_Overlay.Utils
         #endregion
 
         #region Helper Methods
+
+        public static bool TryGetWindowRectDips(IntPtr hWnd, out RECT rect)
+        {
+            if (!GetWindowRect(hWnd, out RECT pixels))
+            {
+                rect = default;
+                return false;
+            }
+
+            rect = ConvertRectToDips(hWnd, pixels);
+            return true;
+        }
+
+        private static RECT ConvertRectToDips(IntPtr hWnd, RECT pixels)
+        {
+            var topLeft = new POINT { X = pixels.Left, Y = pixels.Top };
+            var bottomRight = new POINT { X = pixels.Right, Y = pixels.Bottom };
+            try
+            {
+                if (hWnd != IntPtr.Zero
+                    && PhysicalToLogicalPointForPerMonitorDPI(hWnd, ref topLeft)
+                    && PhysicalToLogicalPointForPerMonitorDPI(hWnd, ref bottomRight))
+                {
+                    return new RECT
+                    {
+                        Left = topLeft.X,
+                        Top = topLeft.Y,
+                        Right = bottomRight.X,
+                        Bottom = bottomRight.Y
+                    };
+                }
+            }
+            catch (EntryPointNotFoundException)
+            {
+            }
+
+            double scale = GetWindowScale(hWnd);
+            return new RECT
+            {
+                Left = (int)Math.Round(pixels.Left / scale),
+                Top = (int)Math.Round(pixels.Top / scale),
+                Right = (int)Math.Round(pixels.Right / scale),
+                Bottom = (int)Math.Round(pixels.Bottom / scale)
+            };
+        }
+
+        private static double GetWindowScale(IntPtr hWnd)
+        {
+            try
+            {
+                uint dpi = hWnd == IntPtr.Zero ? 96u : GetDpiForWindow(hWnd);
+                return dpi > 0 ? dpi / 96d : 1d;
+            }
+            catch (EntryPointNotFoundException)
+            {
+                return 1d;
+            }
+        }
 
         /// <summary>
         /// Finds a process by name and returns the first match
@@ -209,7 +291,7 @@ namespace ED_Inara_Overlay.Utils
         /// </summary>
         public static Rect GetWindowBounds(IntPtr hWnd)
         {
-            if (GetWindowRect(hWnd, out RECT rect))
+            if (TryGetWindowRectDips(hWnd, out RECT rect))
             {
                 return new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
             }
@@ -236,11 +318,12 @@ namespace ED_Inara_Overlay.Utils
 
                         if (GetMonitorInfo(monitor, ref monitorInfo))
                         {
+                            RECT workArea = ConvertRectToDips(targetWindow, monitorInfo.rcWork);
                             return new Rect(
-                                monitorInfo.rcWork.Left,
-                                monitorInfo.rcWork.Top,
-                                monitorInfo.rcWork.Right - monitorInfo.rcWork.Left,
-                                monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top);
+                                workArea.Left,
+                                workArea.Top,
+                                workArea.Right - workArea.Left,
+                                workArea.Bottom - workArea.Top);
                         }
                     }
                 }
@@ -274,7 +357,35 @@ namespace ED_Inara_Overlay.Utils
                     ShowWindow(hWnd, SW_SHOW);
                 }
 
-                return SetForegroundWindow(hWnd);
+                bool activated = SetForegroundWindow(hWnd);
+                if (activated || GetForegroundWindow() == hWnd)
+                {
+                    return true;
+                }
+
+                // Windows may reject a foreground transfer even though the request came
+                // directly from a click in our overlay. Temporarily sharing input queues
+                // makes the handoff deterministic without stealing focus later.
+                uint currentThread = GetCurrentThreadId();
+                uint targetThread = GetWindowThreadProcessId(hWnd, out _);
+                IntPtr foreground = GetForegroundWindow();
+                uint foregroundThread = foreground == IntPtr.Zero
+                    ? 0
+                    : GetWindowThreadProcessId(foreground, out _);
+                bool attachedForeground = foregroundThread != 0 && foregroundThread != currentThread
+                    && AttachThreadInput(currentThread, foregroundThread, true);
+                bool attachedTarget = targetThread != 0 && targetThread != currentThread
+                    && targetThread != foregroundThread && AttachThreadInput(currentThread, targetThread, true);
+                try
+                {
+                    BringWindowToTop(hWnd);
+                    return SetForegroundWindow(hWnd) || GetForegroundWindow() == hWnd;
+                }
+                finally
+                {
+                    if (attachedTarget) AttachThreadInput(currentThread, targetThread, false);
+                    if (attachedForeground) AttachThreadInput(currentThread, foregroundThread, false);
+                }
             }
             catch (Exception ex)
             {
@@ -319,7 +430,7 @@ namespace ED_Inara_Overlay.Utils
         /// </summary>
         public static void PositionWindowRelativeToTarget(Window window, IntPtr targetWindow, RelativePosition position)
         {
-            if (targetWindow == IntPtr.Zero || !GetWindowRect(targetWindow, out RECT targetRect))
+            if (targetWindow == IntPtr.Zero || !TryGetWindowRectDips(targetWindow, out RECT targetRect))
                 return;
 
             var helper = new WindowInteropHelper(window);
@@ -370,8 +481,7 @@ namespace ED_Inara_Overlay.Utils
         }
 
         /// <summary>
-        /// Ensures cursor is visible and positioned at center of the specified window.
-        /// Useful when showing a newly opened interactive overlay window.
+        /// Ensures the cursor is visible without changing the commander's pointer position.
         /// </summary>
         public static void EnsureCursorVisibleOnWindow(Window window)
         {
@@ -388,17 +498,50 @@ namespace ED_Inara_Overlay.Utils
                     return;
                 }
 
-                while (ShowCursor(true) < 0)
+                lock (CursorVisibilitySync)
                 {
+                    // ShowCursor changes a process/thread display counter. Repeated calls used to
+                    // leak positive counter values and left a pointer visible over the game.
+                    if (forcedCursorIncrements > 0)
+                    {
+                        return;
+                    }
+
+                    int result;
+                    do
+                    {
+                        result = ShowCursor(true);
+                        forcedCursorIncrements++;
+                    }
+                    while (result < 0);
                 }
 
-                int centerX = (int)(window.Left + window.Width / 2);
-                int centerY = (int)(window.Top + window.Height / 2);
-                SetCursorPos(centerX, centerY);
             }
             catch (Exception ex)
             {
                 Logger.Logger.Warning($"WindowsAPI.EnsureCursorVisibleOnWindow failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Reverts only the ShowCursor increments made by <see cref="EnsureCursorVisibleOnWindow"/>.
+        /// </summary>
+        public static void RestoreCursorVisibility()
+        {
+            try
+            {
+                lock (CursorVisibilitySync)
+                {
+                    while (forcedCursorIncrements > 0)
+                    {
+                        ShowCursor(false);
+                        forcedCursorIncrements--;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Warning($"WindowsAPI.RestoreCursorVisibility failed: {ex.Message}");
             }
         }
         
