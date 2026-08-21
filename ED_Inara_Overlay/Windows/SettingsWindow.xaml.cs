@@ -215,19 +215,23 @@ namespace ED_Inara_Overlay.Windows
 
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
-            // Save controls whose labels/options are rebuilt by a language switch first.
+            // Сначала сохранить ВСЕ значения из UI.
             SaveRouteAutomationSettings();
-            SaveLanguageSettings();
             SaveHotkeySettings();
             SaveJournalSettings();
             SaveExplorationDataSettings();
             SaveX52Settings();
+
+            // Language refresh может перезагрузить controls,
+            // поэтому он должен идти после сохранения остальных настроек.
+            SaveLanguageSettings();
 
             var selectedTheme = ThemeComboBox.SelectedItem as Models.Theme;
             if (selectedTheme != null)
             {
                 ThemeManager.Instance.ApplyTheme(selectedTheme);
             }
+
             ApplyStatusText.Text = string.Empty;
         }
 
@@ -241,6 +245,17 @@ namespace ED_Inara_Overlay.Windows
         private void SaveLanguageSettings()
         {
             if (LanguageComboBox.SelectedItem is not LanguageOption option)
+            {
+                return;
+            }
+
+            string currentLanguage =
+                LocalizationService.Normalize(SettingsService.Instance.Settings.Language);
+
+            if (string.Equals(
+                    currentLanguage,
+                    option.Code,
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
