@@ -24,6 +24,7 @@ public sealed class ExplorationVisitStateService : IDisposable
     private long pendingDestinationSystemAddress;
     private string pendingDestinationName = string.Empty;
     private int destinationGeneration;
+    private int refreshGeneration;
 
     private bool started;
     private bool disposed;
@@ -159,6 +160,7 @@ public sealed class ExplorationVisitStateService : IDisposable
         bool force)
     {
         string signature = BuildRelevantSignature(state);
+        int generation;
 
         lock (sync)
         {
@@ -174,6 +176,7 @@ public sealed class ExplorationVisitStateService : IDisposable
             }
 
             relevantSignature = signature;
+            generation = ++refreshGeneration;
         }
 
         ExplorationSystemHistorySnapshot history =
@@ -190,9 +193,11 @@ public sealed class ExplorationVisitStateService : IDisposable
 
         lock (sync)
         {
-            // A newer journal/status update changed systems while history/catalog
-            // were being loaded. Ignore this stale refresh.
-            if (!SameSystem(latestState, state))
+            // A newer journal/status/data refresh may have completed while this
+            // history/catalog build was running. Reject this result even when
+            // both refreshes belong to the same star system.
+            if (generation != refreshGeneration
+                || !SameSystem(latestState, state))
             {
                 return;
             }

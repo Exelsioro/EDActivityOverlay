@@ -668,7 +668,7 @@
     <sys:String x:Key="Loc_Show_game_state_on_X52_MFD">Show activity, system and ship state on the MFD</sys:String>
     <sys:String x:Key="Loc_Control_X52_lighting_from_game_state">Control button lighting from the current game state</sys:String>
     <sys:String x:Key="Loc_Use_X52_MFD_wheel_for_activity_widgets">Use the right MFD wheel to control activity widgets</sys:String>
-    <sys:String x:Key="Loc_X52_controls_hint">Wheel up/down: previous/next activity. Short press: hide or restore the widget. Hold for 0.7 s: interactive mode. In that mode POV 1 moves the cursor and Fire A performs a left click.</sys:String>
+    <sys:String x:Key="Loc_X52_controls_hint">Wheel up/down: previous/next activity. Single press: toggle interactive focus. Double press: hide/restore all overlays. Mouse Pointer and Mouse Click use the native Logitech/Saitek X52 mouse profile.</sys:String>
     <sys:String x:Key="Loc_RECONNECT">RECONNECT</sys:String>
     <sys:String x:Key="Loc_X52_status_disabled">X52 support is disabled.</sys:String>
     <sys:String x:Key="Loc_X52_status_driver_missing">Logitech DirectOutput driver was not found. Install the X52 Pro software package.</sys:String>

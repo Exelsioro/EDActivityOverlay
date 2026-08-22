@@ -668,7 +668,7 @@
     <sys:String x:Key="Loc_Show_game_state_on_X52_MFD">Показывать занятие, систему и состояние корабля на MFD</sys:String>
     <sys:String x:Key="Loc_Control_X52_lighting_from_game_state">Управлять подсветкой кнопок по состоянию игры</sys:String>
     <sys:String x:Key="Loc_Use_X52_MFD_wheel_for_activity_widgets">Использовать правое колесо MFD для управления виджетами</sys:String>
-    <sys:String x:Key="Loc_X52_controls_hint">Колесо вверх/вниз: предыдущее/следующее занятие. Короткое нажатие: скрыть или вернуть виджет. Удержание 0,7 с: интерактивный режим. В нём POV 1 двигает курсор, Fire A выполняет левый клик.</sys:String>
+    <sys:String x:Key="Loc_X52_controls_hint">Колесо вверх/вниз: предыдущее/следующее занятие. Одиночное нажатие: включить/выключить интерактивный фокус. Двойное нажатие: скрыть/вернуть все оверлеи. Mouse Pointer и Mouse Click используют штатный профиль мыши Logitech/Saitek X52.</sys:String>
     <sys:String x:Key="Loc_RECONNECT">ПЕРЕПОДКЛЮЧИТЬ</sys:String>
     <sys:String x:Key="Loc_X52_status_disabled">Поддержка X52 отключена.</sys:String>
     <sys:String x:Key="Loc_X52_status_driver_missing">Драйвер Logitech DirectOutput не найден. Установите программное обеспечение X52 Pro.</sys:String>

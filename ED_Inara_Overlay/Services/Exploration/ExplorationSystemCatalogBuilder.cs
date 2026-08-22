@@ -69,7 +69,14 @@ public static class ExplorationSystemCatalogBuilder
         long mappingValue = local.EstimatedEfficientMappingValue > 0
             ? local.EstimatedEfficientMappingValue
             : external?.EstimatedMappingValue ?? local.EstimatedMappingValue;
-        int biologicalSignals = local.BiologicalSignals;
+        int biologicalSignals = Math.Max(
+            local.BiologicalSignals,
+            history?.BiologicalSignals ?? 0);
+        IReadOnlyList<string> genuses =
+            ResolveGenusNames(
+                local.Genuses,
+                history);
+
         ExplorationBodyHighlights highlights = BuildHighlights(
             subtype,
             terraformable,
@@ -101,7 +108,7 @@ public static class ExplorationSystemCatalogBuilder
             local.WasDiscovered,
             local.WasMapped,
             biologicalSignals,
-            local.Genuses,
+            genuses,
             highlights,
             external is null || string.IsNullOrWhiteSpace(externalSource)
                 ? "Journal"
@@ -121,12 +128,19 @@ public static class ExplorationSystemCatalogBuilder
         string source)
     {
         bool terraformable = ContainsTerraform(body.TerraformingState);
+        int biologicalSignals =
+            history?.BiologicalSignals ?? 0;
+        IReadOnlyList<string> genuses =
+            ResolveGenusNames(
+                Array.Empty<string>(),
+                history);
+
         ExplorationBodyHighlights highlights = BuildHighlights(
             body.Subtype,
             terraformable,
             ExplorationInterest.None,
             body.EstimatedMappingValue,
-            0,
+            biologicalSignals,
             body.Landable);
         return new ExplorationCatalogBody(
             body.BodyId,
@@ -151,13 +165,33 @@ public static class ExplorationSystemCatalogBuilder
             history?.CompletedOrganics ?? 0,
             false,
             false,
-            0,
-            Array.Empty<string>(),
+            biologicalSignals,
+            genuses,
             highlights,
             source)
         {
             SurfacePressureAtmospheres = body.SurfacePressureAtmospheres
         };
+    }
+
+    private static IReadOnlyList<string> ResolveGenusNames(
+        IReadOnlyList<string> liveGenuses,
+        ExplorationHistoryBodySnapshot? history)
+    {
+        if (liveGenuses.Count > 0)
+        {
+            return liveGenuses;
+        }
+
+        return history?.Genuses
+            .Select(item =>
+                !string.IsNullOrWhiteSpace(item.GenusName)
+                    ? item.GenusName
+                    : item.GenusKey)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? Array.Empty<string>();
     }
 
     private static ExplorationBodyHighlights BuildHighlights(
