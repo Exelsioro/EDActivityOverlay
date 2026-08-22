@@ -14,6 +14,8 @@ public sealed class ExplorationVisitStateService : IDisposable
 
     private System.Threading.Timer? destinationTimer;
     private GameStateSnapshot latestState = GameStateSnapshot.Empty;
+    private ExplorationSystemCatalog latestCatalog =
+        ExplorationSystemCatalog.Empty;
     private ExplorationVisitQueueSnapshot current =
         ExplorationVisitQueueSnapshot.Empty;
 
@@ -103,6 +105,10 @@ public sealed class ExplorationVisitStateService : IDisposable
             {
                 current = engine.Current;
                 changed = current;
+
+                // If the player is still targeting the resumed body, allow the
+                // normal stability window to make it active again.
+                UpdatePendingDestinationLocked(latestState);
             }
         }
 
@@ -191,6 +197,8 @@ public sealed class ExplorationVisitStateService : IDisposable
                 return;
             }
 
+            latestCatalog = catalog;
+
             next = engine.Update(
                 state,
                 catalog,
@@ -206,10 +214,10 @@ public sealed class ExplorationVisitStateService : IDisposable
     private void UpdatePendingDestinationLocked(
         GameStateSnapshot state)
     {
-        int bodyId = state.DestinationBodyId;
-
-        if (!IsCurrentSystemBodyDestination(state)
-            || !engine.CanActivateBody(bodyId))
+        if (!TryResolveCurrentSystemBodyDestination(
+                state,
+                out int bodyId,
+                out string resolvedName))
         {
             CancelPendingDestinationLocked();
             return;
@@ -226,7 +234,7 @@ public sealed class ExplorationVisitStateService : IDisposable
                 == state.DestinationSystemAddress
             && string.Equals(
                 pendingDestinationName,
-                state.DestinationName,
+                resolvedName,
                 StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -238,8 +246,7 @@ public sealed class ExplorationVisitStateService : IDisposable
         pendingDestinationBodyId = bodyId;
         pendingDestinationSystemAddress =
             state.DestinationSystemAddress;
-        pendingDestinationName =
-            state.DestinationName;
+        pendingDestinationName = resolvedName;
 
         destinationTimer?.Dispose();
         destinationTimer = new System.Threading.Timer(
@@ -264,13 +271,15 @@ public sealed class ExplorationVisitStateService : IDisposable
 
             GameStateSnapshot state = latestState;
 
-            if (!IsCurrentSystemBodyDestination(state)
-                || state.DestinationBodyId
-                    != pendingDestinationBodyId
+            if (!TryResolveCurrentSystemBodyDestination(
+                    state,
+                    out int resolvedBodyId,
+                    out string resolvedName)
+                || resolvedBodyId != pendingDestinationBodyId
                 || state.DestinationSystemAddress
                     != pendingDestinationSystemAddress
                 || !string.Equals(
-                    state.DestinationName,
+                    resolvedName,
                     pendingDestinationName,
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -281,7 +290,7 @@ public sealed class ExplorationVisitStateService : IDisposable
             int bodyId = pendingDestinationBodyId;
             CancelPendingDestinationLocked();
 
-            if (engine.ActivateBody(bodyId))
+            if (engine.SelectDestinationBody(bodyId))
             {
                 current = engine.Current;
                 changed = current;
@@ -294,10 +303,17 @@ public sealed class ExplorationVisitStateService : IDisposable
         }
     }
 
-    private bool IsCurrentSystemBodyDestination(
-        GameStateSnapshot state)
+    private bool TryResolveCurrentSystemBodyDestination(
+        GameStateSnapshot state,
+        out int bodyId,
+        out string bodyName)
     {
-        if (state.DestinationBodyId < 0)
+        int resolvedBodyId = state.DestinationBodyId;
+
+        bodyId = resolvedBodyId;
+        bodyName = string.Empty;
+
+        if (resolvedBodyId < 0)
         {
             return false;
         }
@@ -310,28 +326,42 @@ public sealed class ExplorationVisitStateService : IDisposable
             return false;
         }
 
-        ExplorationVisitBodyState? candidate =
-            current.Active?.BodyId == state.DestinationBodyId
-                ? current.Active
-                : current.Recommended
-                    .Concat(current.Deferred)
-                    .FirstOrDefault(
-                        item => item.BodyId
-                            == state.DestinationBodyId);
+        bodyName = latestCatalog.Bodies
+            .FirstOrDefault(item => item.BodyId == resolvedBodyId)
+            ?.Name
+            ?? state.ExplorationBodies
+                .FirstOrDefault(item => item.BodyId == resolvedBodyId)
+                ?.Name
+            ?? FindQueueBodyName(resolvedBodyId)
+            ?? string.Empty;
 
-        if (candidate is null)
+        if (string.IsNullOrWhiteSpace(bodyName))
         {
             return false;
         }
 
-        // Body id is the primary identity. Matching the name as well prevents a
-        // station/carrier destination attached to a body from being interpreted
-        // as selecting the planet itself.
+        // Status.json can expose a station/carrier with a Body id. Require its
+        // visible destination name to match the known body name so that such a
+        // target is not interpreted as switching exploration bodies.
         return string.IsNullOrWhiteSpace(state.DestinationName)
             || string.Equals(
                 state.DestinationName.Trim(),
-                candidate.BodyName.Trim(),
+                bodyName.Trim(),
                 StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string? FindQueueBodyName(int bodyId)
+    {
+        if (current.Active?.BodyId == bodyId)
+        {
+            return current.Active.BodyName;
+        }
+
+        return current.Recommended
+            .Concat(current.Deferred)
+            .Concat(current.Completed)
+            .FirstOrDefault(item => item.BodyId == bodyId)
+            ?.BodyName;
     }
 
     private void CancelPendingDestinationLocked()
@@ -394,19 +424,29 @@ public sealed class ExplorationVisitStateService : IDisposable
                 .Append(':')
                 .Append(string.Join(
                     ",",
-                    body.Genuses.OrderBy(
-                        value => value,
-                        StringComparer.OrdinalIgnoreCase)));
+                    body.GenusKeys.Count > 0
+                        ? body.GenusKeys.OrderBy(
+                            value => value,
+                            StringComparer.OrdinalIgnoreCase)
+                        : body.Genuses.OrderBy(
+                            value => value,
+                            StringComparer.OrdinalIgnoreCase)));
         }
 
         foreach (OrganicScanProgressSnapshot organic in
                  state.OrganicProgress
                      .OrderBy(item => item.BodyId)
+                     .ThenBy(item => item.GenusKey)
+                     .ThenBy(item => item.SpeciesKey)
                      .ThenBy(item => item.Genus)
                      .ThenBy(item => item.Species))
         {
             result.Append("|O:")
                 .Append(organic.BodyId)
+                .Append(':')
+                .Append(organic.GenusKey)
+                .Append(':')
+                .Append(organic.SpeciesKey)
                 .Append(':')
                 .Append(organic.Genus)
                 .Append(':')

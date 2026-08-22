@@ -82,6 +82,8 @@ public sealed record ExplorationBodySnapshot(
     public long EstimatedEfficientMappingValue { get; init; }
     public IReadOnlyList<BiologyEstimateSnapshot> BiologyEstimates { get; init; } =
         Array.Empty<BiologyEstimateSnapshot>();
+    public IReadOnlyList<string> GenusKeys { get; init; } =
+        Array.Empty<string>();
     public int LastProbesUsed { get; init; }
     public int EfficiencyTarget { get; init; }
 
@@ -111,7 +113,12 @@ public sealed record OrganicScanProgressSnapshot(
     int ColonyRangeMeters,
     double? LastSampleLatitude,
     double? LastSampleLongitude,
-    DateTimeOffset UpdatedUtc);
+    DateTimeOffset UpdatedUtc)
+{
+    public string GenusKey { get; init; } = string.Empty;
+    public string SpeciesKey { get; init; } = string.Empty;
+    public string VariantKey { get; init; } = string.Empty;
+}
 
 public sealed record GameStateSnapshot
 {
@@ -238,7 +245,14 @@ public sealed record GameStateSnapshot
     public int GetCompletedBiologicalSignalsForBody(int bodyId) =>
         GetOrganicProgressForBody(bodyId)
             .Where(item => item.Completed)
-            .Select(item => !string.IsNullOrWhiteSpace(item.Genus) ? item.Genus : item.Species)
+            .Select(item =>
+                !string.IsNullOrWhiteSpace(item.GenusKey)
+                    ? item.GenusKey
+                    : !string.IsNullOrWhiteSpace(item.Genus)
+                        ? item.Genus
+                        : !string.IsNullOrWhiteSpace(item.SpeciesKey)
+                            ? item.SpeciesKey
+                            : item.Species)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();

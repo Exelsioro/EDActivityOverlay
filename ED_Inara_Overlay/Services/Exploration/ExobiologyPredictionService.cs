@@ -51,13 +51,13 @@ public sealed class ExobiologyPredictionService
         if (!landable || maximumResults <= 0) return Array.Empty<ExobiologyPrediction>();
 
         HashSet<string> confirmedGenuses = genuses
-            .Select(NormalizeGenus)
+            .Select(NormalizeGenusIdentity)
             .Where(value => value.Length > 0)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var scored = new List<(SpeciesProfile Profile, double Score)>();
         foreach (SpeciesProfile profile in profiles.Value)
         {
-            if (confirmedGenuses.Count > 0 && !confirmedGenuses.Contains(NormalizeGenus(profile.Genus))) continue;
+            if (confirmedGenuses.Count > 0 && !confirmedGenuses.Contains(NormalizeGenusIdentity(profile.Genus))) continue;
             if (!TryScore(profile, bodyType, atmosphere, volcanism, temperature, gravity, pressure, out double score)) continue;
             scored.Add((profile, score));
         }
@@ -227,7 +227,7 @@ public sealed class ExobiologyPredictionService
         .Replace("  ", " ", StringComparison.Ordinal)
         .Trim();
 
-    private static string NormalizeGenus(string value)
+    internal static string NormalizeGenusIdentity(string value)
     {
         string normalized = value.ToLowerInvariant();
         foreach (string token in new[] { "bacterial", "bacterium", "aleoida", "cactoida", "clypeus", "concha", "electricae", "fonticulua", "frutexa", "fumerola", "fungoida", "osseus", "recepta", "stratum", "tubus", "tussock" })

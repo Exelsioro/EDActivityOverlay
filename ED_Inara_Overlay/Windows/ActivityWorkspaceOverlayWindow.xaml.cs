@@ -16,6 +16,8 @@ namespace ED_Inara_Overlay.Windows;
 
 public partial class ActivityWorkspaceOverlayWindow : Window
 {
+    private const double CompactWidth = 420;
+    private const double CompactHeight = 350;
     private readonly MainWindow? parentWindow;
     private readonly DispatcherTimer updateTimer;
     private readonly SpanshRouteClient spanshRouteClient = new();
@@ -879,11 +881,18 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 body,
                 12);
 
-        if (progress is { MissingGenuses.Count: > 0 })
+        if (progress is not null
+            && (progress.MissingGenusKeys.Count > 0
+                || progress.MissingGenuses.Count > 0))
         {
+            IReadOnlyList<string> missingIdentity =
+                progress.MissingGenusKeys.Count > 0
+                    ? progress.MissingGenusKeys
+                    : progress.MissingGenuses;
+
             predictions = predictions
                 .Where(prediction =>
-                    progress.MissingGenuses.Any(
+                    missingIdentity.Any(
                         genus =>
                             GenusMatches(
                                 genus,
@@ -941,23 +950,11 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private static bool GenusMatches(
         string expected,
-        string actual)
-    {
-        if (string.Equals(
-            expected.Trim(),
-            actual.Trim(),
-            StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return expected.Contains(
-                   actual,
-                   StringComparison.OrdinalIgnoreCase)
-               || actual.Contains(
-                   expected,
-                   StringComparison.OrdinalIgnoreCase);
-    }
+        string actual) =>
+        string.Equals(
+            ExobiologyPredictionService.NormalizeGenusIdentity(expected),
+            ExobiologyPredictionService.NormalizeGenusIdentity(actual),
+            StringComparison.OrdinalIgnoreCase);
     private void DeferSelectedBodyButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1112,8 +1109,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         CompactPanel.Visibility = Visibility.Visible;
         MinWidth = 0;
         MinHeight = 0;
-        Width = 400;
-        Height = 330;
+        Width = CompactWidth;
+        Height = CompactHeight;
         parentWindow?.EndExclusiveOverlayInteraction();
         PositionOverlay();
     }
@@ -2283,7 +2280,27 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                + Loc.Format("Loc_FUEL_ESTIMATE_FORMAT", needed, fuel.EmergencyReserve);
     }
 
-    public void RefreshLocalization() => RefreshContent(JournalMonitorService.Instance.Current);
+    public void RefreshLocalization()
+    {
+        string selectedFilter =
+            (CatalogFilterComboBox?.SelectedItem
+                as CatalogFilterOption)?.Value
+            ?? "All";
+
+        if (CatalogFilterComboBox is not null)
+        {
+            CatalogFilterComboBox.ItemsSource = null;
+            CatalogFilterComboBox.ItemsSource = CatalogFilters;
+            CatalogFilterComboBox.SelectedItem =
+                CatalogFilters.FirstOrDefault(
+                    item => item.Value == selectedFilter)
+                ?? CatalogFilters[0];
+        }
+
+        ApplyRoutePanelState();
+        RefreshContent(
+            JournalMonitorService.Instance.Current);
+    }
 
     private static string BuildFlightState(GameStateSnapshot state)
     {

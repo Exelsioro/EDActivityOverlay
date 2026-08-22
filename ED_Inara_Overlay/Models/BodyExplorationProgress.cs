@@ -8,7 +8,12 @@ public sealed record BodyOrganicProgressStatus(
     bool Completed,
     int ColonyRangeMeters,
     bool SeenThisSession,
-    DateTimeOffset? UpdatedUtc);
+    DateTimeOffset? UpdatedUtc)
+{
+    public string GenusKey { get; init; } = string.Empty;
+    public string SpeciesKey { get; init; } = string.Empty;
+    public string VariantKey { get; init; } = string.Empty;
+}
 
 public sealed record BodyExplorationProgress(
     int BodyId,
@@ -23,8 +28,25 @@ public sealed record BodyExplorationProgress(
     IReadOnlyList<BodyOrganicProgressStatus> Organics,
     bool HistoricalBiologyDetailIncomplete)
 {
-    public int RemainingBiologicalSignals => Math.Max(0, BiologicalSignals - CompletedBiologicalSignals);
+    public IReadOnlyList<string> KnownGenusKeys { get; init; } =
+        Array.Empty<string>();
+
+    public IReadOnlyList<string> MissingGenusKeys { get; init; } =
+        Array.Empty<string>();
+
+    public int RemainingBiologicalSignals =>
+        Math.Max(
+            0,
+            BiologicalSignals - CompletedBiologicalSignals);
+
     public bool HasBiology => BiologicalSignals > 0;
-    public bool BiologyComplete => !HasBiology || RemainingBiologicalSignals == 0;
-    public bool IsKnown => FssScanned || DssMapped || BiologicalSignals > 0 || Organics.Count > 0;
+
+    public bool BiologyComplete =>
+        !HasBiology || RemainingBiologicalSignals == 0;
+
+    public bool IsKnown =>
+        FssScanned
+        || DssMapped
+        || BiologicalSignals > 0
+        || Organics.Count > 0;
 }

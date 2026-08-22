@@ -6,6 +6,8 @@ namespace ED_Inara_Overlay.Services.Exploration;
 
 internal sealed class ExplorationHistoryRepository
 {
+    internal const int CanonicalBiologyHistorySchemaVersion = 2;
+
     private readonly object sync = new();
     private readonly string connectionString;
 
@@ -407,6 +409,10 @@ internal sealed class ExplorationHistoryRepository
                     path TEXT PRIMARY KEY, length INTEGER NOT NULL, last_write_utc TEXT NOT NULL,
                     line_count INTEGER NOT NULL, imported_utc TEXT NOT NULL);
 
+                CREATE TABLE IF NOT EXISTS exploration_meta(
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL);
+
                 CREATE TABLE IF NOT EXISTS exploration_body_genus_history(
                     commander TEXT NOT NULL, system_address INTEGER NOT NULL, system_name TEXT NOT NULL,
                     body_key TEXT NOT NULL, genus_key TEXT NOT NULL, genus_name TEXT NOT NULL DEFAULT '',
@@ -430,7 +436,73 @@ internal sealed class ExplorationHistoryRepository
             EnsureColumn(connection, "exploration_organic_history", "genus_name", "TEXT NOT NULL DEFAULT ''");
             EnsureColumn(connection, "exploration_organic_history", "variant_key", "TEXT NOT NULL DEFAULT ''");
             EnsureColumn(connection, "exploration_organic_history", "variant_name", "TEXT NOT NULL DEFAULT ''");
+
+            EnsureCanonicalBiologyHistorySchema(connection);
         }
+    }
+
+    private static void EnsureCanonicalBiologyHistorySchema(
+        SqliteConnection connection)
+    {
+        int version = 0;
+
+        using (SqliteCommand read = connection.CreateCommand())
+        {
+            read.CommandText = """
+                SELECT value
+                FROM exploration_meta
+                WHERE key = 'schema_version'
+                LIMIT 1;
+                """;
+
+            object? value = read.ExecuteScalar();
+
+            if (value is not null)
+            {
+                int.TryParse(
+                    Convert.ToString(
+                        value,
+                        System.Globalization.CultureInfo.InvariantCulture),
+                    out version);
+            }
+        }
+
+        if (version >= CanonicalBiologyHistorySchemaVersion)
+        {
+            return;
+        }
+
+        using SqliteTransaction transaction =
+            connection.BeginTransaction();
+
+        using SqliteCommand migrate =
+            connection.CreateCommand();
+
+        migrate.Transaction = transaction;
+        migrate.CommandText = """
+            DELETE FROM exploration_body_genus_history;
+            DELETE FROM exploration_organic_history;
+            UPDATE exploration_body_history
+            SET completed_organics = 0;
+            DELETE FROM exploration_import_file;
+
+            INSERT INTO exploration_meta(key, value)
+            VALUES('schema_version', $version)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value;
+            """;
+
+        migrate.Parameters.AddWithValue(
+            "$version",
+            CanonicalBiologyHistorySchemaVersion.ToString(
+                System.Globalization.CultureInfo.InvariantCulture));
+
+        migrate.ExecuteNonQuery();
+        transaction.Commit();
+
+        Logger.Logger.Info(
+            $"Exploration history schema upgraded to {CanonicalBiologyHistorySchemaVersion}; "
+            + "biology history and import markers were invalidated for canonical re-import.");
     }
 
     private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)

@@ -105,6 +105,7 @@ internal static class ExplorationVisitPolicy
 internal sealed class ExplorationVisitQueueEngine
 {
     private readonly HashSet<int> deferredBodyIds = new();
+    private readonly HashSet<int> manuallyDeferredBodyIds = new();
 
     private string currentSystemKey = string.Empty;
     private string commander = string.Empty;
@@ -161,7 +162,15 @@ internal sealed class ExplorationVisitQueueEngine
             .ToDictionary(item => item.BodyId);
 
         deferredBodyIds.RemoveWhere(bodyId =>
-            !entries.TryGetValue(bodyId, out ExplorationVisitBodyState? body)
+            !entries.TryGetValue(
+                bodyId,
+                out ExplorationVisitBodyState? body)
+            || body.IsComplete);
+
+        manuallyDeferredBodyIds.RemoveWhere(bodyId =>
+            !entries.TryGetValue(
+                bodyId,
+                out ExplorationVisitBodyState? body)
             || body.IsComplete);
 
         if (activeBodyId >= 0
@@ -178,8 +187,11 @@ internal sealed class ExplorationVisitQueueEngine
     }
 
     public bool CanActivateBody(int bodyId) =>
-        entries.TryGetValue(bodyId, out ExplorationVisitBodyState? body)
-        && !body.IsComplete;
+        entries.TryGetValue(
+            bodyId,
+            out ExplorationVisitBodyState? body)
+        && !body.IsComplete
+        && !manuallyDeferredBodyIds.Contains(bodyId);
 
     public bool ActivateBody(int bodyId)
     {
@@ -188,27 +200,50 @@ internal sealed class ExplorationVisitQueueEngine
             return false;
         }
 
+        return SelectDestinationBody(bodyId);
+    }
+
+    public bool SelectDestinationBody(int bodyId)
+    {
+        bool changed = false;
+
         if (activeBodyId == bodyId)
         {
-            deferredBodyIds.Remove(bodyId);
-            Current = BuildSnapshot();
             return false;
         }
 
-        if (activeBodyId >= 0
-            && entries.TryGetValue(
-                activeBodyId,
-                out ExplorationVisitBodyState? previous)
-            && !previous.IsComplete)
+        if (activeBodyId >= 0)
         {
-            deferredBodyIds.Add(activeBodyId);
+            int previousBodyId = activeBodyId;
+            activeBodyId = -1;
+            changed = true;
+
+            if (entries.TryGetValue(
+                    previousBodyId,
+                    out ExplorationVisitBodyState? previous)
+                && !previous.IsComplete)
+            {
+                deferredBodyIds.Add(previousBodyId);
+            }
         }
 
-        deferredBodyIds.Remove(bodyId);
-        activeBodyId = bodyId;
+        if (entries.TryGetValue(
+                bodyId,
+                out ExplorationVisitBodyState? next)
+            && !next.IsComplete
+            && !manuallyDeferredBodyIds.Contains(bodyId))
+        {
+            deferredBodyIds.Remove(bodyId);
+            activeBodyId = bodyId;
+            changed = true;
+        }
 
-        Current = BuildSnapshot();
-        return true;
+        if (changed)
+        {
+            Current = BuildSnapshot();
+        }
+
+        return changed;
     }
 
     public bool DeferBody(int bodyId)
@@ -222,6 +257,7 @@ internal sealed class ExplorationVisitQueueEngine
         }
 
         bool changed = deferredBodyIds.Add(bodyId);
+        changed |= manuallyDeferredBodyIds.Add(bodyId);
 
         if (activeBodyId == bodyId)
         {
@@ -247,7 +283,8 @@ internal sealed class ExplorationVisitQueueEngine
             return false;
         }
 
-        bool changed = deferredBodyIds.Remove(bodyId);
+        bool changed = manuallyDeferredBodyIds.Remove(bodyId);
+        changed |= deferredBodyIds.Remove(bodyId);
 
         if (changed)
         {
@@ -256,6 +293,9 @@ internal sealed class ExplorationVisitQueueEngine
 
         return changed;
     }
+
+    internal bool IsManuallyDeferred(int bodyId) =>
+        manuallyDeferredBodyIds.Contains(bodyId);
 
     private ExplorationVisitQueueSnapshot BuildSnapshot()
     {
@@ -332,6 +372,7 @@ internal sealed class ExplorationVisitQueueEngine
         currentSystemKey = nextSystemKey;
         activeBodyId = -1;
         deferredBodyIds.Clear();
+        manuallyDeferredBodyIds.Clear();
         entries.Clear();
         Current = ExplorationVisitQueueSnapshot.Empty;
     }
