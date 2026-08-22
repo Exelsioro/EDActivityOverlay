@@ -94,10 +94,15 @@ internal sealed class JournalStateReducer
                                   && root.TryGetProperty("Longitude", out _);
         int cargoUsed = TryGetInt32(root, "Cargo", state.CargoUsed);
         long balance = TryGetInt64(root, "Balance", state.Balance);
-        string destination = string.Empty;
-        if (root.TryGetProperty("Destination", out JsonElement destinationElement))
+        string destinationName = string.Empty;
+        long destinationSystemAddress = 0;
+        int destinationBodyId = -1;
+        if (root.TryGetProperty("Destination", out JsonElement destinationElement)
+            && destinationElement.ValueKind == JsonValueKind.Object)
         {
-            destination = GetString(destinationElement, "Name");
+            destinationName = GetString(destinationElement, "Name");
+            destinationSystemAddress = TryGetInt64(destinationElement, "System");
+            destinationBodyId = TryGetInt32(destinationElement, "Body", -1);
         }
         double fuelMain = state.FuelMain;
         double fuelReservoir = state.FuelReservoir;
@@ -146,9 +151,12 @@ internal sealed class JournalStateReducer
             TemperatureKelvin = TryGetNullableDouble(root, "Temperature"),
             CurrentBody = GetString(root, "BodyName", current.CurrentBody),
             LegalState = GetString(root, "LegalState", current.LegalState),
-            Destination = string.IsNullOrWhiteSpace(destination) ? current.Destination : destination
-            ,FuelMain = fuelMain
-            ,FuelReservoir = fuelReservoir
+            Destination = destinationName,
+            DestinationName = destinationName,
+            DestinationSystemAddress = destinationSystemAddress,
+            DestinationBodyId = destinationBodyId,
+            FuelMain = fuelMain,
+            FuelReservoir = fuelReservoir
         });
     }
 
@@ -304,6 +312,9 @@ internal sealed class JournalStateReducer
                     Latitude = null,
                     Longitude = null,
                     Destination = string.Empty,
+                    DestinationName = string.Empty,
+                    DestinationSystemAddress = 0,
+                    DestinationBodyId = -1,
                     SystemBodyCount = 0,
                     FssProgress = 0,
                     NonBodySignals = 0,
@@ -336,10 +347,23 @@ internal sealed class JournalStateReducer
             case "undocked":
                 return current with { Station = string.Empty, Docked = false };
             case "fsdtarget":
-                return current with { Destination = GetString(root, "Name", current.Destination) };
+                string fsdTargetName = GetString(root, "Name", current.Destination);
+                return current with
+                {
+                    Destination = fsdTargetName,
+                    DestinationName = fsdTargetName,
+                    DestinationSystemAddress = TryGetInt64(root, "SystemAddress", current.DestinationSystemAddress),
+                    DestinationBodyId = -1
+                };
             case "navrouteclear":
                 navRoute.Clear();
-                return current with { Destination = string.Empty };
+                return current with
+                {
+                    Destination = string.Empty,
+                    DestinationName = string.Empty,
+                    DestinationSystemAddress = 0,
+                    DestinationBodyId = -1
+                };
             case "fuelscoop":
                 return current with { FuelMain = TryGetDouble(root, "Total", current.FuelMain) };
             case "refuelall":

@@ -1,0 +1,1019 @@
+﻿diff --git a/ED_Inara_Overlay/Resources/Localization.en-US.xaml b/ED_Inara_Overlay/Resources/Localization.en-US.xaml
+index eae4729..e779a35 100644
+--- a/ED_Inara_Overlay/Resources/Localization.en-US.xaml
++++ b/ED_Inara_Overlay/Resources/Localization.en-US.xaml
+@@ -801,4 +801,22 @@
+     <sys:String x:Key="Loc_X52_CURRENT_PROFILE_FORMAT">X52 profile: {0}</sys:String>
+     <sys:String x:Key="Loc_X52_PROFILE_NOT_FOUND">No *_Overlay.pr0 profile was found in the shared Logitech folder.</sys:String>
+     <sys:String x:Key="Loc_X52_CHEATSHEET_NOT_FOUND">The control cheatsheet file is missing. Reinstall or rebuild the application.</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT">ROUTE тЖТ {0} тАв stop {1}/{2}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">BODY TARGET</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% тАв {1} bodies тАв DSS {2} тАв BIO {3}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">{0} deferred тАв open the full assistant to resume</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MISSING_GENUSES_FORMAT">Missing: {0}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MODE_EXOBIO">EXOBIOLOGY</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_UNKNOWN_GENUSES_FORMAT">Unknown after DSS/history: {0}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_SYSTEM_COMPLETE_COMPACT">No unfinished recommended bodies.</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_QUEUE_FORMAT">{0} remaining тАв {1} deferred тАв {2} complete</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_DEFERRED_HUD_FORMAT">{0} deferred тАв available in the full assistant</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_ALL_OBJECTIVES_DONE">Objectives complete</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_HISTORY_BIO_DETAIL_INCOMPLETE">Some older completed bio scans have no genus detail.</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_TARGETS_HEADER">NEXT TARGETS</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_PENDING_FORMAT">NEXT: {0}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_EXOBIO_PROGRESS_FORMAT">sample {0} тАв {1}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_FOOTER_QUEUE_FORMAT">Deferred {0} тАв complete {1}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MODE_SYSTEM">SYSTEM</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_NO_TARGETS">No recommended bodies yet.</sys:String>
+ </ResourceDictionary>
+diff --git a/ED_Inara_Overlay/Resources/Localization.ru-RU.xaml b/ED_Inara_Overlay/Resources/Localization.ru-RU.xaml
+index 3e48f1c..816672d 100644
+--- a/ED_Inara_Overlay/Resources/Localization.ru-RU.xaml
++++ b/ED_Inara_Overlay/Resources/Localization.ru-RU.xaml
+@@ -801,4 +801,22 @@
+     <sys:String x:Key="Loc_X52_CURRENT_PROFILE_FORMAT">╨Я╤А╨╛╤Д╨╕╨╗╤М X52: {0}</sys:String>
+     <sys:String x:Key="Loc_X52_PROFILE_NOT_FOUND">╨Я╤А╨╛╤Д╨╕╨╗╤М *_Overlay.pr0 ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜ ╨▓ ╨╛╨▒╤Й╨╡╨╣ ╨┐╨░╨┐╨║╨╡ Logitech.</sys:String>
+     <sys:String x:Key="Loc_X52_CHEATSHEET_NOT_FOUND">╨д╨░╨╣╨╗ ╤И╨┐╨░╤А╨│╨░╨╗╨║╨╕ ╨╜╨╡ ╨╜╨░╨╣╨┤╨╡╨╜. ╨Я╨╡╤А╨╡╤Г╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╨╡ ╨╕╨╗╨╕ ╨┐╨╡╤А╨╡╤Б╨╛╨▒╨╡╤А╨╕╤В╨╡ ╨┐╤А╨╕╨╗╨╛╨╢╨╡╨╜╨╕╨╡.</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT">╨Ь╨Р╨а╨и╨а╨г╨в тЖТ {0} тАв ╤В╨╛╤З╨║╨░ {1}/{2}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">╨ж╨Х╨Ы╨Х╨Т╨Ю╨Х ╨в╨Х╨Ы╨Ю</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% тАв ╤В╨╡╨╗╨░ {1} тАв DSS {2} тАв BIO {3}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">╨╛╤В╨╗╨╛╨╢╨╡╨╜╨╛ {0} тАв ╨▓╨╡╤А╨╜╤Г╤В╤М ╨╝╨╛╨╢╨╜╨╛ ╨▓ ╨┐╨╛╨╗╨╜╨╛╨╝ ╨░╤Б╤Б╨╕╤Б╤В╨╡╨╜╤В╨╡</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MISSING_GENUSES_FORMAT">╨Э╨╡ ╨╜╨░╨╣╨┤╨╡╨╜╨╛: {0}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MODE_EXOBIO">╨н╨Ъ╨Ч╨Ю╨С╨Ш╨Ю╨Ы╨Ю╨У╨Ш╨п</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_UNKNOWN_GENUSES_FORMAT">╨Э╨╡ ╨╛╨┐╤А╨╡╨┤╨╡╨╗╨╡╨╜╨╛ ╨┐╨╛ DSS/╨╕╤Б╤В╨╛╤А╨╕╨╕: {0}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_SYSTEM_COMPLETE_COMPACT">╨Э╨╡╨╖╨░╨▓╨╡╤А╤И╤С╨╜╨╜╤Л╤Е ╤А╨╡╨║╨╛╨╝╨╡╨╜╨┤╤Г╨╡╨╝╤Л╤Е ╤В╨╡╨╗ ╨╜╨╡╤В.</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_QUEUE_FORMAT">╨╛╤Б╤В╨░╨╗╨╛╤Б╤М {0} тАв ╨╛╤В╨╗╨╛╨╢╨╡╨╜╨╛ {1} тАв ╨╖╨░╨▓╨╡╤А╤И╨╡╨╜╨╛ {2}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_DEFERRED_HUD_FORMAT">╨╛╤В╨╗╨╛╨╢╨╡╨╜╨╛ {0} тАв ╨┤╨╛╤Б╤В╤Г╨┐╨╜╨╛ ╨▓ ╨┐╨╛╨╗╨╜╨╛╨╝ ╨░╤Б╤Б╨╕╤Б╤В╨╡╨╜╤В╨╡</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_ALL_OBJECTIVES_DONE">╨ж╨╡╨╗╨╕ ╨╕╤Б╤Б╨╗╨╡╨┤╨╛╨▓╨░╨╜╨╕╤П ╨▓╤Л╨┐╨╛╨╗╨╜╨╡╨╜╤Л</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_HISTORY_BIO_DETAIL_INCOMPLETE">╨Ф╨╗╤П ╤З╨░╤Б╤В╨╕ ╤Б╤В╨░╤А╤Л╤Е ╨╖╨░╨▓╨╡╤А╤И╤С╨╜╨╜╤Л╤Е ╨▒╨╕╨╛╤Б╨║╨░╨╜╨╛╨▓ genus ╨╜╨╡ ╤Б╨╛╤Е╤А╨░╨╜╤С╨╜.</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_TARGETS_HEADER">╨б╨Ы╨Х╨Ф╨г╨о╨й╨Ш╨Х ╨ж╨Х╨Ы╨Ш</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_PENDING_FORMAT">╨Ф╨Р╨Ы╨Х╨Х: {0}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_EXOBIO_PROGRESS_FORMAT">╨╛╨▒╤А╨░╨╖╨╡╤Ж {0} тАв {1}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_FOOTER_QUEUE_FORMAT">╨Ю╤В╨╗╨╛╨╢╨╡╨╜╨╛ {0} тАв ╨╖╨░╨▓╨╡╤А╤И╨╡╨╜╨╛ {1}</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_MODE_SYSTEM">╨б╨Ш╨б╨в╨Х╨Ь╨Р</sys:String>
++    <sys:String x:Key="Loc_EXPLORATION_NO_TARGETS">╨а╨╡╨║╨╛╨╝╨╡╨╜╨┤╤Г╨╡╨╝╤Л╤Е ╤В╨╡╨╗ ╨┐╨╛╨║╨░ ╨╜╨╡╤В.</sys:String>
+ </ResourceDictionary>
+diff --git a/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml b/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml
+index efd4037..0e5f55c 100644
+--- a/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml
++++ b/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml
+@@ -1,7 +1,7 @@
+ <Window x:Class="ED_Inara_Overlay.Windows.ActivityWorkspaceOverlayWindow"
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+-        Title="{DynamicResource Loc_Activity_assistant}" Width="400" Height="330"
++        Title="{DynamicResource Loc_Activity_assistant}" Width="420" Height="350"
+         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+         Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize">
+     <Grid>
+@@ -34,7 +34,7 @@
+                 </StackPanel>
+             </Grid>
+ 
+-            <Border Grid.Row="1" Margin="0,10,0,8" Padding="9,6"
++            <Border x:Name="LegacyLocationPanel" Grid.Row="1" Margin="0,10,0,8" Padding="9,6"
+                     Background="{DynamicResource HighlightBackgroundBrush}">
+                 <StackPanel>
+                     <TextBlock x:Name="LocationText" Text="{DynamicResource Loc_SYSTEM}"
+@@ -48,61 +48,193 @@
+                 </StackPanel>
+             </Border>
+ 
+-            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+-                          PanningMode="VerticalOnly">
+-            <StackPanel Margin="0,0,5,0">
+-                <TextBlock x:Name="PrimaryHintText" TextWrapping="Wrap" Margin="0,4,0,9"
+-                           Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+-                <Border x:Name="SurfaceNavigationPanel" Padding="9,7" Margin="0,0,0,7"
+-                        Background="{DynamicResource HighlightBackgroundBrush}"
+-                        BorderBrush="{DynamicResource AccentColorBrush}" BorderThickness="1,0,0,0">
+-                    <Grid>
+-                        <Grid.ColumnDefinitions>
+-                            <ColumnDefinition Width="58"/>
+-                            <ColumnDefinition Width="*"/>
+-                        </Grid.ColumnDefinitions>
+-                        <Grid x:Name="SurfaceRadar" Width="50" Height="50" VerticalAlignment="Center">
+-                            <Ellipse Stroke="{DynamicResource BorderColorBrush}" StrokeThickness="1"/>
+-                            <Ellipse Width="30" Height="30" Stroke="{DynamicResource MutedTextColorBrush}"
+-                                     StrokeThickness="1" StrokeDashArray="2,2"/>
+-                            <Ellipse Width="4" Height="4" Fill="{DynamicResource PrimaryTextColorBrush}"/>
+-                            <Path Data="M 25,4 L 20,15 L 25,12 L 30,15 Z"
+-                                  Fill="{DynamicResource AccentColorBrush}"
+-                                  RenderTransformOrigin="0.5,0.5">
+-                                <Path.RenderTransform>
+-                                    <RotateTransform x:Name="SurfaceEscapeArrowTransform" Angle="0" CenterX="25" CenterY="25"/>
+-                                </Path.RenderTransform>
+-                            </Path>
++            <Grid Grid.Row="2">
++                <StackPanel x:Name="AdaptiveExplorationPanel" Visibility="Collapsed">
++                    <Border Padding="9,7" Margin="0,1,0,7"
++                            Background="{DynamicResource HighlightBackgroundBrush}"
++                            BorderBrush="{DynamicResource AccentColorBrush}"
++                            BorderThickness="2,0,0,0">
++                        <Grid>
++                            <Grid.ColumnDefinitions>
++                                <ColumnDefinition Width="*"/>
++                                <ColumnDefinition Width="Auto"/>
++                            </Grid.ColumnDefinitions>
++                            <StackPanel>
++                                <TextBlock x:Name="CompactModeText"
++                                           FontSize="9" FontWeight="SemiBold"
++                                           Foreground="{DynamicResource AccentColorBrush}"/>
++                                <TextBlock x:Name="CompactContextTitleText"
++                                           Margin="0,2,0,0"
++                                           FontSize="15" FontWeight="Bold"
++                                           TextTrimming="CharacterEllipsis"
++                                           Foreground="{DynamicResource PrimaryTextColorBrush}"/>
++                            </StackPanel>
++                            <TextBlock x:Name="CompactQueueCountText"
++                                       Grid.Column="1"
++                                       Margin="10,0,0,0"
++                                       VerticalAlignment="Center"
++                                       TextAlignment="Right"
++                                       FontSize="9"
++                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+                         </Grid>
+-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+-                            <TextBlock x:Name="SurfaceNavigationText" TextWrapping="Wrap" FontWeight="SemiBold"
++                    </Border>
++
++                    <Border x:Name="SystemContextPanel"
++                            Padding="9,7" Margin="0,0,0,7"
++                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
++                            BorderBrush="{DynamicResource BorderColorBrush}"
++                            BorderThickness="1,0,0,0">
++                        <StackPanel>
++                            <ItemsControl x:Name="CompactTargetsItemsControl">
++                                <ItemsControl.ItemTemplate>
++                                    <DataTemplate>
++                                        <TextBlock Text="{Binding}"
++                                                   Margin="0,0,0,4"
++                                                   FontSize="11"
++                                                   TextWrapping="Wrap"
++                                                   Foreground="{DynamicResource PrimaryTextColorBrush}"/>
++                                    </DataTemplate>
++                                </ItemsControl.ItemTemplate>
++                            </ItemsControl>
++                            <TextBlock x:Name="CompactEmptyTargetsText"
++                                       Visibility="Collapsed"
++                                       TextWrapping="Wrap"
++                                       FontSize="11"
++                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
++                        </StackPanel>
++                    </Border>
++
++                    <Border x:Name="BodyContextPanel"
++                            Visibility="Collapsed"
++                            Padding="9,7" Margin="0,0,0,7"
++                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
++                            BorderBrush="{DynamicResource AccentColorBrush}"
++                            BorderThickness="1,0,0,0">
++                        <StackPanel>
++                            <TextBlock x:Name="BodyStatusText"
++                                       FontWeight="SemiBold"
+                                        Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+-                            <TextBlock Text="{DynamicResource Loc_EXOBIO_RADAR_EXPLANATION}" Margin="0,3,0,0"
+-                                       TextWrapping="Wrap" FontSize="9"
++                            <TextBlock x:Name="BodyObjectiveText"
++                                       Margin="0,4,0,0"
++                                       TextWrapping="Wrap"
++                                       Foreground="{DynamicResource SecondaryTextColorBrush}"/>
++                            <TextBlock x:Name="BodyMissingText"
++                                       Margin="0,3,0,0"
++                                       TextWrapping="Wrap"
++                                       FontSize="10"
++                                       Foreground="{DynamicResource AccentColorBrush}"/>
++                            <TextBlock x:Name="BodyMetaText"
++                                       Margin="0,4,0,0"
++                                       TextWrapping="Wrap"
++                                       FontSize="9"
+                                        Foreground="{DynamicResource MutedTextColorBrush}"/>
+                         </StackPanel>
+-                    </Grid>
+-                </Border>
+-                <Border x:Name="FuelAdvicePanel" Padding="9,7" Margin="0,0,0,7" Visibility="Collapsed"
+-                        Background="{DynamicResource SecondaryBackgroundColorBrush}"
+-                        BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1,0,0,0">
+-                    <TextBlock x:Name="FuelAdviceText" TextWrapping="Wrap"
+-                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+-                </Border>
+-                <Border x:Name="ExplorationPoiPanel" Padding="9,7" Margin="0,0,0,7" Visibility="Collapsed"
+-                        Background="{DynamicResource SecondaryBackgroundColorBrush}"
+-                        BorderBrush="{DynamicResource AccentColorBrush}" BorderThickness="1,0,0,0">
+-                    <TextBlock x:Name="ExplorationPoiText" TextWrapping="Wrap"
+-                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+-                </Border>
+-                <Border Padding="9,7" Background="{DynamicResource SecondaryBackgroundColorBrush}"
+-                        BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1,0,0,0">
+-                    <TextBlock x:Name="PlannedFeaturesText" TextWrapping="Wrap" FontSize="11"
+-                               Foreground="{DynamicResource MutedTextColorBrush}"/>
+-                </Border>
+-            </StackPanel>
+-            </ScrollViewer>
++                    </Border>
++
++                    <StackPanel x:Name="ExobioContextPanel"
++                                Visibility="Collapsed">
++                        <Border x:Name="SurfaceNavigationPanel"
++                                Padding="9,7" Margin="0,0,0,5"
++                                Background="{DynamicResource HighlightBackgroundBrush}"
++                                BorderBrush="{DynamicResource AccentColorBrush}"
++                                BorderThickness="1,0,0,0">
++                            <Grid>
++                                <Grid.ColumnDefinitions>
++                                    <ColumnDefinition Width="58"/>
++                                    <ColumnDefinition Width="*"/>
++                                </Grid.ColumnDefinitions>
++                                <Grid x:Name="SurfaceRadar"
++                                      Width="50" Height="50"
++                                      VerticalAlignment="Center">
++                                    <Ellipse Stroke="{DynamicResource BorderColorBrush}"
++                                             StrokeThickness="1"/>
++                                    <Ellipse Width="30" Height="30"
++                                             Stroke="{DynamicResource MutedTextColorBrush}"
++                                             StrokeThickness="1"
++                                             StrokeDashArray="2,2"/>
++                                    <Ellipse Width="4" Height="4"
++                                             Fill="{DynamicResource PrimaryTextColorBrush}"/>
++                                    <Path Data="M 25,4 L 20,15 L 25,12 L 30,15 Z"
++                                          Fill="{DynamicResource AccentColorBrush}"
++                                          RenderTransformOrigin="0.5,0.5">
++                                        <Path.RenderTransform>
++                                            <RotateTransform x:Name="SurfaceEscapeArrowTransform"
++                                                             Angle="0"
++                                                             CenterX="25"
++                                                             CenterY="25"/>
++                                        </Path.RenderTransform>
++                                    </Path>
++                                </Grid>
++                                <StackPanel Grid.Column="1"
++                                            VerticalAlignment="Center">
++                                    <TextBlock x:Name="SurfaceNavigationText"
++                                               TextWrapping="Wrap"
++                                               FontWeight="SemiBold"
++                                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
++                                </StackPanel>
++                            </Grid>
++                        </Border>
++                        <TextBlock x:Name="ExobioBodyProgressText"
++                                   Margin="9,0,9,5"
++                                   TextWrapping="Wrap"
++                                   FontSize="10"
++                                   Foreground="{DynamicResource SecondaryTextColorBrush}"/>
++                    </StackPanel>
++
++                    <Border x:Name="CompactRouteAlertPanel"
++                            Visibility="Collapsed"
++                            Padding="9,6"
++                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
++                            BorderBrush="{DynamicResource BorderColorBrush}"
++                            BorderThickness="1,0,0,0">
++                        <TextBlock x:Name="CompactRouteAlertText"
++                                   TextWrapping="Wrap"
++                                   FontSize="9"
++                                   Foreground="{DynamicResource MutedTextColorBrush}"/>
++                    </Border>
++                </StackPanel>
+ 
++                <ScrollViewer x:Name="LegacyCompactScrollViewer"
++                              VerticalScrollBarVisibility="Auto"
++                              HorizontalScrollBarVisibility="Disabled"
++                              PanningMode="VerticalOnly">
++                    <StackPanel Margin="0,0,5,0">
++                        <TextBlock x:Name="PrimaryHintText"
++                                   TextWrapping="Wrap"
++                                   Margin="0,4,0,9"
++                                   Foreground="{DynamicResource PrimaryTextColorBrush}"/>
++                        <Border x:Name="FuelAdvicePanel"
++                                Padding="9,7" Margin="0,0,0,7"
++                                Visibility="Collapsed"
++                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
++                                BorderBrush="{DynamicResource BorderColorBrush}"
++                                BorderThickness="1,0,0,0">
++                            <TextBlock x:Name="FuelAdviceText"
++                                       TextWrapping="Wrap"
++                                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
++                        </Border>
++                        <Border x:Name="ExplorationPoiPanel"
++                                Padding="9,7" Margin="0,0,0,7"
++                                Visibility="Collapsed"
++                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
++                                BorderBrush="{DynamicResource AccentColorBrush}"
++                                BorderThickness="1,0,0,0">
++                            <TextBlock x:Name="ExplorationPoiText"
++                                       TextWrapping="Wrap"
++                                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
++                        </Border>
++                        <Border Padding="9,7"
++                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
++                                BorderBrush="{DynamicResource BorderColorBrush}"
++                                BorderThickness="1,0,0,0">
++                            <TextBlock x:Name="PlannedFeaturesText"
++                                       TextWrapping="Wrap"
++                                       FontSize="11"
++                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
++                        </Border>
++                    </StackPanel>
++                </ScrollViewer>
++            </Grid>
+             <Grid Grid.Row="3" Margin="0,8,0,0">
+                 <Grid.ColumnDefinitions>
+                     <ColumnDefinition Width="*"/>
+diff --git a/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml.cs b/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml.cs
+index 7bf3d4f..977d154 100644
+--- a/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml.cs
++++ b/ED_Inara_Overlay/Windows/ActivityWorkspaceOverlayWindow.xaml.cs
+@@ -71,6 +71,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
+         JournalMonitorService.Instance.StateChanged += OnJournalStateChanged;
+         ExplorationDataService.Instance.DataChanged += OnExplorationDataChanged;
+         ExplorationHistoryService.Instance.HistoryChanged += OnExplorationHistoryChanged;
++        ExplorationVisitStateService.Instance.Changed += OnExplorationVisitStateChanged;
+         ExplorationRouteService.Instance.RouteChanged += OnExplorationRouteChanged;
+         ExplorationPoiService.Instance.PoiChanged += OnExplorationPoiChanged;
+         ExplorationEarningsService.Instance.Changed += OnExplorationEarningsChanged;
+@@ -143,71 +144,115 @@ public partial class ActivityWorkspaceOverlayWindow : Window
+     private void RefreshContent(GameStateSnapshot state)
+     {
+         bool exploration = activity == ActivityType.Exploration;
+-        TitleText.Text = exploration ? Loc.Get("Loc_EXPLORATION_AND_EXOBIOLOGY") : Loc.Get("Loc_MINING");
+-        ModuleStatusText.Text = state.IsLive ? Loc.Get("Loc_JOURNAL_LIVE_2") : Loc.Get("Loc_JOURNAL_ASSISTANT");
++
+         LocationText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
+             ? Loc.Get("Loc_SYSTEM")
+             : Loc.Format("Loc_System_Format", state.StarSystem.ToUpperInvariant());
++
+         FlightStateText.Text = BuildFlightState(state);
+-        ExplorationDataState externalData = ExplorationDataService.Instance.Current;
++
++        ExplorationDataState externalData =
++            ExplorationDataService.Instance.Current;
++
+         ExternalDataText.Visibility = Visibility.Collapsed;
+         ExternalDataText.Text = string.Empty;
++
+         if (exploration)
+         {
+-            string progress = BuildExplorationProgress(state, externalData);
+-            long scanValue = state.ExplorationBodies.Sum(body => body.EstimatedScanValue);
+-            long mappedValue = state.ExplorationBodies
+-                .Where(body => body.IsMapped)
+-                .Sum(body => body.MappingEfficient
+-                    ? body.EstimatedEfficientMappingValue
+-                    : body.EstimatedMappingValue);
+-            PrimaryHintText.Text = scanValue > 0 || mappedValue > 0
+-                ? progress + Environment.NewLine + Loc.Format("Loc_Exploration_local_value_format", scanValue, mappedValue)
+-                : progress;
+-            PlannedFeaturesText.Text = BuildCompactExplorationTarget(state, externalData);
+-            SurfaceNavigationText.Text = BuildSurfaceNavigation(state);
+-            SurfaceNavigationPanel.Visibility = state.ActiveOrganic is null
+-                ? Visibility.Collapsed
+-                : Visibility.Visible;
+-            FuelAdvicePanel.Visibility = Visibility.Collapsed;
+-            ExplorationPoiPanel.Visibility = Visibility.Collapsed;
+-            FooterHintText.Text = BuildExplorationFooter(state);
+-            OpenExplorationAssistantButton.Visibility = Visibility.Visible;
+-            if (string.IsNullOrWhiteSpace(SpanshSourceTextBox.Text) && !string.IsNullOrWhiteSpace(state.StarSystem))
++            TitleText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
++                ? Loc.Get("Loc_EXPLORATION")
++                : state.StarSystem.ToUpperInvariant();
++
++            ExplorationVisitQueueSnapshot queue =
++                ExplorationVisitStateService.Instance.Current;
++
++            ModuleStatusText.Text =
++                BuildAdaptiveExplorationHeader(
++                    state,
++                    externalData,
++                    queue);
++
++            LegacyLocationPanel.Visibility = Visibility.Collapsed;
++            LegacyCompactScrollViewer.Visibility = Visibility.Collapsed;
++            AdaptiveExplorationPanel.Visibility = Visibility.Visible;
++
++            RefreshAdaptiveExploration(
++                state,
++                externalData,
++                queue);
++
++            FooterHintText.Text =
++                BuildAdaptiveExplorationFooter(
++                    state,
++                    queue);
++
++            OpenExplorationAssistantButton.Visibility =
++                Visibility.Visible;
++
++            if (string.IsNullOrWhiteSpace(SpanshSourceTextBox.Text)
++                && !string.IsNullOrWhiteSpace(state.StarSystem))
++            {
+                 SpanshSourceTextBox.Text = state.StarSystem;
++            }
++
+             if (fullExplorationVisible)
+             {
+                 RefreshCatalog(state, externalData);
+-                FullOverviewText.Text = BuildFullOverview(state, externalData);
++                FullOverviewText.Text =
++                    BuildFullOverview(state, externalData);
+                 RefreshExplorationLog();
+             }
++
++            return;
+         }
+-        else
+-        {
+-            SurfaceNavigationPanel.Visibility = Visibility.Collapsed;
+-            FuelAdvicePanel.Visibility = Visibility.Collapsed;
+-            ExplorationPoiPanel.Visibility = Visibility.Collapsed;
+-            ProspectedAsteroidSnapshot? prospect = state.LastProspectedAsteroid;
+-            PrimaryHintText.Text = prospect is null
+-                ? Loc.Get("Loc_Mining_waiting_for_prospector")
+-                : Loc.Format(
+-                    prospect.HasMotherlode ? "Loc_Mining_core_prospect_format" : "Loc_Mining_prospect_format",
+-                    prospect.HasMotherlode ? prospect.MotherlodeMaterial : prospect.Content,
+-                    prospect.Remaining);
+-            string leadingMaterials = prospect is null
+-                ? Loc.Get("Loc_No_prospect_data")
+-                : string.Join(" ┬╖ ", prospect.Materials.Take(3)
+-                    .Select(material => $"{material.Name} {material.Proportion:0.#}%"));
+-            PlannedFeaturesText.Text = Loc.Format(
+-                "Loc_Mining_session_format",
+-                state.RefinedMiningUnits,
+-                state.CrackedAsteroids,
+-                leadingMaterials);
+-            FooterHintText.Text = Loc.Get("Loc_Switch_activities_in_the_main_window");
+-            OpenExplorationAssistantButton.Visibility = Visibility.Collapsed;
+-        }
+-    }
+ 
++        TitleText.Text = Loc.Get("Loc_MINING");
++        ModuleStatusText.Text = state.IsLive
++            ? Loc.Get("Loc_JOURNAL_LIVE_2")
++            : Loc.Get("Loc_JOURNAL_ASSISTANT");
++
++        LegacyLocationPanel.Visibility = Visibility.Visible;
++        LegacyCompactScrollViewer.Visibility = Visibility.Visible;
++        AdaptiveExplorationPanel.Visibility = Visibility.Collapsed;
++        SurfaceNavigationPanel.Visibility = Visibility.Collapsed;
++        FuelAdvicePanel.Visibility = Visibility.Collapsed;
++        ExplorationPoiPanel.Visibility = Visibility.Collapsed;
++
++        ProspectedAsteroidSnapshot? prospect =
++            state.LastProspectedAsteroid;
++
++        PrimaryHintText.Text = prospect is null
++            ? Loc.Get("Loc_Mining_waiting_for_prospector")
++            : Loc.Format(
++                prospect.HasMotherlode
++                    ? "Loc_Mining_core_prospect_format"
++                    : "Loc_Mining_prospect_format",
++                prospect.HasMotherlode
++                    ? prospect.MotherlodeMaterial
++                    : prospect.Content,
++                prospect.Remaining);
++
++        string leadingMaterials = prospect is null
++            ? Loc.Get("Loc_No_prospect_data")
++            : string.Join(
++                " ┬╖ ",
++                prospect.Materials
++                    .Take(3)
++                    .Select(material =>
++                        $"{material.Name} {material.Proportion:0.#}%"));
++
++        PlannedFeaturesText.Text = Loc.Format(
++            "Loc_Mining_session_format",
++            state.RefinedMiningUnits,
++            state.CrackedAsteroids,
++            leadingMaterials);
++
++        FooterHintText.Text =
++            Loc.Get("Loc_Switch_activities_in_the_main_window");
++
++        OpenExplorationAssistantButton.Visibility =
++            Visibility.Collapsed;
++    }
+     private void RefreshCatalog(GameStateSnapshot state, ExplorationDataState externalData)
+     {
+         ExplorationSystemHistorySnapshot history = ExplorationHistoryService.Instance.LoadSystem(state);
+@@ -782,6 +827,499 @@ public partial class ActivityWorkspaceOverlayWindow : Window
+         string Distance,
+         string MappingValue,
+         string Progress);
++    private void RefreshAdaptiveExploration(
++        GameStateSnapshot state,
++        ExplorationDataState externalData,
++        ExplorationVisitQueueSnapshot queue)
++    {
++        bool queueMatchesSystem =
++            QueueMatchesSystem(queue, state);
++
++        ExplorationVisitBodyState? active =
++            queueMatchesSystem
++                ? queue.Active
++                : null;
++
++        OrganicScanProgressSnapshot? activeOrganic =
++            active is null
++                ? null
++                : state.GetActiveOrganicForBody(active.BodyId);
++
++        SystemContextPanel.Visibility =
++            active is null
++                ? Visibility.Visible
++                : Visibility.Collapsed;
++
++        BodyContextPanel.Visibility =
++            active is not null && activeOrganic is null
++                ? Visibility.Visible
++                : Visibility.Collapsed;
++
++        ExobioContextPanel.Visibility =
++            active is not null && activeOrganic is not null
++                ? Visibility.Visible
++                : Visibility.Collapsed;
++
++        CompactQueueCountText.Text =
++            queueMatchesSystem
++                ? Loc.Format(
++                    "Loc_EXPLORATION_QUEUE_FORMAT",
++                    queue.RemainingCount,
++                    queue.DeferredCount,
++                    queue.CompletedCount)
++                : string.Empty;
++
++        if (active is null)
++        {
++            CompactModeText.Text =
++                Loc.Get("Loc_EXPLORATION_MODE_SYSTEM");
++
++            CompactContextTitleText.Text =
++                Loc.Get("Loc_EXPLORATION_TARGETS_HEADER");
++
++            ExplorationVisitBodyState[] targets =
++                queueMatchesSystem
++                    ? queue.Recommended
++                        .Take(3)
++                        .ToArray()
++                    : Array.Empty<ExplorationVisitBodyState>();
++
++            CompactTargetsItemsControl.ItemsSource =
++                targets
++                    .Select(BuildAdaptiveTargetLine)
++                    .ToArray();
++
++            CompactEmptyTargetsText.Visibility =
++                targets.Length == 0
++                    ? Visibility.Visible
++                    : Visibility.Collapsed;
++
++            CompactEmptyTargetsText.Text =
++                queueMatchesSystem
++                    && queue.DeferredCount > 0
++                    && queue.Recommended.Count == 0
++                        ? Loc.Format(
++                            "Loc_EXPLORATION_DEFERRED_ONLY_FORMAT",
++                            queue.DeferredCount)
++                        : state.FssProgress >= 0.999
++                            ? Loc.Get(
++                                "Loc_EXPLORATION_SYSTEM_COMPLETE_COMPACT")
++                            : Loc.Get(
++                                "Loc_EXPLORATION_NO_TARGETS");
++        }
++        else if (activeOrganic is null)
++        {
++            CompactModeText.Text =
++                Loc.Get("Loc_EXPLORATION_MODE_BODY");
++
++            CompactContextTitleText.Text =
++                active.BodyName;
++
++            BodyStatusText.Text =
++                BuildAdaptiveBodyStatus(active);
++
++            BodyObjectiveText.Text =
++                BuildAdaptiveBodyObjectives(active);
++
++            BodyMissingText.Text =
++                BuildAdaptiveMissingBiology(active);
++
++            BodyMissingText.Visibility =
++                string.IsNullOrWhiteSpace(BodyMissingText.Text)
++                    ? Visibility.Collapsed
++                    : Visibility.Visible;
++
++            BodyMetaText.Text =
++                BuildAdaptiveBodyMeta(active);
++        }
++        else
++        {
++            CompactModeText.Text =
++                Loc.Get("Loc_EXPLORATION_MODE_EXOBIO");
++
++            CompactContextTitleText.Text =
++                !string.IsNullOrWhiteSpace(activeOrganic.Variant)
++                    ? activeOrganic.Variant
++                    : !string.IsNullOrWhiteSpace(activeOrganic.Species)
++                        ? activeOrganic.Species
++                        : active.BodyName;
++
++            SurfaceNavigationText.Text =
++                BuildSurfaceNavigation(state);
++
++            SurfaceNavigationPanel.Visibility =
++                Visibility.Visible;
++
++            ExobioBodyProgressText.Text =
++                BuildAdaptiveExobioProgress(
++                    active,
++                    activeOrganic);
++        }
++
++        string routeAlert =
++            BuildCompactRouteOrAlert(
++                state,
++                queueMatchesSystem ? queue : null);
++
++        CompactRouteAlertText.Text = routeAlert;
++        CompactRouteAlertPanel.Visibility =
++            string.IsNullOrWhiteSpace(routeAlert)
++                ? Visibility.Collapsed
++                : Visibility.Visible;
++    }
++
++    private static bool QueueMatchesSystem(
++        ExplorationVisitQueueSnapshot queue,
++        GameStateSnapshot state)
++    {
++        if (state.SystemAddress != 0
++            && queue.SystemAddress != 0)
++        {
++            return state.SystemAddress == queue.SystemAddress;
++        }
++
++        return string.Equals(
++            queue.SystemName,
++            state.StarSystem,
++            StringComparison.OrdinalIgnoreCase);
++    }
++
++    private static string BuildAdaptiveExplorationHeader(
++        GameStateSnapshot state,
++        ExplorationDataState externalData,
++        ExplorationVisitQueueSnapshot queue)
++    {
++        if (!state.JournalAvailable)
++        {
++            return Loc.Get(
++                "Loc_Waiting_for_Elite_Dangerous_journal");
++        }
++
++        int knownBodyCount = Math.Max(
++            state.SystemBodyCount,
++            externalData.System is { } system
++            && string.Equals(
++                system.SystemName,
++                state.StarSystem,
++                StringComparison.OrdinalIgnoreCase)
++                ? system.BodyCount
++                : 0);
++
++        int resolvedBodyCount = knownBodyCount == 0
++            ? state.ScannedBodies
++            : Math.Clamp(
++                (int)Math.Round(
++                    knownBodyCount * state.FssProgress),
++                0,
++                knownBodyCount);
++
++        string bodyProgress = knownBodyCount > 0
++            ? $"{resolvedBodyCount}/{knownBodyCount}"
++            : state.ScannedBodies.ToString();
++
++        string result = Loc.Format(
++            "Loc_EXPLORATION_HEADER_FORMAT",
++            Math.Round(state.FssProgress * 100),
++            bodyProgress,
++            state.MappedBodies,
++            state.BiologicalSignals);
++
++        long localValue =
++            state.ExplorationBodies
++                .Sum(body => body.EstimatedScanValue)
++            + state.ExplorationBodies
++                .Where(body => body.IsMapped)
++                .Sum(body =>
++                    body.MappingEfficient
++                        ? body.EstimatedEfficientMappingValue
++                        : body.EstimatedMappingValue);
++
++        if (localValue > 0)
++        {
++            result += "  тАв  "
++                + Loc.Format(
++                    "Loc_Credits_Short_Format",
++                    localValue);
++        }
++
++        return result;
++    }
++
++    private static string BuildAdaptiveTargetLine(
++        ExplorationVisitBodyState item)
++    {
++        var parts = new List<string>
++        {
++            item.BodyName
++        };
++
++        if (!item.Progress.FssScanned)
++        {
++            parts.Add("FSS тЧЛ");
++        }
++
++        if (item.DssRequired)
++        {
++            parts.Add(
++                item.Progress.DssMapped
++                    ? "DSS тЬУ"
++                    : "DSS тЧЛ");
++        }
++
++        if (item.BiologyRequired)
++        {
++            parts.Add(
++                $"BIO {item.Progress.CompletedBiologicalSignals}/{item.Progress.BiologicalSignals}");
++        }
++
++        if (item.Body.DistanceFromArrivalLs > 0)
++        {
++            parts.Add(
++                Loc.Format(
++                    "Loc_Distance_Ls_Value",
++                    item.Body.DistanceFromArrivalLs));
++        }
++
++        long value = item.Body.EstimatedMappingValue;
++        if (value > 0)
++        {
++            parts.Add(
++                Loc.Format(
++                    "Loc_Credits_Short_Format",
++                    value));
++        }
++
++        return string.Join("  тАв  ", parts);
++    }
++
++    private static string BuildAdaptiveBodyStatus(
++        ExplorationVisitBodyState active)
++    {
++        string fss = active.Progress.FssScanned
++            ? "FSS тЬУ"
++            : "FSS тЧЛ";
++
++        string dss = !active.DssRequired
++            ? "DSS тАФ"
++            : active.Progress.DssMapped
++                ? active.Progress.DssEfficient
++                    ? "DSS тЧО"
++                    : "DSS тЬУ"
++                : "DSS тЧЛ";
++
++        string bio = !active.BiologyRequired
++            ? "BIO тАФ"
++            : $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}";
++
++        return string.Join(
++            "  тАв  ",
++            fss,
++            dss,
++            bio);
++    }
++
++    private static string BuildAdaptiveBodyObjectives(
++        ExplorationVisitBodyState active)
++    {
++        var pending = new List<string>();
++
++        if (active.FssRequired
++            && !active.Progress.FssScanned)
++        {
++            pending.Add("FSS");
++        }
++
++        if (active.DssRequired
++            && !active.Progress.DssMapped)
++        {
++            pending.Add("DSS");
++        }
++
++        if (active.BiologyRequired
++            && !active.Progress.BiologyComplete)
++        {
++            pending.Add(
++                $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}");
++        }
++
++        return pending.Count == 0
++            ? Loc.Get(
++                "Loc_EXPLORATION_ALL_OBJECTIVES_DONE")
++            : Loc.Format(
++                "Loc_EXPLORATION_PENDING_FORMAT",
++                string.Join(" + ", pending));
++    }
++
++    private static string BuildAdaptiveMissingBiology(
++        ExplorationVisitBodyState active)
++    {
++        if (!active.BiologyRequired
++            || active.Progress.BiologyComplete)
++        {
++            return string.Empty;
++        }
++
++        string known = active.Progress.MissingGenuses.Count > 0
++            ? string.Join(
++                " ┬╖ ",
++                active.Progress.MissingGenuses)
++            : string.Empty;
++
++        int unknownCount = Math.Max(
++            0,
++            active.Progress.RemainingBiologicalSignals
++                - active.Progress.MissingGenuses.Count);
++
++        var parts = new List<string>();
++
++        if (!string.IsNullOrWhiteSpace(known))
++        {
++            parts.Add(
++                Loc.Format(
++                    "Loc_EXPLORATION_MISSING_GENUSES_FORMAT",
++                    known));
++        }
++
++        if (unknownCount > 0)
++        {
++            parts.Add(
++                Loc.Format(
++                    "Loc_EXPLORATION_UNKNOWN_GENUSES_FORMAT",
++                    unknownCount));
++        }
++
++        if (active.Progress.HistoricalBiologyDetailIncomplete)
++        {
++            parts.Add(
++                Loc.Get(
++                    "Loc_EXPLORATION_HISTORY_BIO_DETAIL_INCOMPLETE"));
++        }
++
++        return string.Join(
++            Environment.NewLine,
++            parts);
++    }
++
++    private static string BuildAdaptiveBodyMeta(
++        ExplorationVisitBodyState active)
++    {
++        var parts = new List<string>();
++
++        string type = string.IsNullOrWhiteSpace(
++            active.Body.Subtype)
++                ? active.Body.Type
++                : active.Body.Subtype;
++
++        if (!string.IsNullOrWhiteSpace(type))
++        {
++            parts.Add(type);
++        }
++
++        if (active.Body.DistanceFromArrivalLs > 0)
++        {
++            parts.Add(
++                Loc.Format(
++                    "Loc_Distance_Ls_Value",
++                    active.Body.DistanceFromArrivalLs));
++        }
++
++        if (active.Body.Landable
++            && active.Body.GravityG > 0)
++        {
++            parts.Add(
++                $"{active.Body.GravityG:0.00} g");
++        }
++
++        if (active.Body.EstimatedMappingValue > 0)
++        {
++            parts.Add(
++                Loc.Format(
++                    "Loc_Credits_Short_Format",
++                    active.Body.EstimatedMappingValue));
++        }
++
++        return string.Join(
++            "  тАв  ",
++            parts);
++    }
++
++    private static string BuildAdaptiveExobioProgress(
++        ExplorationVisitBodyState active,
++        OrganicScanProgressSnapshot organic)
++    {
++        string stage = $"{organic.Stage}/3";
++
++        string bodyProgress =
++            $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}";
++
++        string missing =
++            BuildAdaptiveMissingBiology(active);
++
++        string result = Loc.Format(
++            "Loc_EXPLORATION_EXOBIO_PROGRESS_FORMAT",
++            stage,
++            bodyProgress);
++
++        return string.IsNullOrWhiteSpace(missing)
++            ? result
++            : result
++              + Environment.NewLine
++              + missing;
++    }
++
++    private static string BuildCompactRouteOrAlert(
++        GameStateSnapshot state,
++        ExplorationVisitQueueSnapshot? queue)
++    {
++        FuelRouteAssessment fuel =
++            FuelRouteAdvisor.Evaluate(state);
++
++        if (fuel.Severity
++            is FuelRouteSeverity.Critical
++            or FuelRouteSeverity.Caution)
++        {
++            return BuildFuelAdvice(fuel);
++        }
++
++        ExplorationRoutePlan route =
++            ExplorationRouteService.Instance.Current;
++
++        if (route.NextStop is { } next)
++        {
++            return Loc.Format(
++                "Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT",
++                next.System,
++                Math.Min(
++                    route.Stops.Count,
++                    route.CurrentIndex + 2),
++                route.Stops.Count);
++        }
++
++        if (queue is { DeferredCount: > 0 })
++        {
++            return Loc.Format(
++                "Loc_EXPLORATION_DEFERRED_HUD_FORMAT",
++                queue.DeferredCount);
++        }
++
++        return string.Empty;
++    }
++
++    private static string BuildAdaptiveExplorationFooter(
++        GameStateSnapshot state,
++        ExplorationVisitQueueSnapshot queue)
++    {
++        if (QueueMatchesSystem(queue, state)
++            && queue.DeferredCount > 0)
++        {
++            return Loc.Format(
++                "Loc_EXPLORATION_FOOTER_QUEUE_FORMAT",
++                queue.DeferredCount,
++                queue.CompletedCount);
++        }
++
++        return BuildExplorationFooter(state);
++    }
+ 
+     private static string BuildExplorationProgress(GameStateSnapshot state, ExplorationDataState externalData)
+     {
+@@ -1262,6 +1800,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
+         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
+         ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
+         ExplorationHistoryService.Instance.HistoryChanged -= OnExplorationHistoryChanged;
++        ExplorationVisitStateService.Instance.Changed -= OnExplorationVisitStateChanged;
+         ExplorationRouteService.Instance.RouteChanged -= OnExplorationRouteChanged;
+         ExplorationPoiService.Instance.PoiChanged -= OnExplorationPoiChanged;
+         ExplorationEarningsService.Instance.Changed -= OnExplorationEarningsChanged;
+@@ -1277,6 +1816,13 @@ public partial class ActivityWorkspaceOverlayWindow : Window
+ 
+     private void OnExplorationHistoryChanged(object? sender, ExplorationHistoryChangedEventArgs e) =>
+         Dispatcher.BeginInvoke(new Action(() => RefreshContent(JournalMonitorService.Instance.Current)));
++    private void OnExplorationVisitStateChanged(
++        object? sender,
++        ExplorationVisitStateChangedEventArgs e) =>
++        Dispatcher.BeginInvoke(
++            new Action(() =>
++                RefreshContent(
++                    JournalMonitorService.Instance.Current)));
+ 
+     private void OnExplorationRouteChanged(object? sender, ExplorationRouteChangedEventArgs e) =>
+         Dispatcher.BeginInvoke(new Action(() => RefreshContent(JournalMonitorService.Instance.Current)));

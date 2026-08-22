@@ -45,6 +45,9 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         new("Notable", "Loc_FILTER_NOTABLE"),
         new("Valuable", "Loc_FILTER_VALUABLE"),
         new("Biological", "Loc_FILTER_BIOLOGICAL"),
+        new("Remaining", "Loc_FILTER_REMAINING"),
+        new("Deferred", "Loc_FILTER_DEFERRED"),
+        new("Completed", "Loc_FILTER_COMPLETED"),
         new("Unmapped", "Loc_FILTER_UNMAPPED"),
         new("Landable", "Loc_FILTER_LANDABLE")
     ];
@@ -71,6 +74,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         JournalMonitorService.Instance.StateChanged += OnJournalStateChanged;
         ExplorationDataService.Instance.DataChanged += OnExplorationDataChanged;
         ExplorationHistoryService.Instance.HistoryChanged += OnExplorationHistoryChanged;
+        ExplorationVisitStateService.Instance.Changed += OnExplorationVisitStateChanged;
         ExplorationRouteService.Instance.RouteChanged += OnExplorationRouteChanged;
         ExplorationPoiService.Instance.PoiChanged += OnExplorationPoiChanged;
         ExplorationEarningsService.Instance.Changed += OnExplorationEarningsChanged;
@@ -143,71 +147,115 @@ public partial class ActivityWorkspaceOverlayWindow : Window
     private void RefreshContent(GameStateSnapshot state)
     {
         bool exploration = activity == ActivityType.Exploration;
-        TitleText.Text = exploration ? Loc.Get("Loc_EXPLORATION_AND_EXOBIOLOGY") : Loc.Get("Loc_MINING");
-        ModuleStatusText.Text = state.IsLive ? Loc.Get("Loc_JOURNAL_LIVE_2") : Loc.Get("Loc_JOURNAL_ASSISTANT");
+
         LocationText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
             ? Loc.Get("Loc_SYSTEM")
             : Loc.Format("Loc_System_Format", state.StarSystem.ToUpperInvariant());
+
         FlightStateText.Text = BuildFlightState(state);
-        ExplorationDataState externalData = ExplorationDataService.Instance.Current;
+
+        ExplorationDataState externalData =
+            ExplorationDataService.Instance.Current;
+
         ExternalDataText.Visibility = Visibility.Collapsed;
         ExternalDataText.Text = string.Empty;
+
         if (exploration)
         {
-            string progress = BuildExplorationProgress(state, externalData);
-            long scanValue = state.ExplorationBodies.Sum(body => body.EstimatedScanValue);
-            long mappedValue = state.ExplorationBodies
-                .Where(body => body.IsMapped)
-                .Sum(body => body.MappingEfficient
-                    ? body.EstimatedEfficientMappingValue
-                    : body.EstimatedMappingValue);
-            PrimaryHintText.Text = scanValue > 0 || mappedValue > 0
-                ? progress + Environment.NewLine + Loc.Format("Loc_Exploration_local_value_format", scanValue, mappedValue)
-                : progress;
-            PlannedFeaturesText.Text = BuildCompactExplorationTarget(state, externalData);
-            SurfaceNavigationText.Text = BuildSurfaceNavigation(state);
-            SurfaceNavigationPanel.Visibility = state.ActiveOrganic is null
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-            FuelAdvicePanel.Visibility = Visibility.Collapsed;
-            ExplorationPoiPanel.Visibility = Visibility.Collapsed;
-            FooterHintText.Text = BuildExplorationFooter(state);
-            OpenExplorationAssistantButton.Visibility = Visibility.Visible;
-            if (string.IsNullOrWhiteSpace(SpanshSourceTextBox.Text) && !string.IsNullOrWhiteSpace(state.StarSystem))
+            TitleText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
+                ? Loc.Get("Loc_EXPLORATION")
+                : state.StarSystem.ToUpperInvariant();
+
+            ExplorationVisitQueueSnapshot queue =
+                ExplorationVisitStateService.Instance.Current;
+
+            ModuleStatusText.Text =
+                BuildAdaptiveExplorationHeader(
+                    state,
+                    externalData,
+                    queue);
+
+            LegacyLocationPanel.Visibility = Visibility.Collapsed;
+            LegacyCompactScrollViewer.Visibility = Visibility.Collapsed;
+            AdaptiveExplorationPanel.Visibility = Visibility.Visible;
+
+            RefreshAdaptiveExploration(
+                state,
+                externalData,
+                queue);
+
+            FooterHintText.Text =
+                BuildAdaptiveExplorationFooter(
+                    state,
+                    queue);
+
+            OpenExplorationAssistantButton.Visibility =
+                Visibility.Visible;
+
+            if (string.IsNullOrWhiteSpace(SpanshSourceTextBox.Text)
+                && !string.IsNullOrWhiteSpace(state.StarSystem))
+            {
                 SpanshSourceTextBox.Text = state.StarSystem;
+            }
+
             if (fullExplorationVisible)
             {
                 RefreshCatalog(state, externalData);
-                FullOverviewText.Text = BuildFullOverview(state, externalData);
+                FullOverviewText.Text =
+                    BuildFullOverview(state, externalData);
                 RefreshExplorationLog();
             }
-        }
-        else
-        {
-            SurfaceNavigationPanel.Visibility = Visibility.Collapsed;
-            FuelAdvicePanel.Visibility = Visibility.Collapsed;
-            ExplorationPoiPanel.Visibility = Visibility.Collapsed;
-            ProspectedAsteroidSnapshot? prospect = state.LastProspectedAsteroid;
-            PrimaryHintText.Text = prospect is null
-                ? Loc.Get("Loc_Mining_waiting_for_prospector")
-                : Loc.Format(
-                    prospect.HasMotherlode ? "Loc_Mining_core_prospect_format" : "Loc_Mining_prospect_format",
-                    prospect.HasMotherlode ? prospect.MotherlodeMaterial : prospect.Content,
-                    prospect.Remaining);
-            string leadingMaterials = prospect is null
-                ? Loc.Get("Loc_No_prospect_data")
-                : string.Join(" · ", prospect.Materials.Take(3)
-                    .Select(material => $"{material.Name} {material.Proportion:0.#}%"));
-            PlannedFeaturesText.Text = Loc.Format(
-                "Loc_Mining_session_format",
-                state.RefinedMiningUnits,
-                state.CrackedAsteroids,
-                leadingMaterials);
-            FooterHintText.Text = Loc.Get("Loc_Switch_activities_in_the_main_window");
-            OpenExplorationAssistantButton.Visibility = Visibility.Collapsed;
-        }
-    }
 
+            return;
+        }
+
+        TitleText.Text = Loc.Get("Loc_MINING");
+        ModuleStatusText.Text = state.IsLive
+            ? Loc.Get("Loc_JOURNAL_LIVE_2")
+            : Loc.Get("Loc_JOURNAL_ASSISTANT");
+
+        LegacyLocationPanel.Visibility = Visibility.Visible;
+        LegacyCompactScrollViewer.Visibility = Visibility.Visible;
+        AdaptiveExplorationPanel.Visibility = Visibility.Collapsed;
+        SurfaceNavigationPanel.Visibility = Visibility.Collapsed;
+        FuelAdvicePanel.Visibility = Visibility.Collapsed;
+        ExplorationPoiPanel.Visibility = Visibility.Collapsed;
+
+        ProspectedAsteroidSnapshot? prospect =
+            state.LastProspectedAsteroid;
+
+        PrimaryHintText.Text = prospect is null
+            ? Loc.Get("Loc_Mining_waiting_for_prospector")
+            : Loc.Format(
+                prospect.HasMotherlode
+                    ? "Loc_Mining_core_prospect_format"
+                    : "Loc_Mining_prospect_format",
+                prospect.HasMotherlode
+                    ? prospect.MotherlodeMaterial
+                    : prospect.Content,
+                prospect.Remaining);
+
+        string leadingMaterials = prospect is null
+            ? Loc.Get("Loc_No_prospect_data")
+            : string.Join(
+                " · ",
+                prospect.Materials
+                    .Take(3)
+                    .Select(material =>
+                        $"{material.Name} {material.Proportion:0.#}%"));
+
+        PlannedFeaturesText.Text = Loc.Format(
+            "Loc_Mining_session_format",
+            state.RefinedMiningUnits,
+            state.CrackedAsteroids,
+            leadingMaterials);
+
+        FooterHintText.Text =
+            Loc.Get("Loc_Switch_activities_in_the_main_window");
+
+        OpenExplorationAssistantButton.Visibility =
+            Visibility.Collapsed;
+    }
     private void RefreshCatalog(GameStateSnapshot state, ExplorationDataState externalData)
     {
         ExplorationSystemHistorySnapshot history = ExplorationHistoryService.Instance.LoadSystem(state);
@@ -232,9 +280,33 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 _ => "Loc_Exploration_spoilers_enrich_scanned"
             }));
         ExplorationHistoryImportState import = ExplorationHistoryService.Instance.ImportState;
-        CatalogSourceText.Text = sourceMode + Environment.NewLine + (import.IsRunning
-            ? Loc.Format("Loc_Exploration_history_import_progress_format", import.ProcessedFiles, import.TotalFiles)
-            : Loc.Format("Loc_Exploration_history_status_format", history.Bodies.Count));
+        ExplorationVisitQueueSnapshot visitQueue =
+            ExplorationVisitStateService.Instance.Current;
+
+        string queueSummary = QueueMatchesSystem(
+            visitQueue,
+            state)
+            ? Loc.Format(
+                "Loc_EXPLORATION_QUEUE_FULL_FORMAT",
+                visitQueue.RemainingCount,
+                visitQueue.DeferredCount,
+                visitQueue.CompletedCount)
+            : string.Empty;
+
+        CatalogSourceText.Text =
+            sourceMode
+            + Environment.NewLine
+            + (import.IsRunning
+                ? Loc.Format(
+                    "Loc_Exploration_history_import_progress_format",
+                    import.ProcessedFiles,
+                    import.TotalFiles)
+                : Loc.Format(
+                    "Loc_Exploration_history_status_format",
+                    history.Bodies.Count))
+            + (string.IsNullOrWhiteSpace(queueSummary)
+                ? string.Empty
+                : Environment.NewLine + queueSummary);
         ExplorationRoutePlan route = ExplorationRouteService.Instance.Current;
         ExplorationRouteInfoText.Text = BuildFullRouteSummary(route);
         NextRouteSystemLink.Text = route.NextStop?.System ?? string.Empty;
@@ -249,31 +321,107 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private void ApplyCatalogFilter()
     {
-        if (ExplorationBodiesGrid is null) return;
-        string search = CatalogSearchTextBox?.Text.Trim() ?? string.Empty;
-        string filter = (CatalogFilterComboBox?.SelectedItem as CatalogFilterOption)?.Value ?? "All";
+        if (ExplorationBodiesGrid is null)
+        {
+            return;
+        }
+
+        string search =
+            CatalogSearchTextBox?.Text.Trim()
+            ?? string.Empty;
+
+        string filter =
+            (CatalogFilterComboBox?.SelectedItem
+                as CatalogFilterOption)?.Value
+            ?? "All";
+
+        GameStateSnapshot state =
+            JournalMonitorService.Instance.Current;
+
+        ExplorationVisitQueueSnapshot queue =
+            ExplorationVisitStateService.Instance.Current;
+
+        Dictionary<int, ExplorationVisitDisposition> dispositions =
+            BuildVisitDispositionMap(
+                state,
+                queue);
+
         CatalogRow[] rows = catalog.Bodies
-            .Where(body => string.IsNullOrWhiteSpace(search)
-                           || body.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                           || body.Subtype.Contains(search, StringComparison.OrdinalIgnoreCase)
-                           || body.Atmosphere.Contains(search, StringComparison.OrdinalIgnoreCase))
-            .Where(body => filter switch
+            .Where(body =>
+                string.IsNullOrWhiteSpace(search)
+                || body.Name.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase)
+                || body.Subtype.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase)
+                || body.Atmosphere.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase))
+            .Where(body =>
             {
-                "Notable" => body.IsNotable,
-                "Valuable" => body.IsValuable,
-                "Biological" => body.IsBiological,
-                "Unmapped" => !body.MappedThisVisit && !body.MappedPreviously,
-                "Landable" => body.Landable,
-                _ => true
+                dispositions.TryGetValue(
+                    body.BodyId,
+                    out ExplorationVisitDisposition disposition);
+
+                bool hasVisitState =
+                    dispositions.ContainsKey(body.BodyId);
+
+                return filter switch
+                {
+                    "Notable" => body.IsNotable,
+                    "Valuable" => body.IsValuable,
+                    "Biological" => body.IsBiological,
+                    "Remaining" =>
+                        hasVisitState
+                        && disposition
+                            is ExplorationVisitDisposition.Active
+                            or ExplorationVisitDisposition.Recommended,
+                    "Deferred" =>
+                        hasVisitState
+                        && disposition
+                            == ExplorationVisitDisposition.Deferred,
+                    "Completed" =>
+                        hasVisitState
+                        && disposition
+                            == ExplorationVisitDisposition.Complete,
+                    "Unmapped" =>
+                        !body.MappedThisVisit
+                        && !body.MappedPreviously,
+                    "Landable" => body.Landable,
+                    _ => true
+                };
             })
-            .OrderByDescending(body => body.IsBiological)
+            .OrderBy(body =>
+                VisitSortOrder(
+                    dispositions.TryGetValue(
+                        body.BodyId,
+                        out ExplorationVisitDisposition disposition)
+                        ? disposition
+                        : null))
+            .ThenByDescending(body => body.IsBiological)
             .ThenByDescending(body => body.IsValuable)
-            .ThenByDescending(body => body.EstimatedMappingValue)
-            .ThenBy(body => body.DistanceFromArrivalLs)
-            .Select(ToCatalogRow)
+            .ThenByDescending(
+                body => body.EstimatedMappingValue)
+            .ThenBy(
+                body => body.DistanceFromArrivalLs)
+            .Select(body =>
+                ToCatalogRow(
+                    body,
+                    dispositions.TryGetValue(
+                        body.BodyId,
+                        out ExplorationVisitDisposition disposition)
+                        ? disposition
+                        : null))
             .ToArray();
+
         ExplorationBodiesGrid.ItemsSource = rows;
-        CatalogCountText.Text = Loc.Format("Loc_Exploration_catalog_count_format", rows.Length, catalog.Bodies.Count);
+
+        CatalogCountText.Text = Loc.Format(
+            "Loc_Exploration_catalog_count_format",
+            rows.Length,
+            catalog.Bodies.Count);
+
         if (rows.Length > 0)
         {
             ExplorationBodiesGrid.SelectedIndex = 0;
@@ -284,25 +432,108 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         }
     }
 
-    private static CatalogRow ToCatalogRow(ExplorationCatalogBody body) => new(
+    private static Dictionary<int, ExplorationVisitDisposition>
+        BuildVisitDispositionMap(
+            GameStateSnapshot state,
+            ExplorationVisitQueueSnapshot queue)
+    {
+        var result =
+            new Dictionary<int, ExplorationVisitDisposition>();
+
+        if (!QueueMatchesSystem(queue, state))
+        {
+            return result;
+        }
+
+        if (queue.Active is { } active)
+        {
+            result[active.BodyId] =
+                ExplorationVisitDisposition.Active;
+        }
+
+        foreach (ExplorationVisitBodyState item
+                 in queue.Recommended)
+        {
+            result[item.BodyId] =
+                ExplorationVisitDisposition.Recommended;
+        }
+
+        foreach (ExplorationVisitBodyState item
+                 in queue.Deferred)
+        {
+            result[item.BodyId] =
+                ExplorationVisitDisposition.Deferred;
+        }
+
+        foreach (ExplorationVisitBodyState item
+                 in queue.Completed)
+        {
+            result[item.BodyId] =
+                ExplorationVisitDisposition.Complete;
+        }
+
+        return result;
+    }
+
+    private static int VisitSortOrder(
+        ExplorationVisitDisposition? disposition) =>
+        disposition switch
+        {
+            ExplorationVisitDisposition.Active => 0,
+            ExplorationVisitDisposition.Recommended => 1,
+            ExplorationVisitDisposition.Deferred => 2,
+            ExplorationVisitDisposition.Complete => 3,
+            _ => 4
+        };
+    private static CatalogRow ToCatalogRow(
+        ExplorationCatalogBody body,
+        ExplorationVisitDisposition? disposition) => new(
         body,
         body.Name,
-        string.IsNullOrWhiteSpace(body.Subtype) ? body.Type : body.Subtype,
+        string.IsNullOrWhiteSpace(body.Subtype)
+            ? body.Type
+            : body.Subtype,
         BuildHighlightText(body),
-        Loc.Format("Loc_Distance_Ls_Value", body.DistanceFromArrivalLs),
+        Loc.Format(
+            "Loc_Distance_Ls_Value",
+            body.DistanceFromArrivalLs),
         body.EstimatedMappingValue > 0
-            ? Loc.Format("Loc_Credits_Short_Format", body.EstimatedMappingValue)
+            ? Loc.Format(
+                "Loc_Credits_Short_Format",
+                body.EstimatedMappingValue)
             : Loc.Get("Loc_VALUE_UNKNOWN"),
         body.MappedThisVisit
-            ? Loc.Get(body.EfficientlyMappedThisVisit ? "Loc_DSS_EFFICIENT" : "Loc_DSS_MAPPED")
+            ? Loc.Get(
+                body.EfficientlyMappedThisVisit
+                    ? "Loc_DSS_EFFICIENT"
+                    : "Loc_DSS_MAPPED")
             : body.MappedPreviously
-                ? Loc.Get(body.EfficientlyMappedPreviously ? "Loc_HISTORY_DSS_EFFICIENT" : "Loc_HISTORY_DSS_MAPPED")
-            : body.ScannedThisVisit
-                ? Loc.Get("Loc_FSS_SCANNED")
-                : body.ScannedPreviously
-                    ? Loc.Get("Loc_HISTORY_SCANNED")
-                : Loc.Get("Loc_COMMUNITY_DATA_ONLY"));
+                ? Loc.Get(
+                    body.EfficientlyMappedPreviously
+                        ? "Loc_HISTORY_DSS_EFFICIENT"
+                        : "Loc_HISTORY_DSS_MAPPED")
+                : body.ScannedThisVisit
+                    ? Loc.Get("Loc_FSS_SCANNED")
+                    : body.ScannedPreviously
+                        ? Loc.Get("Loc_HISTORY_SCANNED")
+                        : Loc.Get("Loc_COMMUNITY_DATA_ONLY"),
+        disposition,
+        BuildVisitStateLabel(disposition));
 
+    private static string BuildVisitStateLabel(
+        ExplorationVisitDisposition? disposition) =>
+        disposition switch
+        {
+            ExplorationVisitDisposition.Active =>
+                Loc.Get("Loc_EXPLORATION_STATE_ACTIVE"),
+            ExplorationVisitDisposition.Recommended =>
+                Loc.Get("Loc_EXPLORATION_STATE_RECOMMENDED"),
+            ExplorationVisitDisposition.Deferred =>
+                Loc.Get("Loc_EXPLORATION_STATE_DEFERRED"),
+            ExplorationVisitDisposition.Complete =>
+                Loc.Get("Loc_EXPLORATION_STATE_COMPLETE"),
+            _ => "—"
+        };
     private static string BuildHighlightText(ExplorationCatalogBody body)
     {
         var values = new List<string>();
@@ -330,50 +561,438 @@ public partial class ActivityWorkspaceOverlayWindow : Window
     {
         if (row is null)
         {
-            SelectedBodyNameText.Text = Loc.Get("Loc_Select_a_body");
-            SelectedBodyReasonText.Text = string.Empty;
-            SelectedBodyDetailsText.Text = string.Empty;
-            DssSelectedBodyText.Text = Loc.Get("Loc_Select_a_body");
-            DssMappingResultText.Text = string.Empty;
+            SelectedBodyNameText.Text =
+                Loc.Get("Loc_Select_a_body");
+            SelectedBodyReasonText.Text =
+                string.Empty;
+            SelectedBodyDetailsText.Text =
+                string.Empty;
+            DssSelectedBodyText.Text =
+                Loc.Get("Loc_Select_a_body");
+            DssMappingResultText.Text =
+                string.Empty;
+
             CopySelectedBodyButton.IsEnabled = false;
             BookmarkSelectedBodyButton.IsEnabled = false;
+
+            DeferSelectedBodyButton.Visibility =
+                Visibility.Collapsed;
+            ResumeSelectedBodyButton.Visibility =
+                Visibility.Collapsed;
+
             return;
         }
 
         ExplorationCatalogBody body = row.Body;
+
         SelectedBodyNameText.Text = body.Name;
         DssSelectedBodyText.Text = body.Name;
         SelectedBodyReasonText.Text = row.Highlights;
-        SelectedBodyDetailsText.Text = string.Join(Environment.NewLine,
-            Loc.Format("Loc_BODY_TYPE_DETAIL", row.Type),
-            Loc.Format("Loc_BODY_DISTANCE_DETAIL", body.DistanceFromArrivalLs),
-            Loc.Format("Loc_BODY_SCAN_VALUE_DETAIL", body.EstimatedScanValue),
-            Loc.Format("Loc_BODY_MAPPING_VALUE_DETAIL", body.EstimatedMappingValue),
-            Loc.Format("Loc_BODY_GRAVITY_DETAIL", body.GravityG),
-            Loc.Format("Loc_BODY_TEMPERATURE_DETAIL", body.SurfaceTemperatureKelvin),
-            Loc.Format("Loc_BODY_PRESSURE_DETAIL", body.SurfacePressureAtmospheres),
-            Loc.Format("Loc_BODY_ATMOSPHERE_DETAIL", EmptyAsUnknown(body.Atmosphere)),
-            Loc.Format("Loc_BODY_VOLCANISM_DETAIL", EmptyAsUnknown(body.Volcanism)),
-            Loc.Format("Loc_BODY_BIOLOGY_DETAIL", body.BiologicalSignals,
-                body.Genuses.Count == 0 ? Loc.Get("Loc_VALUE_UNKNOWN") : string.Join(", ", body.Genuses)),
-            Loc.Format("Loc_BODY_ORGANICS_HISTORY_DETAIL", body.CompletedOrganics),
-            Loc.Format("Loc_BODY_SOURCE_DETAIL", LocalizeCatalogSource(body.Source)),
-            BuildPredictionDetails(body));
-        SetDssTarget(body.EfficiencyTarget > 0
-            ? body.EfficiencyTarget
-            : SettingsService.Instance.Settings.DssEfficiencyTarget);
-        DssMappingResultText.Text = body.LastProbesUsed > 0 && body.EfficiencyTarget > 0
-            ? Loc.Format(
-                body.LastProbesUsed <= body.EfficiencyTarget
-                    ? "Loc_DSS_RESULT_EFFICIENT"
-                    : "Loc_DSS_RESULT_OVER_TARGET",
-                body.LastProbesUsed,
-                body.EfficiencyTarget)
-            : Loc.Get("Loc_DSS_NO_RESULT_YET");
-        CopySelectedBodyButton.IsEnabled = !string.IsNullOrWhiteSpace(body.Name);
-        BookmarkSelectedBodyButton.IsEnabled = !string.IsNullOrWhiteSpace(body.Name);
+
+        ExplorationVisitBodyState? visit =
+            FindVisitBodyState(body.BodyId);
+
+        var detailParts = new List<string>();
+
+        string visitDetails =
+            BuildSelectedBodyVisitDetails(
+                visit);
+
+        if (!string.IsNullOrWhiteSpace(visitDetails))
+        {
+            detailParts.Add(visitDetails);
+        }
+
+        detailParts.AddRange(
+        [
+            Loc.Format(
+                "Loc_BODY_TYPE_DETAIL",
+                row.Type),
+            Loc.Format(
+                "Loc_BODY_DISTANCE_DETAIL",
+                body.DistanceFromArrivalLs),
+            Loc.Format(
+                "Loc_BODY_SCAN_VALUE_DETAIL",
+                body.EstimatedScanValue),
+            Loc.Format(
+                "Loc_BODY_MAPPING_VALUE_DETAIL",
+                body.EstimatedMappingValue),
+            Loc.Format(
+                "Loc_BODY_GRAVITY_DETAIL",
+                body.GravityG),
+            Loc.Format(
+                "Loc_BODY_TEMPERATURE_DETAIL",
+                body.SurfaceTemperatureKelvin),
+            Loc.Format(
+                "Loc_BODY_PRESSURE_DETAIL",
+                body.SurfacePressureAtmospheres),
+            Loc.Format(
+                "Loc_BODY_ATMOSPHERE_DETAIL",
+                EmptyAsUnknown(body.Atmosphere)),
+            Loc.Format(
+                "Loc_BODY_VOLCANISM_DETAIL",
+                EmptyAsUnknown(body.Volcanism)),
+            Loc.Format(
+                "Loc_BODY_BIOLOGY_DETAIL",
+                body.BiologicalSignals,
+                body.Genuses.Count == 0
+                    ? Loc.Get("Loc_VALUE_UNKNOWN")
+                    : string.Join(", ", body.Genuses)),
+            Loc.Format(
+                "Loc_BODY_ORGANICS_HISTORY_DETAIL",
+                body.CompletedOrganics),
+            Loc.Format(
+                "Loc_BODY_SOURCE_DETAIL",
+                LocalizeCatalogSource(body.Source))
+        ]);
+
+        string bioGuidance =
+            BuildSelectedBodyBioGuidance(
+                body,
+                visit,
+                JournalMonitorService.Instance.Current);
+
+        if (!string.IsNullOrWhiteSpace(bioGuidance))
+        {
+            detailParts.Add(bioGuidance);
+        }
+        else
+        {
+            detailParts.Add(
+                BuildPredictionDetails(body));
+        }
+
+        SelectedBodyDetailsText.Text =
+            string.Join(
+                Environment.NewLine,
+                detailParts.Where(
+                    value =>
+                        !string.IsNullOrWhiteSpace(value)));
+
+        SetDssTarget(
+            body.EfficiencyTarget > 0
+                ? body.EfficiencyTarget
+                : SettingsService.Instance.Settings
+                    .DssEfficiencyTarget);
+
+        DssMappingResultText.Text =
+            body.LastProbesUsed > 0
+            && body.EfficiencyTarget > 0
+                ? Loc.Format(
+                    body.LastProbesUsed
+                        <= body.EfficiencyTarget
+                            ? "Loc_DSS_RESULT_EFFICIENT"
+                            : "Loc_DSS_RESULT_OVER_TARGET",
+                    body.LastProbesUsed,
+                    body.EfficiencyTarget)
+                : Loc.Get(
+                    "Loc_DSS_NO_RESULT_YET");
+
+        CopySelectedBodyButton.IsEnabled =
+            !string.IsNullOrWhiteSpace(body.Name);
+
+        BookmarkSelectedBodyButton.IsEnabled =
+            !string.IsNullOrWhiteSpace(body.Name);
+
+        DeferSelectedBodyButton.Visibility =
+            visit is not null
+            && !visit.IsComplete
+            && visit.Disposition
+                is ExplorationVisitDisposition.Active
+                or ExplorationVisitDisposition.Recommended
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        ResumeSelectedBodyButton.Visibility =
+            visit?.Disposition
+                == ExplorationVisitDisposition.Deferred
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
+    private static ExplorationVisitBodyState? FindVisitBodyState(
+        int bodyId)
+    {
+        ExplorationVisitQueueSnapshot queue =
+            ExplorationVisitStateService.Instance.Current;
+
+        if (queue.Active?.BodyId == bodyId)
+        {
+            return queue.Active;
+        }
+
+        return queue.Recommended
+            .Concat(queue.Deferred)
+            .Concat(queue.Completed)
+            .FirstOrDefault(
+                item => item.BodyId == bodyId);
+    }
+
+    private static string BuildSelectedBodyVisitDetails(
+        ExplorationVisitBodyState? visit)
+    {
+        if (visit is null)
+        {
+            return string.Empty;
+        }
+
+        string fss = visit.Progress.FssScanned
+            ? "FSS ✓"
+            : "FSS ○";
+
+        string dss = !visit.DssRequired
+            ? "DSS —"
+            : visit.Progress.DssMapped
+                ? visit.Progress.DssEfficient
+                    ? "DSS ◎"
+                    : "DSS ✓"
+                : "DSS ○";
+
+        string bio = !visit.BiologyRequired
+            ? "BIO —"
+            : $"BIO {visit.Progress.CompletedBiologicalSignals}/{visit.Progress.BiologicalSignals}";
+
+        return Loc.Format(
+            "Loc_EXPLORATION_SELECTED_PROGRESS_FORMAT",
+            BuildVisitStateLabel(visit.Disposition),
+            string.Join(
+                "  •  ",
+                fss,
+                dss,
+                bio));
+    }
+
+    private static string BuildSelectedBodyBioGuidance(
+        ExplorationCatalogBody body,
+        ExplorationVisitBodyState? visit,
+        GameStateSnapshot state)
+    {
+        if (!body.IsBiological
+            || body.BiologicalSignals <= 0)
+        {
+            return string.Empty;
+        }
+
+        var lines = new List<string>
+        {
+            Loc.Get("Loc_EXPLORATION_BIO_GUIDANCE_HEADER")
+        };
+
+        BodyExplorationProgress? progress =
+            visit?.Progress;
+
+        if (progress is not null)
+        {
+            lines.Add(
+                Loc.Format(
+                    "Loc_EXPLORATION_BIO_BODY_PROGRESS_FORMAT",
+                    progress.CompletedBiologicalSignals,
+                    progress.BiologicalSignals));
+
+            if (progress.BiologyComplete)
+            {
+                lines.Add(
+                    Loc.Get(
+                        "Loc_EXPLORATION_BIO_COMPLETE_GUIDANCE"));
+
+                return string.Join(
+                    Environment.NewLine,
+                    lines);
+            }
+
+            if (progress.MissingGenuses.Count > 0)
+            {
+                lines.Add(
+                    Loc.Format(
+                        "Loc_EXPLORATION_MISSING_GENUSES_FORMAT",
+                        string.Join(
+                            " · ",
+                            progress.MissingGenuses)));
+            }
+
+            int unnamedRemaining = Math.Max(
+                0,
+                progress.RemainingBiologicalSignals
+                    - progress.MissingGenuses.Count);
+
+            if (unnamedRemaining > 0)
+            {
+                lines.Add(
+                    Loc.Format(
+                        "Loc_EXPLORATION_UNKNOWN_GENUSES_FORMAT",
+                        unnamedRemaining));
+            }
+        }
+
+        OrganicScanProgressSnapshot? activeOrganic =
+            state.GetActiveOrganicForBody(body.BodyId);
+
+        if (activeOrganic is not null)
+        {
+            string organism =
+                !string.IsNullOrWhiteSpace(
+                    activeOrganic.Variant)
+                    ? activeOrganic.Variant
+                    : activeOrganic.Species;
+
+            lines.Add(
+                Loc.Format(
+                    "Loc_EXPLORATION_ACTIVE_SAMPLE_FORMAT",
+                    organism,
+                    activeOrganic.Stage,
+                    activeOrganic.ColonyRangeMeters));
+
+            SurfaceNavigationResult? navigation =
+                SurfaceNavigationCalculator.Calculate(
+                    state.Latitude,
+                    state.Longitude,
+                    state.HeadingDegrees,
+                    state.PlanetRadiusMeters,
+                    activeOrganic.LastSampleLatitude,
+                    activeOrganic.LastSampleLongitude);
+
+            if (navigation is not null
+                && activeOrganic.ColonyRangeMeters > 0)
+            {
+                double remaining = Math.Max(
+                    0,
+                    activeOrganic.ColonyRangeMeters
+                        - navigation.DistanceMeters);
+
+                lines.Add(
+                    navigation.IsFarEnough(
+                        activeOrganic.ColonyRangeMeters)
+                        ? Loc.Format(
+                            "Loc_EXPLORATION_SAMPLE_RANGE_READY_FORMAT",
+                            navigation.DistanceMeters)
+                        : Loc.Format(
+                            "Loc_EXPLORATION_SAMPLE_RANGE_REMAINING_FORMAT",
+                            navigation.DistanceMeters,
+                            remaining,
+                            activeOrganic.ColonyRangeMeters,
+                            navigation.EscapeBearingDegrees));
+            }
+        }
+
+        IReadOnlyList<ExobiologyPrediction> predictions =
+            ExobiologyPredictionService.Instance.Predict(
+                body,
+                12);
+
+        if (progress is { MissingGenuses.Count: > 0 })
+        {
+            predictions = predictions
+                .Where(prediction =>
+                    progress.MissingGenuses.Any(
+                        genus =>
+                            GenusMatches(
+                                genus,
+                                prediction.Genus)))
+                .ToArray();
+        }
+
+        ExobiologyPrediction[] likely =
+            predictions
+                .GroupBy(
+                    prediction => prediction.Genus,
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(group =>
+                    group
+                        .OrderByDescending(
+                            item =>
+                                item.RelativeProbability)
+                        .ThenByDescending(
+                            item =>
+                                item.ObservationCount)
+                        .First())
+                .OrderByDescending(
+                    item => item.RelativeProbability)
+                .Take(4)
+                .ToArray();
+
+        if (likely.Length > 0)
+        {
+            lines.Add(
+                Loc.Get(
+                    "Loc_EXPLORATION_LIKELY_SPECIES_HEADER"));
+
+            foreach (ExobiologyPrediction prediction
+                     in likely)
+            {
+                lines.Add(
+                    Loc.Format(
+                        "Loc_EXPLORATION_LIKELY_SPECIES_LINE_FORMAT",
+                        prediction.Genus,
+                        prediction.Species,
+                        prediction.RelativeProbability * 100,
+                        prediction.ColonyRangeMeters,
+                        prediction.BaseValue));
+            }
+        }
+
+        lines.Add(
+            Loc.Get(
+                "Loc_EXPLORATION_BIO_LOCATION_LIMITATION"));
+
+        return string.Join(
+            Environment.NewLine,
+            lines);
+    }
+
+    private static bool GenusMatches(
+        string expected,
+        string actual)
+    {
+        if (string.Equals(
+            expected.Trim(),
+            actual.Trim(),
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return expected.Contains(
+                   actual,
+                   StringComparison.OrdinalIgnoreCase)
+               || actual.Contains(
+                   expected,
+                   StringComparison.OrdinalIgnoreCase);
+    }
+    private void DeferSelectedBodyButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (ExplorationBodiesGrid.SelectedItem
+            is not CatalogRow row)
+        {
+            return;
+        }
+
+        if (ExplorationVisitStateService.Instance
+            .DeferBody(row.Body.BodyId))
+        {
+            RefreshContent(
+                JournalMonitorService.Instance.Current);
+        }
+    }
+
+    private void ResumeSelectedBodyButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (ExplorationBodiesGrid.SelectedItem
+            is not CatalogRow row)
+        {
+            return;
+        }
+
+        if (ExplorationVisitStateService.Instance
+            .ResumeBody(row.Body.BodyId))
+        {
+            RefreshContent(
+                JournalMonitorService.Instance.Current);
+        }
+    }
     private void SetDssTarget(int target)
     {
         target = Math.Clamp(target, DssProbePatternCatalog.MinimumTarget, DssProbePatternCatalog.MaximumTarget);
@@ -781,7 +1400,502 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         string Highlights,
         string Distance,
         string MappingValue,
-        string Progress);
+        string Progress,
+        ExplorationVisitDisposition? Disposition,
+        string VisitState);
+    private void RefreshAdaptiveExploration(
+        GameStateSnapshot state,
+        ExplorationDataState externalData,
+        ExplorationVisitQueueSnapshot queue)
+    {
+        bool queueMatchesSystem =
+            QueueMatchesSystem(queue, state);
+
+        ExplorationVisitBodyState? active =
+            queueMatchesSystem
+                ? queue.Active
+                : null;
+
+        OrganicScanProgressSnapshot? activeOrganic =
+            active is null
+                ? null
+                : state.GetActiveOrganicForBody(active.BodyId);
+
+        SystemContextPanel.Visibility =
+            active is null
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        BodyContextPanel.Visibility =
+            active is not null && activeOrganic is null
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        ExobioContextPanel.Visibility =
+            active is not null && activeOrganic is not null
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        CompactQueueCountText.Text =
+            queueMatchesSystem
+                ? Loc.Format(
+                    "Loc_EXPLORATION_QUEUE_FORMAT",
+                    queue.RemainingCount,
+                    queue.DeferredCount,
+                    queue.CompletedCount)
+                : string.Empty;
+
+        if (active is null)
+        {
+            CompactModeText.Text =
+                Loc.Get("Loc_EXPLORATION_MODE_SYSTEM");
+
+            CompactContextTitleText.Text =
+                Loc.Get("Loc_EXPLORATION_TARGETS_HEADER");
+
+            ExplorationVisitBodyState[] targets =
+                queueMatchesSystem
+                    ? queue.Recommended
+                        .Take(3)
+                        .ToArray()
+                    : Array.Empty<ExplorationVisitBodyState>();
+
+            CompactTargetsItemsControl.ItemsSource =
+                targets
+                    .Select(BuildAdaptiveTargetLine)
+                    .ToArray();
+
+            CompactEmptyTargetsText.Visibility =
+                targets.Length == 0
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            CompactEmptyTargetsText.Text =
+                queueMatchesSystem
+                    && queue.DeferredCount > 0
+                    && queue.Recommended.Count == 0
+                        ? Loc.Format(
+                            "Loc_EXPLORATION_DEFERRED_ONLY_FORMAT",
+                            queue.DeferredCount)
+                        : state.FssProgress >= 0.999
+                            ? Loc.Get(
+                                "Loc_EXPLORATION_SYSTEM_COMPLETE_COMPACT")
+                            : Loc.Get(
+                                "Loc_EXPLORATION_NO_TARGETS");
+        }
+        else if (activeOrganic is null)
+        {
+            CompactModeText.Text =
+                Loc.Get("Loc_EXPLORATION_MODE_BODY");
+
+            CompactContextTitleText.Text =
+                active.BodyName;
+
+            BodyStatusText.Text =
+                BuildAdaptiveBodyStatus(active);
+
+            BodyObjectiveText.Text =
+                BuildAdaptiveBodyObjectives(active);
+
+            BodyMissingText.Text =
+                BuildAdaptiveMissingBiology(active);
+
+            BodyMissingText.Visibility =
+                string.IsNullOrWhiteSpace(BodyMissingText.Text)
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+
+            BodyMetaText.Text =
+                BuildAdaptiveBodyMeta(active);
+        }
+        else
+        {
+            CompactModeText.Text =
+                Loc.Get("Loc_EXPLORATION_MODE_EXOBIO");
+
+            CompactContextTitleText.Text =
+                !string.IsNullOrWhiteSpace(activeOrganic.Variant)
+                    ? activeOrganic.Variant
+                    : !string.IsNullOrWhiteSpace(activeOrganic.Species)
+                        ? activeOrganic.Species
+                        : active.BodyName;
+
+            SurfaceNavigationText.Text =
+                BuildSurfaceNavigation(state);
+
+            SurfaceNavigationPanel.Visibility =
+                Visibility.Visible;
+
+            ExobioBodyProgressText.Text =
+                BuildAdaptiveExobioProgress(
+                    active,
+                    activeOrganic);
+        }
+
+        string routeAlert =
+            BuildCompactRouteOrAlert(
+                state,
+                queueMatchesSystem ? queue : null);
+
+        CompactRouteAlertText.Text = routeAlert;
+        CompactRouteAlertPanel.Visibility =
+            string.IsNullOrWhiteSpace(routeAlert)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+    }
+
+    private static bool QueueMatchesSystem(
+        ExplorationVisitQueueSnapshot queue,
+        GameStateSnapshot state)
+    {
+        if (state.SystemAddress != 0
+            && queue.SystemAddress != 0)
+        {
+            return state.SystemAddress == queue.SystemAddress;
+        }
+
+        return string.Equals(
+            queue.SystemName,
+            state.StarSystem,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildAdaptiveExplorationHeader(
+        GameStateSnapshot state,
+        ExplorationDataState externalData,
+        ExplorationVisitQueueSnapshot queue)
+    {
+        if (!state.JournalAvailable)
+        {
+            return Loc.Get(
+                "Loc_Waiting_for_Elite_Dangerous_journal");
+        }
+
+        int knownBodyCount = Math.Max(
+            state.SystemBodyCount,
+            externalData.System is { } system
+            && string.Equals(
+                system.SystemName,
+                state.StarSystem,
+                StringComparison.OrdinalIgnoreCase)
+                ? system.BodyCount
+                : 0);
+
+        int resolvedBodyCount = knownBodyCount == 0
+            ? state.ScannedBodies
+            : Math.Clamp(
+                (int)Math.Round(
+                    knownBodyCount * state.FssProgress),
+                0,
+                knownBodyCount);
+
+        string bodyProgress = knownBodyCount > 0
+            ? $"{resolvedBodyCount}/{knownBodyCount}"
+            : state.ScannedBodies.ToString();
+
+        string result = Loc.Format(
+            "Loc_EXPLORATION_HEADER_FORMAT",
+            Math.Round(state.FssProgress * 100),
+            bodyProgress,
+            state.MappedBodies,
+            state.BiologicalSignals);
+
+        long localValue =
+            state.ExplorationBodies
+                .Sum(body => body.EstimatedScanValue)
+            + state.ExplorationBodies
+                .Where(body => body.IsMapped)
+                .Sum(body =>
+                    body.MappingEfficient
+                        ? body.EstimatedEfficientMappingValue
+                        : body.EstimatedMappingValue);
+
+        if (localValue > 0)
+        {
+            result += "  •  "
+                + Loc.Format(
+                    "Loc_Credits_Short_Format",
+                    localValue);
+        }
+
+        return result;
+    }
+
+    private static string BuildAdaptiveTargetLine(
+        ExplorationVisitBodyState item)
+    {
+        var parts = new List<string>
+        {
+            item.BodyName
+        };
+
+        if (!item.Progress.FssScanned)
+        {
+            parts.Add("FSS ○");
+        }
+
+        if (item.DssRequired)
+        {
+            parts.Add(
+                item.Progress.DssMapped
+                    ? "DSS ✓"
+                    : "DSS ○");
+        }
+
+        if (item.BiologyRequired)
+        {
+            parts.Add(
+                $"BIO {item.Progress.CompletedBiologicalSignals}/{item.Progress.BiologicalSignals}");
+        }
+
+        if (item.Body.DistanceFromArrivalLs > 0)
+        {
+            parts.Add(
+                Loc.Format(
+                    "Loc_Distance_Ls_Value",
+                    item.Body.DistanceFromArrivalLs));
+        }
+
+        long value = item.Body.EstimatedMappingValue;
+        if (value > 0)
+        {
+            parts.Add(
+                Loc.Format(
+                    "Loc_Credits_Short_Format",
+                    value));
+        }
+
+        return string.Join("  •  ", parts);
+    }
+
+    private static string BuildAdaptiveBodyStatus(
+        ExplorationVisitBodyState active)
+    {
+        string fss = active.Progress.FssScanned
+            ? "FSS ✓"
+            : "FSS ○";
+
+        string dss = !active.DssRequired
+            ? "DSS —"
+            : active.Progress.DssMapped
+                ? active.Progress.DssEfficient
+                    ? "DSS ◎"
+                    : "DSS ✓"
+                : "DSS ○";
+
+        string bio = !active.BiologyRequired
+            ? "BIO —"
+            : $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}";
+
+        return string.Join(
+            "  •  ",
+            fss,
+            dss,
+            bio);
+    }
+
+    private static string BuildAdaptiveBodyObjectives(
+        ExplorationVisitBodyState active)
+    {
+        var pending = new List<string>();
+
+        if (active.FssRequired
+            && !active.Progress.FssScanned)
+        {
+            pending.Add("FSS");
+        }
+
+        if (active.DssRequired
+            && !active.Progress.DssMapped)
+        {
+            pending.Add("DSS");
+        }
+
+        if (active.BiologyRequired
+            && !active.Progress.BiologyComplete)
+        {
+            pending.Add(
+                $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}");
+        }
+
+        return pending.Count == 0
+            ? Loc.Get(
+                "Loc_EXPLORATION_ALL_OBJECTIVES_DONE")
+            : Loc.Format(
+                "Loc_EXPLORATION_PENDING_FORMAT",
+                string.Join(" + ", pending));
+    }
+
+    private static string BuildAdaptiveMissingBiology(
+        ExplorationVisitBodyState active)
+    {
+        if (!active.BiologyRequired
+            || active.Progress.BiologyComplete)
+        {
+            return string.Empty;
+        }
+
+        string known = active.Progress.MissingGenuses.Count > 0
+            ? string.Join(
+                " · ",
+                active.Progress.MissingGenuses)
+            : string.Empty;
+
+        int unknownCount = Math.Max(
+            0,
+            active.Progress.RemainingBiologicalSignals
+                - active.Progress.MissingGenuses.Count);
+
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(known))
+        {
+            parts.Add(
+                Loc.Format(
+                    "Loc_EXPLORATION_MISSING_GENUSES_FORMAT",
+                    known));
+        }
+
+        if (unknownCount > 0)
+        {
+            parts.Add(
+                Loc.Format(
+                    "Loc_EXPLORATION_UNKNOWN_GENUSES_FORMAT",
+                    unknownCount));
+        }
+
+        if (active.Progress.HistoricalBiologyDetailIncomplete)
+        {
+            parts.Add(
+                Loc.Get(
+                    "Loc_EXPLORATION_HISTORY_BIO_DETAIL_INCOMPLETE"));
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            parts);
+    }
+
+    private static string BuildAdaptiveBodyMeta(
+        ExplorationVisitBodyState active)
+    {
+        var parts = new List<string>();
+
+        string type = string.IsNullOrWhiteSpace(
+            active.Body.Subtype)
+                ? active.Body.Type
+                : active.Body.Subtype;
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            parts.Add(type);
+        }
+
+        if (active.Body.DistanceFromArrivalLs > 0)
+        {
+            parts.Add(
+                Loc.Format(
+                    "Loc_Distance_Ls_Value",
+                    active.Body.DistanceFromArrivalLs));
+        }
+
+        if (active.Body.Landable
+            && active.Body.GravityG > 0)
+        {
+            parts.Add(
+                $"{active.Body.GravityG:0.00} g");
+        }
+
+        if (active.Body.EstimatedMappingValue > 0)
+        {
+            parts.Add(
+                Loc.Format(
+                    "Loc_Credits_Short_Format",
+                    active.Body.EstimatedMappingValue));
+        }
+
+        return string.Join(
+            "  •  ",
+            parts);
+    }
+
+    private static string BuildAdaptiveExobioProgress(
+        ExplorationVisitBodyState active,
+        OrganicScanProgressSnapshot organic)
+    {
+        string stage = $"{organic.Stage}/3";
+
+        string bodyProgress =
+            $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}";
+
+        string missing =
+            BuildAdaptiveMissingBiology(active);
+
+        string result = Loc.Format(
+            "Loc_EXPLORATION_EXOBIO_PROGRESS_FORMAT",
+            stage,
+            bodyProgress);
+
+        return string.IsNullOrWhiteSpace(missing)
+            ? result
+            : result
+              + Environment.NewLine
+              + missing;
+    }
+
+    private static string BuildCompactRouteOrAlert(
+        GameStateSnapshot state,
+        ExplorationVisitQueueSnapshot? queue)
+    {
+        FuelRouteAssessment fuel =
+            FuelRouteAdvisor.Evaluate(state);
+
+        if (fuel.Severity
+            is FuelRouteSeverity.Critical
+            or FuelRouteSeverity.Caution)
+        {
+            return BuildFuelAdvice(fuel);
+        }
+
+        ExplorationRoutePlan route =
+            ExplorationRouteService.Instance.Current;
+
+        if (route.NextStop is { } next)
+        {
+            return Loc.Format(
+                "Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT",
+                next.System,
+                Math.Min(
+                    route.Stops.Count,
+                    route.CurrentIndex + 2),
+                route.Stops.Count);
+        }
+
+        if (queue is { DeferredCount: > 0 })
+        {
+            return Loc.Format(
+                "Loc_EXPLORATION_DEFERRED_HUD_FORMAT",
+                queue.DeferredCount);
+        }
+
+        return string.Empty;
+    }
+
+    private static string BuildAdaptiveExplorationFooter(
+        GameStateSnapshot state,
+        ExplorationVisitQueueSnapshot queue)
+    {
+        if (QueueMatchesSystem(queue, state)
+            && queue.DeferredCount > 0)
+        {
+            return Loc.Format(
+                "Loc_EXPLORATION_FOOTER_QUEUE_FORMAT",
+                queue.DeferredCount,
+                queue.CompletedCount);
+        }
+
+        return BuildExplorationFooter(state);
+    }
 
     private static string BuildExplorationProgress(GameStateSnapshot state, ExplorationDataState externalData)
     {
@@ -1262,6 +2376,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
         ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
         ExplorationHistoryService.Instance.HistoryChanged -= OnExplorationHistoryChanged;
+        ExplorationVisitStateService.Instance.Changed -= OnExplorationVisitStateChanged;
         ExplorationRouteService.Instance.RouteChanged -= OnExplorationRouteChanged;
         ExplorationPoiService.Instance.PoiChanged -= OnExplorationPoiChanged;
         ExplorationEarningsService.Instance.Changed -= OnExplorationEarningsChanged;
@@ -1277,6 +2392,13 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private void OnExplorationHistoryChanged(object? sender, ExplorationHistoryChangedEventArgs e) =>
         Dispatcher.BeginInvoke(new Action(() => RefreshContent(JournalMonitorService.Instance.Current)));
+    private void OnExplorationVisitStateChanged(
+        object? sender,
+        ExplorationVisitStateChangedEventArgs e) =>
+        Dispatcher.BeginInvoke(
+            new Action(() =>
+                RefreshContent(
+                    JournalMonitorService.Instance.Current)));
 
     private void OnExplorationRouteChanged(object? sender, ExplorationRouteChangedEventArgs e) =>
         Dispatcher.BeginInvoke(new Action(() => RefreshContent(JournalMonitorService.Instance.Current)));
