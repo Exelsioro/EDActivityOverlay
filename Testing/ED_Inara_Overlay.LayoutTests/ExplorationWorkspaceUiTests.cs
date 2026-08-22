@@ -17,16 +17,33 @@ public sealed class ExplorationWorkspaceUiTests
     }
 
     [Fact]
-    public void CompactWorkspaceScrollsAndFullWorkspaceContainsCatalogLogAndRoute()
+    public void CompactWorkspaceHasAdaptiveHudAndFullWorkspaceContainsCatalogLogAndRoute()
     {
         string path = FindWorkspaceXaml();
         XDocument document = XDocument.Load(path);
         XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        Assert.Contains(document.Descendants(wpf + "ScrollViewer"), element =>
-            (string?)element.Attribute("Grid.Row") == "2"
-            && (string?)element.Attribute("VerticalScrollBarVisibility") == "Auto");
+        XElement legacyScroll = Assert.Single(
+            document.Descendants(wpf + "ScrollViewer"),
+            element =>
+                (string?)element.Attribute(x + "Name")
+                    == "LegacyCompactScrollViewer");
+
+        Assert.Equal(
+            "Auto",
+            (string?)legacyScroll.Attribute(
+                "VerticalScrollBarVisibility"));
+
+        XElement adaptiveHud = Assert.Single(
+            document.Descendants(),
+            element =>
+                (string?)element.Attribute(x + "Name")
+                    == "AdaptiveExplorationPanel");
+
+        Assert.DoesNotContain(
+            adaptiveHud.Descendants(),
+            element => element.Name == wpf + "ScrollViewer");
         Assert.NotNull(document.Descendants().FirstOrDefault(element =>
             (string?)element.Attribute(x + "Name") == "FullOverviewText"));
         Assert.NotNull(document.Descendants().FirstOrDefault(element =>

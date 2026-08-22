@@ -82,6 +82,8 @@ public sealed record ExplorationBodySnapshot(
     public long EstimatedEfficientMappingValue { get; init; }
     public IReadOnlyList<BiologyEstimateSnapshot> BiologyEstimates { get; init; } =
         Array.Empty<BiologyEstimateSnapshot>();
+    public IReadOnlyList<string> GenusKeys { get; init; } =
+        Array.Empty<string>();
     public int LastProbesUsed { get; init; }
     public int EfficiencyTarget { get; init; }
 
@@ -111,7 +113,12 @@ public sealed record OrganicScanProgressSnapshot(
     int ColonyRangeMeters,
     double? LastSampleLatitude,
     double? LastSampleLongitude,
-    DateTimeOffset UpdatedUtc);
+    DateTimeOffset UpdatedUtc)
+{
+    public string GenusKey { get; init; } = string.Empty;
+    public string SpeciesKey { get; init; } = string.Empty;
+    public string VariantKey { get; init; } = string.Empty;
+}
 
 public sealed record GameStateSnapshot
 {
@@ -168,7 +175,14 @@ public sealed record GameStateSnapshot
     public double? TemperatureKelvin { get; init; }
     public string CurrentBody { get; init; } = string.Empty;
     public string LegalState { get; init; } = string.Empty;
+    // Backwards-compatible destination label used by existing UI.
     public string Destination { get; init; } = string.Empty;
+
+    // Full Status.json Destination identity. Body is -1 for a system/station
+    // target or when Elite does not expose a body destination.
+    public long DestinationSystemAddress { get; init; }
+    public int DestinationBodyId { get; init; } = -1;
+    public string DestinationName { get; init; } = string.Empty;
     public IReadOnlyDictionary<string, int> Cargo { get; init; } =
         new ReadOnlyDictionary<string, int>(new Dictionary<string, int>());
     public IReadOnlyDictionary<string, MarketItemSnapshot> Market { get; init; } =
@@ -214,14 +228,70 @@ public sealed record GameStateSnapshot
 
     public int FreeCargo => CargoCapacity > 0 ? Math.Max(0, CargoCapacity - CargoUsed) : 0;
 
-    public OrganicScanProgressSnapshot? ActiveOrganic => OrganicProgress
-        .Where(item => !item.Completed)
-        .OrderByDescending(item => item.UpdatedUtc)
-        .FirstOrDefault();
+    public IReadOnlyList<OrganicScanProgressSnapshot> GetOrganicProgressForBody(int bodyId) =>
+        bodyId < 0
+            ? Array.Empty<OrganicScanProgressSnapshot>()
+            : OrganicProgress
+                .Where(item => item.BodyId == bodyId)
+                .OrderByDescending(item => item.UpdatedUtc)
+                .ToArray();
 
-    public int RemainingBiologicalSignals => Math.Max(
-        0,
-        BiologicalSignals - OrganicProgress.Count(item => item.Completed));
+    public OrganicScanProgressSnapshot? GetActiveOrganicForBody(int bodyId) =>
+        GetOrganicProgressForBody(bodyId)
+            .Where(item => !item.Completed)
+            .OrderByDescending(item => item.UpdatedUtc)
+            .FirstOrDefault();
+
+    public int GetCompletedBiologicalSignalsForBody(int bodyId) =>
+        GetOrganicProgressForBody(bodyId)
+            .Where(item => item.Completed)
+            .Select(item =>
+                !string.IsNullOrWhiteSpace(item.GenusKey)
+                    ? item.GenusKey
+                    : !string.IsNullOrWhiteSpace(item.Genus)
+                        ? item.Genus
+                        : !string.IsNullOrWhiteSpace(item.SpeciesKey)
+                            ? item.SpeciesKey
+                            : item.Species)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+    public int GetRemainingBiologicalSignalsForBody(int bodyId)
+    {
+        ExplorationBodySnapshot? body = ExplorationBodies.FirstOrDefault(item => item.BodyId == bodyId);
+        return body is null
+            ? 0
+            : Math.Max(0, body.BiologicalSignals - GetCompletedBiologicalSignalsForBody(bodyId));
+    }
+
+    // Compatibility property for the compact surface view. Prefer the current
+    // navigation body; fall back to the body of the latest organic event.
+    public OrganicScanProgressSnapshot? ActiveOrganic
+    {
+        get
+        {
+            int bodyId = DestinationBodyId >= 0 ? DestinationBodyId : LastOrganicBodyId;
+            return GetActiveOrganicForBody(bodyId);
+        }
+    }
+
+    // Compatibility property. New code should use the per-body method.
+    public int RemainingBiologicalSignals
+    {
+        get
+        {
+            int bodyId = DestinationBodyId >= 0 ? DestinationBodyId : LastOrganicBodyId;
+            if (bodyId >= 0) return GetRemainingBiologicalSignalsForBody(bodyId);
+
+            int completed = OrganicProgress
+                .Where(item => item.Completed)
+                .Select(item => $"{item.BodyId}|{(!string.IsNullOrWhiteSpace(item.Genus) ? item.Genus : item.Species)}")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+            return Math.Max(0, BiologicalSignals - completed);
+        }
+    }
 
     public bool IsLive => JournalAvailable
         && LastEventUtc is { } timestamp

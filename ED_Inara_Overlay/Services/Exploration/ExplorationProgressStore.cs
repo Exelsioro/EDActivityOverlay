@@ -23,9 +23,32 @@ internal sealed class ExplorationProgressStore
         {
             try
             {
-                if (!File.Exists(filePath)) return Array.Empty<OrganicScanProgressSnapshot>();
-                return JsonSerializer.Deserialize<List<OrganicScanProgressSnapshot>>(File.ReadAllText(filePath))
-                       ?? new List<OrganicScanProgressSnapshot>();
+                if (!File.Exists(filePath))
+                {
+                    return Array.Empty<OrganicScanProgressSnapshot>();
+                }
+
+                List<OrganicScanProgressSnapshot> progress =
+                    JsonSerializer.Deserialize<List<OrganicScanProgressSnapshot>>(
+                        File.ReadAllText(filePath))
+                    ?? new List<OrganicScanProgressSnapshot>();
+
+                int removedLegacyRows = progress.RemoveAll(item =>
+                    string.IsNullOrWhiteSpace(item.SpeciesKey));
+
+                if (removedLegacyRows > 0)
+                {
+                    Logger.Logger.Info(
+                        $"Exploration progress migration removed {removedLegacyRows} "
+                        + "legacy rows without canonical species identity.");
+
+                    // The active journal is replayed from offset zero when the
+                    // monitor starts, so current sampling progress is rebuilt
+                    // from authoritative ScanOrganic events.
+                    Save(progress);
+                }
+
+                return progress;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {

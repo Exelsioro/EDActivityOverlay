@@ -59,10 +59,15 @@ internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository
             case "saasignalsfound":
             {
                 SetSystemIfPresent(root);
+                int bodyId = GetInt(root, "BodyID", -1);
+                string bodyName = GetString(root, "BodyName");
                 repository.RecordBody(
                     commander, systemAddress, systemName,
-                    GetInt(root, "BodyID", -1), GetString(root, "BodyName"), string.Empty, timestamp,
+                    bodyId, bodyName, string.Empty, timestamp,
                     biologicalSignals: ReadBiologicalSignals(root));
+                repository.RecordBodyGenuses(
+                    commander, systemAddress, systemName,
+                    bodyId, bodyName, ReadGenuses(root), timestamp);
                 return true;
             }
             case "scanorganic":
@@ -74,10 +79,13 @@ internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository
                 string species = GetString(root, "Species");
                 repository.RecordOrganic(
                     commander, systemAddress, systemName, bodyId, previous.Name,
-                    string.IsNullOrWhiteSpace(variant) ? species : variant,
-                    GetLocalized(root, string.IsNullOrWhiteSpace(variant) ? "Species" : "Variant"),
+                    GetString(root, "Species"), GetLocalized(root, "Species"),
                     GetString(root, "ScanType").Equals("Analyse", StringComparison.OrdinalIgnoreCase),
-                    timestamp);
+                    timestamp,
+                    genusKey: GetString(root, "Genus"),
+                    genusName: GetLocalized(root, "Genus"),
+                    variantKey: variant,
+                    variantName: GetLocalized(root, "Variant"));
                 return true;
             }
             default:
@@ -100,6 +108,18 @@ internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository
         if (address > 0) systemAddress = address;
     }
 
+    private static IReadOnlyList<(string Key, string Name)> ReadGenuses(JsonElement root)
+    {
+        if (!root.TryGetProperty("Genuses", out JsonElement source) || source.ValueKind != JsonValueKind.Array)
+            return Array.Empty<(string Key, string Name)>();
+
+        return source.EnumerateArray()
+            .Select(item => (Key: GetString(item, "Genus"), Name: GetLocalized(item, "Genus")))
+            .Where(item => !string.IsNullOrWhiteSpace(item.Key) || !string.IsNullOrWhiteSpace(item.Name))
+            .GroupBy(item => string.IsNullOrWhiteSpace(item.Key) ? item.Name : item.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+    }
     private static int ReadBiologicalSignals(JsonElement root)
     {
         if (!root.TryGetProperty("Signals", out JsonElement signals) || signals.ValueKind != JsonValueKind.Array) return 0;

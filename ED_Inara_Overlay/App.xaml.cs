@@ -47,6 +47,7 @@ namespace ED_Inara_Overlay
             NotificationCenterService.Instance.Start();
             ExplorationDataService.Instance.Start();
             ExplorationHistoryService.Instance.Start(settings.JournalDirectory);
+            ExplorationVisitStateService.Instance.Start();
             ExplorationEarningsService.Instance.Start(settings.JournalDirectory);
             ExplorationLogService.Instance.Start();
             ExplorationRouteService.Instance.Start();
@@ -205,6 +206,7 @@ namespace ED_Inara_Overlay
 
                 EngineeringService.Instance.Dispose();
                 NotificationCenterService.Instance.Dispose();
+                ExplorationVisitStateService.Instance.Dispose();
                 ExplorationDataService.Instance.Dispose();
                 ExplorationHistoryService.Instance.Dispose();
                 ExplorationEarningsService.Instance.Dispose();

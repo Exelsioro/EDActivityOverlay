@@ -1,5 +1,22 @@
 namespace ED_Inara_Overlay.Models;
 
+public sealed record ExplorationHistoryGenusSnapshot(
+    string GenusKey,
+    string GenusName,
+    DateTimeOffset FirstSeenUtc,
+    DateTimeOffset LastSeenUtc);
+
+public sealed record ExplorationHistoryOrganicSnapshot(
+    string GenusKey,
+    string GenusName,
+    string SpeciesKey,
+    string SpeciesName,
+    string VariantKey,
+    string VariantName,
+    bool Completed,
+    DateTimeOffset FirstSeenUtc,
+    DateTimeOffset LastSeenUtc);
+
 public sealed record ExplorationHistoryBodySnapshot(
     int BodyId,
     string BodyName,
@@ -12,7 +29,13 @@ public sealed record ExplorationHistoryBodySnapshot(
     int BiologicalSignals,
     int CompletedOrganics,
     DateTimeOffset FirstSeenUtc,
-    DateTimeOffset LastSeenUtc);
+    DateTimeOffset LastSeenUtc)
+{
+    public IReadOnlyList<ExplorationHistoryGenusSnapshot> Genuses { get; init; } =
+        Array.Empty<ExplorationHistoryGenusSnapshot>();
+    public IReadOnlyList<ExplorationHistoryOrganicSnapshot> Organics { get; init; } =
+        Array.Empty<ExplorationHistoryOrganicSnapshot>();
+}
 
 public sealed record ExplorationSystemHistorySnapshot(
     string Commander,
@@ -25,7 +48,6 @@ public sealed record ExplorationSystemHistorySnapshot(
     public static ExplorationSystemHistorySnapshot Empty { get; } = new(
         string.Empty, 0, string.Empty, null, null,
         Array.Empty<ExplorationHistoryBodySnapshot>());
-
     public bool WasVisited => FirstVisitedUtc is not null;
 }
 

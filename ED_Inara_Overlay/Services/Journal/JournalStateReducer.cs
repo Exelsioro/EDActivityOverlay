@@ -94,10 +94,15 @@ internal sealed class JournalStateReducer
                                   && root.TryGetProperty("Longitude", out _);
         int cargoUsed = TryGetInt32(root, "Cargo", state.CargoUsed);
         long balance = TryGetInt64(root, "Balance", state.Balance);
-        string destination = string.Empty;
-        if (root.TryGetProperty("Destination", out JsonElement destinationElement))
+        string destinationName = string.Empty;
+        long destinationSystemAddress = 0;
+        int destinationBodyId = -1;
+        if (root.TryGetProperty("Destination", out JsonElement destinationElement)
+            && destinationElement.ValueKind == JsonValueKind.Object)
         {
-            destination = GetString(destinationElement, "Name");
+            destinationName = GetString(destinationElement, "Name");
+            destinationSystemAddress = TryGetInt64(destinationElement, "System");
+            destinationBodyId = TryGetInt32(destinationElement, "Body", -1);
         }
         double fuelMain = state.FuelMain;
         double fuelReservoir = state.FuelReservoir;
@@ -146,9 +151,12 @@ internal sealed class JournalStateReducer
             TemperatureKelvin = TryGetNullableDouble(root, "Temperature"),
             CurrentBody = GetString(root, "BodyName", current.CurrentBody),
             LegalState = GetString(root, "LegalState", current.LegalState),
-            Destination = string.IsNullOrWhiteSpace(destination) ? current.Destination : destination
-            ,FuelMain = fuelMain
-            ,FuelReservoir = fuelReservoir
+            Destination = destinationName,
+            DestinationName = destinationName,
+            DestinationSystemAddress = destinationSystemAddress,
+            DestinationBodyId = destinationBodyId,
+            FuelMain = fuelMain,
+            FuelReservoir = fuelReservoir
         });
     }
 
@@ -304,6 +312,9 @@ internal sealed class JournalStateReducer
                     Latitude = null,
                     Longitude = null,
                     Destination = string.Empty,
+                    DestinationName = string.Empty,
+                    DestinationSystemAddress = 0,
+                    DestinationBodyId = -1,
                     SystemBodyCount = 0,
                     FssProgress = 0,
                     NonBodySignals = 0,
@@ -336,10 +347,23 @@ internal sealed class JournalStateReducer
             case "undocked":
                 return current with { Station = string.Empty, Docked = false };
             case "fsdtarget":
-                return current with { Destination = GetString(root, "Name", current.Destination) };
+                string fsdTargetName = GetString(root, "Name", current.Destination);
+                return current with
+                {
+                    Destination = fsdTargetName,
+                    DestinationName = fsdTargetName,
+                    DestinationSystemAddress = TryGetInt64(root, "SystemAddress", current.DestinationSystemAddress),
+                    DestinationBodyId = -1
+                };
             case "navrouteclear":
                 navRoute.Clear();
-                return current with { Destination = string.Empty };
+                return current with
+                {
+                    Destination = string.Empty,
+                    DestinationName = string.Empty,
+                    DestinationSystemAddress = 0,
+                    DestinationBodyId = -1
+                };
             case "fuelscoop":
                 return current with { FuelMain = TryGetDouble(root, "Total", current.FuelMain) };
             case "refuelall":
@@ -406,17 +430,38 @@ internal sealed class JournalStateReducer
                 string species = GetLocalizedName(root, "Species");
                 string genus = GetLocalizedName(root, "Genus");
                 string variant = GetLocalizedName(root, "Variant");
+                string genusIdentifier = GetString(root, "Genus");
                 string speciesIdentifier = GetString(root, "Species", species);
+                string variantIdentifier = GetString(root, "Variant");
                 int organicBodyId = TryGetInt32(root, "Body", current.LastOrganicBodyId);
                 string progressKey = GetOrganicProgressKey(
                     current.Commander, current.SystemAddress, current.StarSystem, organicBodyId, speciesIdentifier);
                 organicProgress.TryGetValue(progressKey, out OrganicScanProgressSnapshot? previousProgress);
+
+                if (previousProgress is null)
+                {
+                    KeyValuePair<string, OrganicScanProgressSnapshot> legacy =
+                        organicProgress.FirstOrDefault(pair =>
+                            pair.Value.BodyId == organicBodyId
+                            && IsCurrentSystem(pair.Value, current)
+                            && string.Equals(
+                                pair.Value.Species,
+                                species,
+                                StringComparison.OrdinalIgnoreCase));
+
+                    if (!string.IsNullOrWhiteSpace(legacy.Key))
+                    {
+                        previousProgress = legacy.Value;
+                        organicProgress.Remove(legacy.Key);
+                    }
+                }
+
                 int sampleStage = scanType.Equals("Analyse", StringComparison.OrdinalIgnoreCase)
                     ? 3
                     : scanType.Equals("Sample", StringComparison.OrdinalIgnoreCase)
                         ? Math.Clamp((previousProgress?.Stage ?? 1) + 1, 2, 3)
                         : 1;
-                int colonyRange = ExobiologyCatalog.GetColonyRange(GetString(root, "Genus"), genus);
+                int colonyRange = ExobiologyCatalog.GetColonyRange(genusIdentifier, genus);
                 string bodyName = explorationBodies.TryGetValue(organicBodyId, out ExplorationBodySnapshot? organicBody)
                     ? organicBody.Name
                     : current.CurrentBody;
@@ -434,7 +479,12 @@ internal sealed class JournalStateReducer
                     colonyRange,
                     current.Latitude,
                     current.Longitude,
-                    timestamp);
+                    timestamp)
+                {
+                    GenusKey = genusIdentifier,
+                    SpeciesKey = speciesIdentifier,
+                    VariantKey = variantIdentifier
+                };
                 explorationProgressStore?.Save(organicProgress.Values);
                 return current with
                 {
@@ -624,15 +674,37 @@ internal sealed class JournalStateReducer
     {
         int id = TryGetInt32(root, "BodyID", -1);
         if (id < 0) return;
-        ExplorationBodySnapshot previous = GetExplorationBody(id, root);
-        IReadOnlyList<string> genuses = ReadGenuses(root);
-        IReadOnlyList<BiologyEstimateSnapshot> estimates = ReadBiologyEstimates(root);
+
+        ExplorationBodySnapshot previous =
+            GetExplorationBody(id, root);
+
+        IReadOnlyList<(string Key, string Name)> genusEntries =
+            ReadGenusEntries(root);
+
+        string[] genusNames = genusEntries
+            .Select(item => item.Name)
+            .ToArray();
+
+        string[] genusKeys = genusEntries
+            .Select(item => item.Key)
+            .ToArray();
+
+        IReadOnlyList<BiologyEstimateSnapshot> estimates =
+            ReadBiologyEstimates(root);
+
         explorationBodies[id] = previous with
         {
             Name = GetString(root, "BodyName", previous.Name),
             BiologicalSignals = biologicalCount,
-            Genuses = genuses.Count == 0 ? previous.Genuses : genuses,
-            BiologyEstimates = estimates.Count == 0 ? previous.BiologyEstimates : estimates
+            Genuses = genusEntries.Count == 0
+                ? previous.Genuses
+                : genusNames,
+            GenusKeys = genusEntries.Count == 0
+                ? previous.GenusKeys
+                : genusKeys,
+            BiologyEstimates = estimates.Count == 0
+                ? previous.BiologyEstimates
+                : estimates
         };
     }
 
@@ -664,7 +736,13 @@ internal sealed class JournalStateReducer
         && string.Equals(item.SystemName, current.StarSystem, StringComparison.OrdinalIgnoreCase);
 
     private static string GetOrganicProgressKey(OrganicScanProgressSnapshot item) => GetOrganicProgressKey(
-        item.Commander, item.SystemAddress, item.SystemName, item.BodyId, item.Species);
+        item.Commander,
+        item.SystemAddress,
+        item.SystemName,
+        item.BodyId,
+        string.IsNullOrWhiteSpace(item.SpeciesKey)
+            ? item.Species
+            : item.SpeciesKey);
 
     private static string GetOrganicProgressKey(
         string commander, long systemAddress, string systemName, int bodyId, string species) =>
@@ -684,16 +762,33 @@ internal sealed class JournalStateReducer
         return target > 0 && used > 0 && used <= target;
     }
 
-    private static IReadOnlyList<string> ReadGenuses(JsonElement root)
+    private static IReadOnlyList<(string Key, string Name)> ReadGenusEntries(
+        JsonElement root)
     {
-        if (!root.TryGetProperty("Genuses", out JsonElement source) || source.ValueKind != JsonValueKind.Array)
+        if (!root.TryGetProperty(
+                "Genuses",
+                out JsonElement source)
+            || source.ValueKind != JsonValueKind.Array)
         {
-            return Array.Empty<string>();
+            return Array.Empty<(string Key, string Name)>();
         }
+
         return source.EnumerateArray()
-            .Select(item => GetLocalizedName(item, "Genus"))
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(item =>
+                (
+                    Key: GetString(item, "Genus"),
+                    Name: GetLocalizedName(item, "Genus")
+                ))
+            .Where(item =>
+                !string.IsNullOrWhiteSpace(item.Key)
+                || !string.IsNullOrWhiteSpace(item.Name))
+            .GroupBy(
+                item =>
+                    string.IsNullOrWhiteSpace(item.Key)
+                        ? item.Name
+                        : item.Key,
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
             .ToArray();
     }
 
