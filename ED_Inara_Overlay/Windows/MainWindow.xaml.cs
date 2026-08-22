@@ -37,7 +37,7 @@ namespace ED_Inara_Overlay
         private EngineeringWindow? engineeringOverlayWindow;
         private NotificationOverlayWindow? notificationOverlayWindow;
         private ShipStatusOverlayWindow? shipStatusOverlayWindow;
-        private readonly X52OverlayPointerController x52OverlayPointerController = new();
+        private readonly X52OverlayPointerController x52OverlayPointerController;
         private bool isToggleActive = false;
         private bool isResultsActive = false;
         private bool isPinnedRouteActive = false;
@@ -89,6 +89,7 @@ namespace ED_Inara_Overlay
         public MainWindow(string processName = "notepad", Process? foundProcess = null)
         {
             InitializeComponent();
+            x52OverlayPointerController = new X52OverlayPointerController(GetInteractiveInputWindowHandle);
             baseWindowWidth = Width;
             baseWindowHeight = Height;
             
@@ -645,13 +646,13 @@ namespace ED_Inara_Overlay
             {
                 interactiveModeEnteredAtUtc = DateTime.UtcNow;
                 interactiveFocusLossGraceUntilUtc = interactiveModeEnteredAtUtc + InteractiveFocusLossGracePeriod;
+
+                // Foreground-exclusive DirectInput needs one of our overlay
+                // windows to own foreground focus before acquisition.
+                FocusInteractiveOverlayWindow();
             }
 
             UpdateOverlayInteractionModes();
-            if (interactiveModeActive)
-            {
-                FocusInteractiveOverlayWindow();
-            }
             UpdateInteractionStatusUi();
             Logger.Logger.Info($"Interactive mode {(interactiveModeActive ? "ENABLED" : "DISABLED")} ({reason})");
         }
@@ -661,9 +662,7 @@ namespace ED_Inara_Overlay
             bool canInteract = exclusiveOverlayInteraction || (interactionModeEnabled && interactiveModeActive);
             bool showCursor = exclusiveOverlayInteraction || showCursorWhenInteractive;
             AppSettings settings = SettingsService.Instance.Settings;
-            x52OverlayPointerController.Enabled = canInteract
-                                                   && settings.EnableX52Support
-                                                   && settings.EnableX52MfdControls;
+            x52OverlayPointerController.Enabled = canInteract && settings.EnableX52Support;
 
             tradeRouteWindow?.ApplyInteractionMode(canInteract, showCursor);
             resultsOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
@@ -769,9 +768,9 @@ namespace ED_Inara_Overlay
             interactiveModeActive = true;
             interactiveModeEnteredAtUtc = DateTime.UtcNow;
             interactiveFocusLossGraceUntilUtc = DateTime.MaxValue;
+            engineeringOverlayWindow?.Activate();
             UpdateOverlayInteractionModes();
             UpdateInteractionStatusUi();
-            engineeringOverlayWindow?.Activate();
             Logger.Logger.Info("Exclusive overlay interaction enabled for a full overlay assistant.");
         }
 
@@ -807,6 +806,14 @@ namespace ED_Inara_Overlay
             return handle != IntPtr.Zero && handle == foregroundWindow;
         }
 
+        private IntPtr GetInteractiveInputWindowHandle()
+        {
+            IntPtr foreground = WindowsAPI.GetForegroundWindow();
+            return WindowsAPI.IsOverlayWindow(foreground)
+                ? foreground
+                : IntPtr.Zero;
+        }
+
         private void FocusInteractiveOverlayWindow()
         {
             try
@@ -838,6 +845,12 @@ namespace ED_Inara_Overlay
                 if (engineeringOverlayWindow?.IsVisible == true)
                 {
                     engineeringOverlayWindow.Activate();
+                    return;
+                }
+
+                if (activityWorkspaceWindow?.IsVisible == true)
+                {
+                    activityWorkspaceWindow.Activate();
                 }
             }
             catch (Exception ex)

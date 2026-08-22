@@ -103,6 +103,9 @@ public partial class MainWindow
                 case X52ControlAction.ToggleInteraction:
                     ToggleInteractiveModeFromHotkey();
                     break;
+                case X52ControlAction.ToggleOverlay:
+                    PerformToggleAction();
+                    break;
             }
         }));
 

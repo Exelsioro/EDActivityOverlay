@@ -7,53 +7,141 @@ namespace ED_Inara_Overlay.LayoutTests;
 public sealed class X52IntegrationTests
 {
     [Fact]
-    public void MfdSelectBounceProducesOnlyOneToggle()
+    public void OneNoisySelectBurstDefersThenTogglesInteraction()
     {
         var filter = new X52SoftButtonFilter();
 
         Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_000));
-        Assert.Equal(X52ControlAction.ToggleActivity, filter.Process(0, 1_100));
-        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_130));
-        Assert.Null(filter.Process(0, 1_150));
-        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_600));
-        Assert.Equal(X52ControlAction.ToggleActivity, filter.Process(0, 1_680));
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_016));
+        Assert.Null(filter.Process(0, 1_031));
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_047));
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_078));
+        Assert.Null(filter.Process(0, 1_094));
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_109));
+
+        Assert.Null(filter.ProcessPending(1_199));
+        Assert.Null(filter.ProcessPending(1_608));
+
+        Assert.Equal(
+            X52ControlAction.ToggleInteraction,
+            filter.ProcessPending(1_609));
+
+        Assert.Null(filter.ProcessPending(1_800));
     }
 
     [Fact]
-    public void HoldingMfdSelectTogglesInteractionWithoutAlsoTogglingActivity()
+    public void DoubleSelectConsumesFirstClickAndOnlyTogglesOverlay()
     {
         var filter = new X52SoftButtonFilter();
 
         Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_000));
-        Assert.Null(filter.ProcessHold(1_699));
-        Assert.Equal(X52ControlAction.ToggleInteraction, filter.ProcessHold(1_700));
-        Assert.Null(filter.Process(0, 1_800));
+        Assert.Null(filter.Process(0, 1_025));
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_050));
+
+        Assert.Null(filter.ProcessPending(1_140));
+        Assert.Null(filter.ProcessPending(1_400));
+
+        Assert.Equal(
+            X52ControlAction.ToggleOverlay,
+            filter.Process(X52SoftButtonFilter.SelectMask, 1_490));
+
+        Assert.Null(filter.ProcessPending(1_550));
+        Assert.Null(filter.ProcessPending(2_100));
     }
 
     [Fact]
-    public void OverlayControllerLayerIsRestrictedToInteractiveMode()
+    public void DoubleSelectWorksEvenWhenTimerDidNotCloseFirstBurst()
+    {
+        var filter = new X52SoftButtonFilter();
+
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_000));
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_050));
+
+        Assert.Equal(
+            X52ControlAction.ToggleOverlay,
+            filter.Process(X52SoftButtonFilter.SelectMask, 1_250));
+
+        Assert.Null(filter.ProcessPending(2_000));
+    }
+
+    [Fact]
+    public void ExpiredFirstClickIsSingleAndNextBurstStartsNewGesture()
+    {
+        var filter = new X52SoftButtonFilter();
+
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_000));
+        Assert.Null(filter.ProcessPending(1_090));
+
+        Assert.Equal(
+            X52ControlAction.ToggleInteraction,
+            filter.ProcessPending(1_500));
+
+        Assert.Null(filter.Process(X52SoftButtonFilter.SelectMask, 1_700));
+        Assert.Null(filter.ProcessPending(1_790));
+
+        Assert.Equal(
+            X52ControlAction.ToggleInteraction,
+            filter.ProcessPending(2_200));
+    }
+    [Fact]
+    public void OverlayUsesNativeX52MousePath()
     {
         string repository = FindRepositoryRoot();
-        string main = File.ReadAllText(Path.Combine(repository, "ED_Inara_Overlay", "Windows", "MainWindow.xaml.cs"));
-        string pointer = File.ReadAllText(Path.Combine(repository, "ED_Inara_Overlay", "Services", "Hardware", "X52OverlayPointerController.cs"));
+        string pointer = File.ReadAllText(
+            Path.Combine(
+                repository,
+                "ED_Inara_Overlay",
+                "Services",
+                "Hardware",
+                "X52OverlayPointerController.cs"));
 
-        Assert.Contains("x52OverlayPointerController.Enabled = canInteract", main, StringComparison.Ordinal);
-        Assert.Contains("Pov", pointer, StringComparison.Ordinal);
-        Assert.Contains("FireAButtonMask", pointer, StringComparison.Ordinal);
-        Assert.Contains("mouse_event(MouseLeftDown", pointer, StringComparison.Ordinal);
+        Assert.Contains(
+            "Compatibility no-op",
+            pointer,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Vortice.DirectInput",
+            pointer,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "CooperativeLevel.",
+            pointer,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "mouse_event",
+            pointer,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "SetCursorPos",
+            pointer,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "FireAButtonIndex",
+            pointer,
+            StringComparison.Ordinal);
     }
-
     [Fact]
-    public void MfdWheelSuppressesRepeatedAndOppositeBounce()
+    public void MfdWheelRequiresReleaseForSameDirectionButAllowsQuickReversal()
     {
         var filter = new X52SoftButtonFilter();
 
-        Assert.Equal(X52ControlAction.PreviousActivity, filter.Process(X52SoftButtonFilter.ScrollUpMask, 2_000));
-        Assert.Null(filter.Process(X52SoftButtonFilter.ScrollUpMask, 2_020));
-        Assert.Null(filter.Process(X52SoftButtonFilter.ScrollDownMask, 2_060));
-        Assert.Equal(X52ControlAction.NextActivity, filter.Process(X52SoftButtonFilter.ScrollDownMask, 2_200));
-    }
+        Assert.Equal(
+            X52ControlAction.PreviousActivity,
+            filter.Process(X52SoftButtonFilter.ScrollUpMask, 1_000));
 
+        Assert.Null(
+            filter.Process(X52SoftButtonFilter.ScrollUpMask, 1_050));
+
+        Assert.Null(filter.Process(0, 1_060));
+
+        Assert.Equal(
+            X52ControlAction.PreviousActivity,
+            filter.Process(X52SoftButtonFilter.ScrollUpMask, 1_095));
+
+        Assert.Equal(
+            X52ControlAction.NextActivity,
+            filter.Process(X52SoftButtonFilter.ScrollDownMask, 1_130));
+    }
     [Fact]
     public void MfdFilterRejectsAmbiguousCombinedMasks()
     {
