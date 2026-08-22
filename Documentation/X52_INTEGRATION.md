@@ -38,17 +38,24 @@ the driver.
 ## Input coverage and expansion
 
 DirectOutput exposes only the right MFD encoder to user applications: up, down
-and push. Rotation selects the previous/next activity, a short push toggles its
-widget, and a 0.7 second hold toggles interactive mode.
+and push. Rotation selects the previous/next activity. A single push toggles interactive focus mode; a double push hides/restores the whole overlay set. The single-push action is deferred until the double-click window expires, so the first click of a valid double click is never executed as a single click. The single-push action is
+delayed briefly so the application can distinguish it from a double push.
 The left encoder and clock/stopwatch buttons are owned by the device firmware
 and should not be repurposed.
 
 The remaining stick and throttle controls are ordinary joystick inputs, not
-DirectOutput soft buttons. The application polls X52 non-exclusively through
-WinMM only while interactive mode is active: POV 1 moves the Windows cursor and
-Fire A sends a left click. Outside interactive mode this polling layer produces
-no cursor or mouse input, leaving the normal Elite/Logitech profile behavior
-unchanged.
+DirectOutput soft buttons. The application does not emulate a mouse from
+DirectInput. X52 cursor control is left to the native Logitech/Saitek profile:
+the throttle Mouse Pointer moves the Windows cursor and the adjacent Mouse Click
+button performs the normal left click. This path already works on the desktop,
+inside Elite Dangerous, and while the overlay is interactive.
+
+The X52 profile therefore needs the throttle ministick X/Y axes assigned to
+Mouse X Axis / Mouse Y Axis. DirectInput exclusivity is not a kernel HID cloak:
+Windows still permits non-exclusive/background readers. If a game deliberately
+continues reading the physical HOTAS in the background, complete suppression
+requires a HID filter and virtual-device relay rather than normal user-mode
+DirectInput.
 
 ## Troubleshooting
 

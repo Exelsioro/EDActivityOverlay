@@ -3,26 +3,36 @@ using ED_Inara_Overlay.Models;
 namespace ED_Inara_Overlay.Services.Hardware;
 
 /// <summary>
-/// Converts X52 Pro MFD soft-button masks into stable application actions.
-/// The scroll encoder can emit repeated or opposite-direction pulses for one
-/// physical detent, while the push button can briefly release and press again.
+/// Normalizes noisy X52 DirectOutput callbacks into physical MFD gestures.
+/// A single click is deferred until the double-click window expires, so the
+/// first click of a valid double click can never also execute the single action.
 /// </summary>
 internal sealed class X52SoftButtonFilter
 {
     internal const uint SelectMask = 0x1;
     internal const uint ScrollUpMask = 0x2;
     internal const uint ScrollDownMask = 0x4;
+
     private const uint KnownMasks = SelectMask | ScrollUpMask | ScrollDownMask;
 
-    internal const long NavigationDebounceMilliseconds = 180;
-    internal const long ToggleDebounceMilliseconds = 450;
-    internal const long InteractionHoldMilliseconds = 700;
+    internal const long SelectBurstQuietMilliseconds = 90;
+
+    // Measured from the END of the first normalized physical click.
+    internal const long DoubleClickMilliseconds = 500;
+
+    internal const long NavigationSameDirectionMinMilliseconds = 90;
+    internal const long NavigationDirectionChangeMinMilliseconds = 30;
 
     private readonly object sync = new();
-    private long? lastNavigationAt;
-    private long? lastToggleAt;
-    private long? selectPressedAt;
-    private bool interactionHoldEmitted;
+
+    private bool selectBurstActive;
+    private bool selectBurstConsumedByDoubleClick;
+    private long? lastSelectSignalAt;
+    private long? pendingCompletedClickAt;
+
+    private long? lastNavigationAcceptedAt;
+    private uint? lastNavigationAcceptedMask;
+    private bool navigationReleaseSeen;
 
     public X52ControlAction? Process(uint buttons, long nowMilliseconds)
     {
@@ -30,58 +40,40 @@ internal sealed class X52SoftButtonFilter
         {
             uint recognized = buttons & KnownMasks;
             bool selectDown = (recognized & SelectMask) != 0;
-            if (selectDown && selectPressedAt is null)
+            uint navigation = recognized & (ScrollUpMask | ScrollDownMask);
+
+            if (selectDown && navigation != 0) return null;
+            if (selectDown) return ProcessSelectSignal(nowMilliseconds);
+
+            if (recognized == 0)
             {
-                selectPressedAt = nowMilliseconds;
-                interactionHoldEmitted = false;
+                navigationReleaseSeen = true;
                 return null;
             }
 
-            if (!selectDown && selectPressedAt is { } pressedAt)
-            {
-                selectPressedAt = null;
-                if (interactionHoldEmitted)
-                {
-                    return null;
-                }
-                if (nowMilliseconds - pressedAt >= InteractionHoldMilliseconds)
-                {
-                    interactionHoldEmitted = true;
-                    return X52ControlAction.ToggleInteraction;
-                }
-                if (IsWithinDebounce(lastToggleAt, nowMilliseconds, ToggleDebounceMilliseconds)) return null;
-                lastToggleAt = nowMilliseconds;
-                return X52ControlAction.ToggleActivity;
-            }
-
-            uint navigation = recognized & (ScrollUpMask | ScrollDownMask);
             if (navigation == 0 || (navigation & (navigation - 1)) != 0) return null;
 
-            // Both encoder directions share one debounce window. This suppresses
-            // the short opposite pulse that some X52 units produce after a detent.
-            if (IsWithinDebounce(lastNavigationAt, nowMilliseconds, NavigationDebounceMilliseconds))
-            {
-                return null;
-            }
-
-            lastNavigationAt = nowMilliseconds;
-            return navigation == ScrollUpMask
-                ? X52ControlAction.PreviousActivity
-                : X52ControlAction.NextActivity;
+            return ProcessNavigationSignal(navigation, nowMilliseconds);
         }
     }
 
-    public X52ControlAction? ProcessHold(long nowMilliseconds)
+    public X52ControlAction? ProcessPending(long nowMilliseconds)
     {
         lock (sync)
         {
-            if (selectPressedAt is null || interactionHoldEmitted
-                || nowMilliseconds - selectPressedAt.Value < InteractionHoldMilliseconds)
+            CloseSelectBurstIfQuiet(nowMilliseconds);
+
+            if (pendingCompletedClickAt is not { } firstClickCompletedAt) return null;
+
+            if (nowMilliseconds < firstClickCompletedAt
+                || nowMilliseconds - firstClickCompletedAt < DoubleClickMilliseconds)
             {
                 return null;
             }
 
-            interactionHoldEmitted = true;
+            pendingCompletedClickAt = null;
+
+            // SINGLE = enter/leave interactive focus mode.
             return X52ControlAction.ToggleInteraction;
         }
     }
@@ -90,13 +82,118 @@ internal sealed class X52SoftButtonFilter
     {
         lock (sync)
         {
-            lastNavigationAt = null;
-            lastToggleAt = null;
-            selectPressedAt = null;
-            interactionHoldEmitted = false;
+            selectBurstActive = false;
+            selectBurstConsumedByDoubleClick = false;
+            lastSelectSignalAt = null;
+            pendingCompletedClickAt = null;
+            lastNavigationAcceptedAt = null;
+            lastNavigationAcceptedMask = null;
+            navigationReleaseSeen = false;
         }
     }
 
-    private static bool IsWithinDebounce(long? previous, long current, long interval) =>
-        previous.HasValue && current >= previous.Value && current - previous.Value < interval;
+    private X52ControlAction? ProcessSelectSignal(long nowMilliseconds)
+    {
+        if (selectBurstActive && lastSelectSignalAt is { } previousSignalAt)
+        {
+            if (nowMilliseconds >= previousSignalAt
+                && nowMilliseconds - previousSignalAt < SelectBurstQuietMilliseconds)
+            {
+                lastSelectSignalAt = nowMilliseconds;
+                return null;
+            }
+
+            CompleteActiveSelectBurst(previousSignalAt);
+        }
+
+        return StartNewSelectBurst(nowMilliseconds);
+    }
+
+    private X52ControlAction? StartNewSelectBurst(long nowMilliseconds)
+    {
+        selectBurstActive = true;
+        selectBurstConsumedByDoubleClick = false;
+        lastSelectSignalAt = nowMilliseconds;
+
+        if (pendingCompletedClickAt is not { } firstClickCompletedAt) return null;
+
+        long interval = nowMilliseconds - firstClickCompletedAt;
+
+        if (interval >= 0 && interval <= DoubleClickMilliseconds)
+        {
+            pendingCompletedClickAt = null;
+            selectBurstConsumedByDoubleClick = true;
+
+            // DOUBLE = hide/restore the whole overlay set.
+            return X52ControlAction.ToggleOverlay;
+        }
+
+        // An older pending click is already outside the double-click window.
+        pendingCompletedClickAt = null;
+        return X52ControlAction.ToggleInteraction;
+    }
+
+    private void CloseSelectBurstIfQuiet(long nowMilliseconds)
+    {
+        if (!selectBurstActive || lastSelectSignalAt is not { } lastSignalAt) return;
+
+        if (nowMilliseconds < lastSignalAt
+            || nowMilliseconds - lastSignalAt < SelectBurstQuietMilliseconds)
+        {
+            return;
+        }
+
+        CompleteActiveSelectBurst(lastSignalAt);
+    }
+
+    private void CompleteActiveSelectBurst(long completedAt)
+    {
+        selectBurstActive = false;
+
+        if (!selectBurstConsumedByDoubleClick)
+        {
+            pendingCompletedClickAt = completedAt;
+        }
+
+        selectBurstConsumedByDoubleClick = false;
+    }
+
+    private X52ControlAction? ProcessNavigationSignal(uint navigation, long nowMilliseconds)
+    {
+        if (lastNavigationAcceptedAt is null || lastNavigationAcceptedMask is null)
+        {
+            return AcceptNavigation(navigation, nowMilliseconds);
+        }
+
+        long elapsed = nowMilliseconds - lastNavigationAcceptedAt.Value;
+
+        if (elapsed < 0) return AcceptNavigation(navigation, nowMilliseconds);
+
+        bool directionChanged = navigation != lastNavigationAcceptedMask.Value;
+
+        if (directionChanged)
+        {
+            if (elapsed < NavigationDirectionChangeMinMilliseconds) return null;
+            return AcceptNavigation(navigation, nowMilliseconds);
+        }
+
+        if (!navigationReleaseSeen
+            || elapsed < NavigationSameDirectionMinMilliseconds)
+        {
+            return null;
+        }
+
+        return AcceptNavigation(navigation, nowMilliseconds);
+    }
+
+    private X52ControlAction AcceptNavigation(uint navigation, long nowMilliseconds)
+    {
+        lastNavigationAcceptedAt = nowMilliseconds;
+        lastNavigationAcceptedMask = navigation;
+        navigationReleaseSeen = false;
+
+        return navigation == ScrollUpMask
+            ? X52ControlAction.PreviousActivity
+            : X52ControlAction.NextActivity;
+    }
 }

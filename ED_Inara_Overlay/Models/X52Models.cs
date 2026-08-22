@@ -22,7 +22,8 @@ public enum X52ControlAction
     PreviousActivity,
     NextActivity,
     ToggleActivity,
-    ToggleInteraction
+    ToggleInteraction,
+    ToggleOverlay
 }
 
 public sealed class X52StateChangedEventArgs(X52IntegrationState state) : EventArgs
