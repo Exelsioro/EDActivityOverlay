@@ -14,6 +14,7 @@ public sealed class X52IntegrationService : IDisposable
     private string[] lastLines = [];
     private Dictionary<int, bool> lastLeds = [];
     private Timer? animationTimer;
+    private Timer? inputTimer;
     private long animationStep;
     private bool started;
     private bool disposed;
@@ -37,6 +38,7 @@ public sealed class X52IntegrationService : IDisposable
         SettingsService.Instance.SettingsChanged += OnSettingsChanged;
         JournalMonitorService.Instance.StateChanged += OnJournalStateChanged;
         animationTimer = new Timer(_ => OnAnimationTick(), null, TimeSpan.FromMilliseconds(250), TimeSpan.FromMilliseconds(250));
+        inputTimer = new Timer(_ => OnInputTick(), null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
         ApplySettings(forceReconnect: true);
     }
 
@@ -57,6 +59,10 @@ public sealed class X52IntegrationService : IDisposable
     private void ApplySettings(bool forceReconnect)
     {
         AppSettings settings = SettingsService.Instance.Settings;
+        if (!settings.EnableX52MfdControls)
+        {
+            softButtonFilter.Reset();
+        }
         if (!settings.EnableX52Support)
         {
             Disconnect();
@@ -101,14 +107,17 @@ public sealed class X52IntegrationService : IDisposable
 
     private void OnJournalStateChanged(object? sender, GameStateChangedEventArgs e) => RefreshOutput(e.State);
 
-    private void OnAnimationTick()
+    private void OnInputTick()
     {
         if (SettingsService.Instance.Settings.EnableX52MfdControls
-            && softButtonFilter.ProcessHold(Environment.TickCount64) is { } holdAction)
+            && softButtonFilter.ProcessPending(Environment.TickCount64) is { } action)
         {
-            EmitControlAction(holdAction, "hold");
+            EmitControlAction(action, "timer");
         }
+    }
 
+    private void OnAnimationTick()
+    {
         GameStateSnapshot game = JournalMonitorService.Instance.Current;
         if (!game.FsdCharging && !game.IsInDanger && !game.LowFuel && !game.OverHeating)
         {
@@ -225,6 +234,8 @@ public sealed class X52IntegrationService : IDisposable
         if (disposed) return;
         animationTimer?.Dispose();
         animationTimer = null;
+        inputTimer?.Dispose();
+        inputTimer = null;
         if (started)
         {
             SettingsService.Instance.SettingsChanged -= OnSettingsChanged;
