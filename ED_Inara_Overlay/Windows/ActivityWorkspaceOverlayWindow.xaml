@@ -317,12 +317,13 @@
                         BorderBrush="{DynamicResource BorderColorBrush}"
                         BorderThickness="1">
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="164"/>
+                        </Grid.ColumnDefinitions>
 
-                        <StackPanel>
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{DynamicResource Loc_EXPLORATION_POI_NEARBY}"
                                        FontSize="9"
                                        FontWeight="Bold"
@@ -347,27 +348,43 @@
                                        Foreground="{DynamicResource MutedTextColorBrush}"/>
                         </StackPanel>
 
-                        <WrapPanel Grid.Row="1"
-                                   Margin="0,7,0,0"
-                                   HorizontalAlignment="Right">
+                        <Grid Grid.Column="2"
+                              VerticalAlignment="Center">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="28"/>
+                                <RowDefinition Height="6"/>
+                                <RowDefinition Height="28"/>
+                            </Grid.RowDefinitions>
                             <Button x:Name="PlotPoiRouteButton"
-                                    Padding="8,3"
+                                    Width="164"
+                                    Height="28"
+                                    Padding="7,2"
                                     IsEnabled="False"
                                     Content="{DynamicResource Loc_PREPARE_IN_GALAXY_MAP}"
                                     Click="PlotPoiRouteButton_Click"/>
-                            <Button x:Name="OpenPoiDetailsButton"
-                                    Margin="6,0,0,0"
-                                    Padding="8,3"
-                                    IsEnabled="False"
-                                    Content="{DynamicResource Loc_EXPLORATION_INFO_SHORT}"
-                                    Click="OpenPoiDetailsButton_Click"/>
-                            <Button x:Name="CopyPoiSystemButton"
-                                    Margin="6,0,0,0"
-                                    Padding="8,3"
-                                    IsEnabled="False"
-                                    Content="{DynamicResource Loc_EXPLORATION_COPY_SHORT}"
-                                    Click="CopyPoiSystemButton_Click"/>
-                        </WrapPanel>
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="79"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="79"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="OpenPoiDetailsButton"
+                                        Width="79"
+                                        Height="28"
+                                        Padding="6,2"
+                                        IsEnabled="False"
+                                        Content="{DynamicResource Loc_EXPLORATION_INFO_SHORT}"
+                                        Click="OpenPoiDetailsButton_Click"/>
+                                <Button x:Name="CopyPoiSystemButton"
+                                        Grid.Column="2"
+                                        Width="79"
+                                        Height="28"
+                                        Padding="6,2"
+                                        IsEnabled="False"
+                                        Content="{DynamicResource Loc_EXPLORATION_COPY_SHORT}"
+                                        Click="CopyPoiSystemButton_Click"/>
+                            </Grid>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>
@@ -386,18 +403,21 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Grid Margin="0,0,0,7"
+                    <Grid Margin="8,6,0,7"
                           HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="170"/>
+                            <ColumnDefinition Width="172"/>
                             <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="170"/>
+                            <ColumnDefinition Width="172"/>
                         </Grid.ColumnDefinitions>
 
                         <TextBox x:Name="CatalogSearchTextBox"
-                                 Width="170"
+                                 Width="172"
                                  Height="28"
+                                 Margin="0"
                                  Padding="7,0"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Center"
                                  VerticalContentAlignment="Center"
                                  Style="{DynamicResource TextBoxStyle}"
                                  ToolTip="{DynamicResource Loc_Exploration_search_hint}"
@@ -405,9 +425,12 @@
 
                         <ComboBox x:Name="CatalogFilterComboBox"
                                   Grid.Column="2"
-                                  Width="170"
+                                  Width="172"
                                   Height="28"
+                                  Margin="0"
                                   Padding="7,0"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
                                   VerticalContentAlignment="Center"
                                   Style="{DynamicResource ComboBoxStyle}"
                                   DisplayMemberPath="Label"
@@ -522,24 +545,49 @@
                             </StackPanel>
                         </ScrollViewer>
                         <StackPanel Grid.Row="2">
-                            <WrapPanel>
-                                <Button x:Name="DeferSelectedBodyButton" MinWidth="0" Padding="8,3" Margin="0,0,6,6" Visibility="Collapsed"
-                                        Content="{DynamicResource Loc_EXPLORATION_DEFER_THIS_VISIT}"
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="34"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button x:Name="DeferSelectedBodyButton"
+                                        Height="28"
+                                        Padding="8,2"
+                                        Visibility="Collapsed"
+                                        Content="{DynamicResource Loc_EXPLORATION_DEFER_SHORT}"
                                         Click="DeferSelectedBodyButton_Click"/>
-                                <Button x:Name="ResumeSelectedBodyButton" MinWidth="0" Padding="8,3" Margin="0,0,6,6" Visibility="Collapsed"
-                                        Content="{DynamicResource Loc_EXPLORATION_RESUME_BODY}"
+                                <Button x:Name="ResumeSelectedBodyButton"
+                                        Height="28"
+                                        Padding="8,2"
+                                        Visibility="Collapsed"
+                                        Content="{DynamicResource Loc_EXPLORATION_RESUME_SHORT}"
                                         Click="ResumeSelectedBodyButton_Click"/>
-                                <Button x:Name="DssGuideSelectedBodyButton" MinWidth="0" Padding="8,3" Margin="0,0,6,6" Visibility="Collapsed"
-                                        Content="{DynamicResource Loc_DSS_GUIDANCE}"
-                                        Click="DssGuideSelectedBodyButton_Click"/>
-                                <Button x:Name="BookmarkSelectedBodyButton" Width="34" Padding="5,3" Margin="0,0,6,6" Content="★"
+
+                                <Button x:Name="BookmarkSelectedBodyButton"
+                                        Grid.Column="2"
+                                        Width="34"
+                                        Height="28"
+                                        Padding="4,2"
+                                        Content="★"
                                         ToolTip="{DynamicResource Loc_MARK_NOTABLE_FINDING}"
-                                        IsEnabled="False" Click="BookmarkSelectedBodyButton_Click"/>
-                                <Button x:Name="CopySelectedBodyButton" MinWidth="0" Padding="8,3" Margin="0,0,0,6"
-                                        Content="{DynamicResource Loc_COPY_BODY_NAME}"
-                                        IsEnabled="False" Click="CopySelectedBodyButton_Click"/>
-                            </WrapPanel>
-                            <TextBlock x:Name="CurrentSystemLinkText" Margin="0,2,0,0"
+                                        IsEnabled="False"
+                                        Click="BookmarkSelectedBodyButton_Click"/>
+
+                                <Button x:Name="CopySelectedBodyButton"
+                                        Grid.Column="4"
+                                        Height="28"
+                                        Padding="8,2"
+                                        Content="{DynamicResource Loc_EXPLORATION_COPY_BODY_SHORT}"
+                                        IsEnabled="False"
+                                        Click="CopySelectedBodyButton_Click"/>
+                            </Grid>
+
+                            <TextBlock x:Name="CurrentSystemLinkText"
+                                       Margin="0,1,0,0"
                                        Style="{DynamicResource ClickableTextStyle}"
                                        ToolTip="{DynamicResource Loc_CLICK_TO_COPY_SYSTEM}"
                                        MouseLeftButtonUp="CopyCurrentSystemText_MouseLeftButtonUp"/>

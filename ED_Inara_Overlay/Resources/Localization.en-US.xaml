@@ -857,4 +857,7 @@
     <sys:String x:Key="Loc_EXPLORATION_INTEREST_VALUE_SHORT">HIGH VALUE</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_INTEREST_NEUTRON_SHORT">NEUTRON</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_INTEREST_BLACK_HOLE_SHORT">BLACK HOLE</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DEFER_SHORT">DEFER</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_RESUME_SHORT">RESUME</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_COPY_BODY_SHORT">COPY BODY</sys:String>
 </ResourceDictionary>

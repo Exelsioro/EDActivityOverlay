@@ -857,4 +857,7 @@
     <sys:String x:Key="Loc_EXPLORATION_INTEREST_VALUE_SHORT">ЦЕННОЕ</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_INTEREST_NEUTRON_SHORT">НЕЙТРОН</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_INTEREST_BLACK_HOLE_SHORT">ЧЁРНАЯ ДЫРА</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DEFER_SHORT">ОТЛОЖИТЬ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_RESUME_SHORT">ВЕРНУТЬ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_COPY_BODY_SHORT">КОПИРОВАТЬ</sys:String>
 </ResourceDictionary>

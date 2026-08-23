@@ -629,7 +629,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             SelectedBodyBiologyText.Text = string.Empty;
             SelectedBodyBiologyPanel.Visibility = Visibility.Collapsed;
             SelectedBodySourceText.Text = string.Empty;
-            DssGuideSelectedBodyButton.Visibility = Visibility.Collapsed;
+
             DssSelectedBodyText.Text =
                 Loc.Get("Loc_Select_a_body");
             DssMappingResultText.Text =
@@ -682,8 +682,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             Loc.Format("Loc_BODY_MAPPING_VALUE_DETAIL", body.EstimatedMappingValue));
         SelectedBodySourceText.Text =
             Loc.Format("Loc_BODY_SOURCE_DETAIL", LocalizeCatalogSource(body.Source));
-        DssGuideSelectedBodyButton.Visibility =
-            visit?.DssRequired == true ? Visibility.Visible : Visibility.Collapsed;
+
 
         detailParts.AddRange(
         [
@@ -1079,11 +1078,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 JournalMonitorService.Instance.Current);
         }
     }
-    private void DssGuideSelectedBodyButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (ExplorationBodiesGrid.SelectedItem is not CatalogRow) return;
-        ExplorationTabs.SelectedItem = DssGuidanceTab;
-    }
+
     private void SetDssTarget(int target)
     {
         target = Math.Clamp(target, DssProbePatternCatalog.MinimumTarget, DssProbePatternCatalog.MaximumTarget);

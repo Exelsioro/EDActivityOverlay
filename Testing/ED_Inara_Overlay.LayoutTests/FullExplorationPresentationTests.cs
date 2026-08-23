@@ -12,7 +12,13 @@ public sealed class FullExplorationPresentationTests
         Assert.Contains("x:Name=\"FullPoiPanel\"", xaml);
         Assert.Contains("x:Name=\"SelectedBodyPhysicalText\"", xaml);
         Assert.Contains("x:Name=\"SelectedBodyBiologyPanel\"", xaml);
-        Assert.Contains("x:Name=\"DssGuideSelectedBodyButton\"", xaml);
+        Assert.DoesNotContain("x:Name=\"DssGuideSelectedBodyButton\"", xaml);
+        Assert.Contains("x:Name=\"PlotPoiRouteButton\"", xaml);
+        Assert.Contains("x:Name=\"OpenPoiDetailsButton\"", xaml);
+        Assert.Contains("x:Name=\"CopyPoiSystemButton\"", xaml);
+        Assert.Contains("x:Name=\"DeferSelectedBodyButton\"", xaml);
+        Assert.Contains("x:Name=\"BookmarkSelectedBodyButton\"", xaml);
+        Assert.Contains("x:Name=\"CopySelectedBodyButton\"", xaml);
         Assert.DoesNotContain("Header=\"{DynamicResource Loc_EXPLORATION_VISIT_STATE}\"", xaml);
     }
 
