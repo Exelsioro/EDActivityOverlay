@@ -509,6 +509,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         string.IsNullOrWhiteSpace(body.Subtype)
             ? body.Type
             : body.Subtype,
+        BuildCompactHighlightText(body),
         BuildHighlightText(body),
         Loc.Format(
             "Loc_Distance_Ls_Value",
@@ -560,6 +561,36 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 Loc.Get("Loc_EXPLORATION_STATE_COMPLETE"),
             _ => "—"
         };
+    private static string BuildCompactHighlightText(
+        ExplorationCatalogBody body)
+    {
+        var values = new List<string>();
+
+        void Add(
+            ExplorationBodyHighlights flag,
+            string label)
+        {
+            if (body.Highlights.HasFlag(flag))
+            {
+                values.Add(label);
+            }
+        }
+
+        Add(ExplorationBodyHighlights.EarthLike, "ELW");
+        Add(ExplorationBodyHighlights.WaterWorld, "WW");
+        Add(ExplorationBodyHighlights.AmmoniaWorld, "AW");
+        Add(ExplorationBodyHighlights.Terraformable, "TERRAFORMABLE");
+        Add(ExplorationBodyHighlights.Biological, "BIO");
+        Add(ExplorationBodyHighlights.Valuable, "HIGH VALUE");
+        Add(ExplorationBodyHighlights.NeutronStar, "NEUTRON");
+        Add(ExplorationBodyHighlights.BlackHole, "BLACK HOLE");
+
+        return values.Count == 0
+            ? "—"
+            : string.Join(
+                Environment.NewLine,
+                values.Take(3));
+    }
     private static string BuildHighlightText(ExplorationCatalogBody body)
     {
         var values = new List<string>();
@@ -619,7 +650,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         SelectedBodyNameText.Text = body.Name;
         DssSelectedBodyText.Text = body.Name;
-        SelectedBodyReasonText.Text = row.Highlights;
+        SelectedBodyReasonText.Text = row.HighlightsTooltip;
 
         ExplorationVisitBodyState? visit =
             FindVisitBodyState(body.BodyId);
@@ -1488,6 +1519,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         string RowMarker,
         string Type,
         string Highlights,
+        string HighlightsTooltip,
         string Distance,
         string MappingValue,
         string Progress,

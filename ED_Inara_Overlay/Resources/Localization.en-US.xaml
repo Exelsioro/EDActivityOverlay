@@ -840,4 +840,9 @@
     <sys:String x:Key="Loc_EXPLORATION_STATE_ACTIVE">ACTIVE</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_LIKELY_SPECIES_HEADER">Likely species from known body conditions:</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_SAMPLE_RANGE_READY_FORMAT">Distance from last sample: {0:0} m • separation requirement satisfied.</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_INTEREST_SHORT">INTEREST</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VALUE_SHORT">VALUE</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_ARRIVAL_SHORT">ARRIVAL</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_INFO_SHORT">INFO</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_COPY_SHORT">COPY</sys:String>
 </ResourceDictionary>
