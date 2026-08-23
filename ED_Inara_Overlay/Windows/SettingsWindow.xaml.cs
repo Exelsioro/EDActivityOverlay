@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -383,43 +385,180 @@ namespace ED_Inara_Overlay.Windows
         private void LoadRouteAutomationSettings()
         {
             AppSettings settings = SettingsService.Instance.Settings;
-            EnableExperimentalRouteAutomationCheckBox.IsChecked = settings.EnableExperimentalRouteAutomation;
-            var presets = new List<HotkeyOption>
+            EnableExperimentalRouteAutomationCheckBox.IsChecked =
+                settings.EnableExperimentalRouteAutomation;
+
+            string currentSelection =
+                EliteBindingsPresetComboBox.SelectedItem is HotkeyOption selected
+                    ? selected.Value
+                    : settings.EliteBindingsFilePath;
+
+            var files = new List<HotkeyOption>
             {
-                new() { Label = Loc.Get("Loc_AUTOMATIC_FROM_ELITE"), Value = string.Empty }
+                new()
+                {
+                    Label = Loc.Get("Loc_AUTOMATIC_FROM_ELITE"),
+                    Value = string.Empty
+                }
             };
-            presets.AddRange(EliteBindingsService.ListPresets().Select(name =>
-                new HotkeyOption { Label = name, Value = name }));
-            EliteBindingsPresetComboBox.ItemsSource = presets;
-            EliteBindingsPresetComboBox.SelectedItem = presets.FirstOrDefault(option =>
-                string.Equals(option.Value, settings.EliteBindingsPreset, StringComparison.OrdinalIgnoreCase)) ?? presets[0];
-            RouteAutomationMapDelayTextBox.Text = Math.Clamp(settings.RouteAutomationMapDelayMs, 3000, 15000).ToString();
-            RouteAutomationStepDelayTextBox.Text = settings.RouteAutomationStepDelayMs.ToString();
+
+            files.AddRange(
+                EliteBindingsService.ListBindingFiles()
+                    .Select(item => new HotkeyOption
+                    {
+                        Label = item.DisplayName,
+                        Value = item.FilePath
+                    }));
+
+            string desired =
+                !string.IsNullOrWhiteSpace(currentSelection)
+                    ? currentSelection
+                    : settings.EliteBindingsFilePath;
+
+            if (!string.IsNullOrWhiteSpace(desired)
+                && files.All(option =>
+                    !string.Equals(
+                        option.Value,
+                        desired,
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                files.Add(new HotkeyOption
+                {
+                    Label = Loc.Format(
+                        "Loc_BINDINGS_FILE_MISSING_FORMAT",
+                        Path.GetFileName(desired)),
+                    Value = desired
+                });
+            }
+
+            EliteBindingsPresetComboBox.ItemsSource = files;
+            EliteBindingsPresetComboBox.SelectedItem =
+                files.FirstOrDefault(option =>
+                    string.Equals(
+                        option.Value,
+                        desired,
+                        StringComparison.OrdinalIgnoreCase))
+                ?? files[0];
+
+            RouteAutomationMapDelayTextBox.Text =
+                Math.Clamp(
+                    settings.RouteAutomationMapDelayMs,
+                    3000,
+                    15000).ToString();
+
+            RouteAutomationStepDelayTextBox.Text =
+                settings.RouteAutomationStepDelayMs.ToString();
+
+            RefreshRouteBindingsStatus();
+        }
+
+        private void RefreshRouteBindingsStatus()
+        {
+            AppSettings settings = SettingsService.Instance.Settings;
+
+            string selectedFile =
+                EliteBindingsPresetComboBox.SelectedItem is HotkeyOption option
+                    ? option.Value
+                    : settings.EliteBindingsFilePath;
+
             try
             {
-                EliteNavigationBindings bindings = EliteBindingsService.Detect(
-                    presetOverride: settings.EliteBindingsPreset);
-                RouteAutomationBindingsStatusText.Text = Loc.Format("Loc_NAVIGATION_BINDINGS_STATUS",
-                    bindings.PresetName, bindings.GalaxyMap.DisplayName,
-                    bindings.NextPanel.DisplayName, bindings.Select.DisplayName);
+                EliteNavigationBindings bindings =
+                    EliteBindingsService.Detect(
+                        presetOverride: settings.EliteBindingsPreset,
+                        fileOverride: selectedFile);
+
+                RouteAutomationBindingsStatusText.Text =
+                    Loc.Format(
+                        "Loc_NAVIGATION_BINDINGS_FILE_STATUS",
+                        Path.GetFileName(bindings.FilePath),
+                        bindings.PresetName,
+                        bindings.GalaxyMap.DisplayName,
+                        bindings.NextPanel.DisplayName,
+                        bindings.Select.DisplayName);
             }
             catch (Exception ex)
             {
-                RouteAutomationBindingsStatusText.Text = Loc.Format("Loc_NAVIGATION_BINDINGS_ERROR", ex.Message);
+                RouteAutomationBindingsStatusText.Text =
+                    Loc.Format(
+                        "Loc_NAVIGATION_BINDINGS_ERROR",
+                        ex.Message);
             }
+        }
+
+        private void EliteBindingsPresetComboBox_SelectionChanged(
+            object sender,
+            SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            RefreshRouteBindingsStatus();
+        }
+
+        private void RefreshBindingsFilesButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            LoadRouteAutomationSettings();
+        }
+
+        private void OpenBindingsFolderButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            string directory =
+                EliteBindingsService.DefaultBindingsDirectory;
+
+            if (!Directory.Exists(directory))
+            {
+                RouteAutomationBindingsStatusText.Text =
+                    Loc.Format(
+                        "Loc_NAVIGATION_BINDINGS_ERROR",
+                        directory);
+                return;
+            }
+
+            Process.Start(
+                new ProcessStartInfo(directory)
+                {
+                    UseShellExecute = true
+                });
         }
 
         private void SaveRouteAutomationSettings()
         {
             AppSettings current = SettingsService.Instance.Settings;
-            int mapDelay = int.TryParse(RouteAutomationMapDelayTextBox.Text, out int parsedMap)
-                ? parsedMap : current.RouteAutomationMapDelayMs;
-            int stepDelay = int.TryParse(RouteAutomationStepDelayTextBox.Text, out int parsedStep)
-                ? parsedStep : current.RouteAutomationStepDelayMs;
+
+            int mapDelay =
+                int.TryParse(
+                    RouteAutomationMapDelayTextBox.Text,
+                    out int parsedMap)
+                    ? parsedMap
+                    : current.RouteAutomationMapDelayMs;
+
+            int stepDelay =
+                int.TryParse(
+                    RouteAutomationStepDelayTextBox.Text,
+                    out int parsedStep)
+                    ? parsedStep
+                    : current.RouteAutomationStepDelayMs;
+
+            string selectedFile =
+                EliteBindingsPresetComboBox.SelectedItem is HotkeyOption option
+                    ? option.Value
+                    : string.Empty;
+
             SettingsService.Instance.SetRouteAutomationSettings(
                 EnableExperimentalRouteAutomationCheckBox.IsChecked == true,
-                EliteBindingsPresetComboBox.SelectedItem is HotkeyOption preset ? preset.Value : string.Empty,
-                mapDelay, stepDelay, current.RouteAutomationVerificationSeconds);
+                current.EliteBindingsPreset,
+                selectedFile,
+                mapDelay,
+                stepDelay,
+                current.RouteAutomationVerificationSeconds);
+
             LoadRouteAutomationSettings();
         }
 

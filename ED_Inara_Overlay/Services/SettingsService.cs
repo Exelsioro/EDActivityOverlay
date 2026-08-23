@@ -340,14 +340,22 @@ namespace ED_Inara_Overlay.Services
             SaveSettings();
         }
 
-        public void SetRouteAutomationSettings(bool experimentalEnabled, string bindingsPreset, int mapDelayMs, int stepDelayMs, int verificationSeconds)
+        public void SetRouteAutomationSettings(
+            bool experimentalEnabled,
+            string bindingsPreset,
+            string bindingsFilePath,
+            int mapDelayMs,
+            int stepDelayMs,
+            int verificationSeconds)
         {
             bindingsPreset = bindingsPreset?.Trim() ?? string.Empty;
+            bindingsFilePath = bindingsFilePath?.Trim() ?? string.Empty;
             mapDelayMs = Math.Clamp(mapDelayMs, 3000, 15000);
             stepDelayMs = Math.Clamp(stepDelayMs, 100, 2000);
             verificationSeconds = Math.Clamp(verificationSeconds, 5, 30);
             if (_settings.EnableExperimentalRouteAutomation == experimentalEnabled
                 && string.Equals(_settings.EliteBindingsPreset, bindingsPreset, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(_settings.EliteBindingsFilePath, bindingsFilePath, StringComparison.OrdinalIgnoreCase)
                 && _settings.RouteAutomationMapDelayMs == mapDelayMs
                 && _settings.RouteAutomationStepDelayMs == stepDelayMs
                 && _settings.RouteAutomationVerificationSeconds == verificationSeconds)
@@ -356,11 +364,12 @@ namespace ED_Inara_Overlay.Services
             }
             _settings.EnableExperimentalRouteAutomation = experimentalEnabled;
             _settings.EliteBindingsPreset = bindingsPreset;
+            _settings.EliteBindingsFilePath = bindingsFilePath;
             _settings.RouteAutomationMapDelayMs = mapDelayMs;
             _settings.RouteAutomationStepDelayMs = stepDelayMs;
             _settings.RouteAutomationVerificationSeconds = verificationSeconds;
             SaveSettings();
-            Logger.Logger.Info($"Route automation settings updated: experimental={experimentalEnabled}, preset={bindingsPreset}, mapDelay={mapDelayMs}, stepDelay={stepDelayMs}, verify={verificationSeconds}");
+            Logger.Logger.Info($"Route automation settings updated: experimental={experimentalEnabled}, preset={bindingsPreset}, file={bindingsFilePath}, mapDelay={mapDelayMs}, stepDelay={stepDelayMs}, verify={verificationSeconds}");
         }
 
         public void SetX52Settings(bool enabled, bool mfd, bool leds, bool mfdControls)
@@ -539,8 +548,14 @@ namespace ED_Inara_Overlay.Services
         /// <summary>Allows the app to select a Galaxy Map result and hold UI Select to plot it.</summary>
         public bool EnableExperimentalRouteAutomation { get; set; }
 
-        /// <summary>Optional controls preset override. Empty follows StartPreset.4.start.</summary>
+        /// <summary>Legacy controls preset override. Empty follows StartPreset.4.start.</summary>
         public string EliteBindingsPreset { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Exact Elite Dangerous .binds file used by Galaxy Map automation.
+        /// Empty keeps the legacy automatic preset detection.
+        /// </summary>
+        public string EliteBindingsFilePath { get; set; } = string.Empty;
 
         /// <summary>Wait after opening Galaxy Map before navigating its UI.</summary>
         public int RouteAutomationMapDelayMs { get; set; } = 6000;

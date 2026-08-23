@@ -295,8 +295,32 @@
                             <StackPanel>
                                 <TextBlock Text="{DynamicResource Loc_GALAXY_MAP_NAVIGATION}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
                                 <TextBlock Text="{DynamicResource Loc_GALAXY_MAP_NAVIGATION_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                <TextBlock Text="{DynamicResource Loc_ELITE_CONTROLS_PRESET}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                <ComboBox x:Name="EliteBindingsPresetComboBox" Height="30" Margin="0,4,0,10" DisplayMemberPath="Label"/>
+                                <TextBlock Text="{DynamicResource Loc_ELITE_BINDINGS_FILE}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                                <TextBlock Text="{DynamicResource Loc_ELITE_BINDINGS_FILE_HINT}"
+                                           Margin="0,3,0,5"
+                                           FontSize="10"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="88"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="EliteBindingsPresetComboBox"
+                                              Height="30"
+                                              DisplayMemberPath="Label"
+                                              SelectionChanged="EliteBindingsPresetComboBox_SelectionChanged"/>
+                                    <Button Grid.Column="2"
+                                            Height="30"
+                                            Content="{DynamicResource Loc_REFRESH}"
+                                            Click="RefreshBindingsFilesButton_Click"/>
+                                </Grid>
+                                <Button Content="{DynamicResource Loc_OPEN_BINDINGS_FOLDER}"
+                                        HorizontalAlignment="Left"
+                                        Padding="10,4"
+                                        Margin="0,0,0,10"
+                                        Click="OpenBindingsFolderButton_Click"/>
                                 <CheckBox x:Name="EnableExperimentalRouteAutomationCheckBox" Content="{DynamicResource Loc_ENABLE_EXPERIMENTAL_ROUTE_AUTOMATION}" Foreground="{DynamicResource AccentColorBrush}" Margin="0,0,0,12"/>
                                 <TextBlock Text="{DynamicResource Loc_MAP_OPEN_DELAY}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
                                 <TextBox x:Name="RouteAutomationMapDelayTextBox" Margin="0,4,0,9"/>

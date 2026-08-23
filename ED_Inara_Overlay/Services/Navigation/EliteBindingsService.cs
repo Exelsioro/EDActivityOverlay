@@ -3,7 +3,33 @@ using System.Xml.Linq;
 
 namespace ED_Inara_Overlay.Services.Navigation;
 
-public sealed record EliteKeyBinding(ushort VirtualKey, IReadOnlyList<ushort> Modifiers, string DisplayName);
+public enum EliteKeyboardLayout
+{
+    Us,
+    Russian
+}
+
+public sealed record EliteResolvedKey(
+    ushort VirtualKey,
+    ushort ScanCode,
+    bool Extended,
+    string FrontierToken);
+
+public sealed record EliteKeyBinding(
+    ushort VirtualKey,
+    IReadOnlyList<ushort> Modifiers,
+    string DisplayName)
+{
+    public ushort ScanCode { get; init; }
+    public bool Extended { get; init; }
+    public IReadOnlyList<ushort> ModifierScanCodes { get; init; } =
+        Array.Empty<ushort>();
+    public IReadOnlyList<bool> ModifierExtended { get; init; } =
+        Array.Empty<bool>();
+    public string FrontierToken { get; init; } = string.Empty;
+    public EliteKeyboardLayout DetectedLayout { get; init; } =
+        EliteKeyboardLayout.Us;
+}
 
 public sealed record EliteNavigationBindings(
     string PresetName,
@@ -12,14 +38,88 @@ public sealed record EliteNavigationBindings(
     EliteKeyBinding NextPanel,
     EliteKeyBinding Select);
 
+public sealed record EliteBindingsFileOption(
+    string FilePath,
+    string FileName,
+    string PresetName,
+    DateTime LastWriteUtc)
+{
+    public string DisplayName =>
+        string.IsNullOrWhiteSpace(PresetName)
+            ? FileName
+            : $"{FileName}  [{PresetName}]";
+}
+
 public static class EliteBindingsService
 {
+    private const uint KlfNotTellShell = 0x00000080;
+    private const uint MapVkVkToVscEx = 4;
+
+    [System.Runtime.InteropServices.DllImport(
+        "user32.dll",
+        CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern IntPtr LoadKeyboardLayout(
+        string pwszKLID,
+        uint flags);
+
+    [System.Runtime.InteropServices.DllImport(
+        "user32.dll",
+        CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern short VkKeyScanEx(
+        char character,
+        IntPtr keyboardLayout);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint MapVirtualKeyEx(
+        uint code,
+        uint mapType,
+        IntPtr keyboardLayout);
+
     public static string DefaultBindingsDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Frontier Developments", "Elite Dangerous", "Options", "Bindings");
 
-    public static EliteNavigationBindings Detect(string? bindingsDirectory = null, string? presetOverride = null)
+    public static EliteNavigationBindings Detect(
+        string? bindingsDirectory = null,
+        string? presetOverride = null,
+        string? fileOverride = null)
     {
+        if (!string.IsNullOrWhiteSpace(fileOverride))
+        {
+            string selectedFile =
+                Path.GetFullPath(fileOverride.Trim());
+
+            if (!File.Exists(selectedFile))
+            {
+                throw new FileNotFoundException(
+                    "Selected Elite bindings file was not found.",
+                    selectedFile);
+            }
+
+            if (!selectedFile.EndsWith(
+                    ".binds",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "Selected Elite controls file must have the .binds extension.");
+            }
+
+            XElement selectedRoot =
+                XDocument.Load(selectedFile).Root
+                ?? throw new InvalidDataException(
+                    "Elite bindings XML has no root element.");
+
+            string selectedPreset =
+                ((string?)selectedRoot.Attribute("PresetName")
+                 ?? Path.GetFileNameWithoutExtension(selectedFile))
+                .Trim();
+
+            return BuildBindings(
+                selectedPreset,
+                selectedFile,
+                selectedRoot);
+        }
+
         string directory = string.IsNullOrWhiteSpace(bindingsDirectory)
             ? DefaultBindingsDirectory
             : bindingsDirectory;
@@ -41,12 +141,56 @@ public static class EliteBindingsService
 
         XElement root = XDocument.Load(file).Root
             ?? throw new InvalidDataException("Elite bindings XML has no root element.");
-        return new EliteNavigationBindings(
+
+        return BuildBindings(
+            preset,
+            file,
+            root);
+    }
+
+    private static EliteNavigationBindings BuildBindings(
+        string preset,
+        string file,
+        XElement root) =>
+        new(
             preset,
             file,
             ReadKeyboardBinding(root, "GalaxyMapOpen"),
             ReadKeyboardBinding(root, "CycleNextPanel"),
             ReadKeyboardBinding(root, "UI_Select"));
+
+    public static IReadOnlyList<EliteBindingsFileOption> ListBindingFiles(
+        string? bindingsDirectory = null)
+    {
+        string directory = string.IsNullOrWhiteSpace(bindingsDirectory)
+            ? DefaultBindingsDirectory
+            : bindingsDirectory;
+
+        if (!Directory.Exists(directory))
+        {
+            return Array.Empty<EliteBindingsFileOption>();
+        }
+
+        return Directory
+            .EnumerateFiles(directory, "*.binds")
+            .Select(path =>
+            {
+                XElement? root = TryLoad(path);
+                string preset =
+                    ((string?)root?.Attribute("PresetName")
+                     ?? string.Empty).Trim();
+
+                return new EliteBindingsFileOption(
+                    path,
+                    Path.GetFileName(path),
+                    preset,
+                    File.GetLastWriteTimeUtc(path));
+            })
+            .OrderByDescending(item => item.LastWriteUtc)
+            .ThenBy(
+                item => item.FileName,
+                StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
     }
 
     public static IReadOnlyList<string> ListPresets(string? bindingsDirectory = null)
@@ -84,26 +228,237 @@ public static class EliteBindingsService
         catch { return null; }
     }
 
-    private static EliteKeyBinding ReadKeyboardBinding(XElement root, string action)
+    private static EliteKeyBinding ReadKeyboardBinding(
+        XElement root,
+        string action)
     {
         XElement node = root.Element(action)
-            ?? throw new InvalidDataException($"Elite action '{action}' is missing from the active preset.");
+            ?? throw new InvalidDataException(
+                $"Elite action '{action}' is missing from the active preset.");
+
         XElement binding = node.Elements()
-            .FirstOrDefault(element => string.Equals((string?)element.Attribute("Device"), "Keyboard",
-                StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidDataException($"Elite action '{action}' has no keyboard binding.");
-        string keyName = (string?)binding.Attribute("Key") ?? string.Empty;
-        ushort key = ToVirtualKey(keyName);
-        ushort[] modifiers = binding.Elements("Modifier")
-            .Where(element => string.Equals((string?)element.Attribute("Device"), "Keyboard",
-                StringComparison.OrdinalIgnoreCase))
-            .Select(element => ToVirtualKey((string?)element.Attribute("Key") ?? string.Empty))
-            .ToArray();
-        string display = modifiers.Length == 0
-            ? keyName.Replace("Key_", string.Empty)
-            : string.Join("+", modifiers.Select(VirtualKeyName).Append(keyName.Replace("Key_", string.Empty)));
-        return new EliteKeyBinding(key, modifiers, display);
+            .FirstOrDefault(element =>
+                string.Equals(
+                    (string?)element.Attribute("Device"),
+                    "Keyboard",
+                    StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException(
+                $"Elite action '{action}' has no keyboard binding.");
+
+        EliteKeyboardLayout layout =
+            DetectKeyboardLayout(root);
+
+        string keyName =
+            (string?)binding.Attribute("Key")
+            ?? string.Empty;
+
+        EliteResolvedKey key =
+            ResolvePhysicalKey(
+                keyName,
+                layout);
+
+        EliteResolvedKey[] modifiers =
+            binding.Elements("Modifier")
+                .Where(element =>
+                    string.Equals(
+                        (string?)element.Attribute("Device"),
+                        "Keyboard",
+                        StringComparison.OrdinalIgnoreCase))
+                .Select(element =>
+                    ResolvePhysicalKey(
+                        (string?)element.Attribute("Key")
+                        ?? string.Empty,
+                        layout))
+                .ToArray();
+
+        string display =
+            modifiers.Length == 0
+                ? keyName.Replace(
+                    "Key_",
+                    string.Empty)
+                : string.Join(
+                    "+",
+                    modifiers
+                        .Select(item =>
+                            VirtualKeyName(item.VirtualKey))
+                        .Append(
+                            keyName.Replace(
+                                "Key_",
+                                string.Empty)));
+
+        return new EliteKeyBinding(
+            key.VirtualKey,
+            modifiers
+                .Select(item => item.VirtualKey)
+                .ToArray(),
+            display)
+        {
+            ScanCode = key.ScanCode,
+            Extended = key.Extended,
+            ModifierScanCodes = modifiers
+                .Select(item => item.ScanCode)
+                .ToArray(),
+            ModifierExtended = modifiers
+                .Select(item => item.Extended)
+                .ToArray(),
+            FrontierToken = keyName,
+            DetectedLayout = layout
+        };
     }
+
+    public static EliteKeyboardLayout DetectKeyboardLayout(
+        XElement root)
+    {
+        bool containsCyrillic =
+            root.DescendantsAndSelf()
+                .Attributes("Key")
+                .Select(attribute =>
+                    attribute.Value)
+                .Any(ContainsCyrillic);
+
+        return containsCyrillic
+            ? EliteKeyboardLayout.Russian
+            : EliteKeyboardLayout.Us;
+    }
+
+    public static EliteResolvedKey ResolvePhysicalKey(
+        string frontierKey,
+        EliteKeyboardLayout layout)
+    {
+        string name =
+            frontierKey.StartsWith(
+                "Key_",
+                StringComparison.OrdinalIgnoreCase)
+                ? frontierKey[4..]
+                : frontierKey;
+
+        IntPtr keyboardLayout =
+            LoadKeyboardLayout(
+                layout == EliteKeyboardLayout.Russian
+                    ? "00000419"
+                    : "00000409",
+                KlfNotTellShell);
+
+        if (keyboardLayout == IntPtr.Zero)
+        {
+            throw new InvalidOperationException(
+                $"Windows keyboard layout '{layout}' could not be loaded.");
+        }
+
+        if (name.Length == 1
+            && IsCyrillic(name[0]))
+        {
+            return ResolveCharacterKey(
+                name[0],
+                frontierKey,
+                keyboardLayout);
+        }
+
+        if (TryGetNamedCharacter(
+                name,
+                out char namedCharacter))
+        {
+            return ResolveCharacterKey(
+                namedCharacter,
+                frontierKey,
+                keyboardLayout);
+        }
+
+        ushort virtualKey =
+            ToVirtualKey(frontierKey);
+
+        return ResolveVirtualKey(
+            virtualKey,
+            frontierKey,
+            keyboardLayout);
+    }
+
+    private static EliteResolvedKey ResolveCharacterKey(
+        char character,
+        string frontierToken,
+        IntPtr keyboardLayout)
+    {
+        short result =
+            VkKeyScanEx(
+                character,
+                keyboardLayout);
+
+        if (result == -1)
+        {
+            throw new InvalidDataException(
+                $"Keyboard character '{character}' from '{frontierToken}' cannot be resolved in the detected Windows layout.");
+        }
+
+        ushort virtualKey =
+            (ushort)(result & 0x00FF);
+
+        return ResolveVirtualKey(
+            virtualKey,
+            frontierToken,
+            keyboardLayout);
+    }
+
+    private static EliteResolvedKey ResolveVirtualKey(
+        ushort virtualKey,
+        string frontierToken,
+        IntPtr keyboardLayout)
+    {
+        uint mapped =
+            MapVirtualKeyEx(
+                virtualKey,
+                MapVkVkToVscEx,
+                keyboardLayout);
+
+        if (mapped == 0)
+        {
+            throw new InvalidDataException(
+                $"Windows scan code for '{frontierToken}' could not be resolved.");
+        }
+
+        ushort scanCode =
+            (ushort)(mapped & 0x00FF);
+
+        bool extended =
+            (mapped & 0xFF00) != 0;
+
+        return new EliteResolvedKey(
+            virtualKey,
+            scanCode,
+            extended,
+            frontierToken);
+    }
+
+    private static bool TryGetNamedCharacter(
+        string name,
+        out char character)
+    {
+        character =
+            name.ToLowerInvariant() switch
+            {
+                "slash" => '/',
+                "period" => '.',
+                "comma" => ',',
+                "minus" => '-',
+                "equals" => '=',
+                "leftbracket" => '[',
+                "rightbracket" => ']',
+                "semicolon" => ';',
+                "apostrophe" => '\'',
+                "grave" => '`',
+                "backslash" => '\\',
+                _ => '\0'
+            };
+
+        return character != '\0';
+    }
+
+    private static bool ContainsCyrillic(
+        string value) =>
+        value.Any(IsCyrillic);
+
+    private static bool IsCyrillic(
+        char value) =>
+        value is >= '\u0400' and <= '\u04FF';
 
     public static ushort ToVirtualKey(string frontierKey)
     {

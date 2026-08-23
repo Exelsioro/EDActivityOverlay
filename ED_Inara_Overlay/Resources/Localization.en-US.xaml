@@ -860,4 +860,9 @@
     <sys:String x:Key="Loc_EXPLORATION_DEFER_SHORT">DEFER</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_RESUME_SHORT">RESUME</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_COPY_BODY_SHORT">COPY BODY</sys:String>
+    <sys:String x:Key="Loc_ELITE_BINDINGS_FILE">Elite controls file (.binds)</sys:String>
+    <sys:String x:Key="Loc_ELITE_BINDINGS_FILE_HINT">Select the exact controls file used by your current Elite profile. Files are read from %LOCALAPPDATA%\Frontier Developments\Elite Dangerous\Options\Bindings.</sys:String>
+    <sys:String x:Key="Loc_OPEN_BINDINGS_FOLDER">OPEN BINDS FOLDER</sys:String>
+    <sys:String x:Key="Loc_BINDINGS_FILE_MISSING_FORMAT">MISSING: {0}</sys:String>
+    <sys:String x:Key="Loc_NAVIGATION_BINDINGS_FILE_STATUS">File: {0}&#10;Preset: {1} · map: {2} · next panel: {3} · select: {4}</sys:String>
 </ResourceDictionary>

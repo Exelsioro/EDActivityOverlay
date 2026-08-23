@@ -1,3 +1,4 @@
+using System.IO;
 using ED_Inara_Overlay.Services.Journal;
 using ED_Inara_Overlay.Utils;
 
@@ -27,7 +28,8 @@ public sealed class EliteRouteNavigationService
     public static EliteRouteNavigationService Instance { get; } = new();
 
     public EliteNavigationBindings DetectBindings() => EliteBindingsService.Detect(
-        presetOverride: SettingsService.Instance.Settings.EliteBindingsPreset);
+        presetOverride: SettingsService.Instance.Settings.EliteBindingsPreset,
+        fileOverride: SettingsService.Instance.Settings.EliteBindingsFilePath);
 
     public async Task<EliteNavigationResult> PrepareAsync(
         string targetSystem,
@@ -54,7 +56,7 @@ public sealed class EliteRouteNavigationService
 
         try
         {
-            Logger.Logger.Info($"Galaxy Map handoff started: target={targetSystem}, automatic={confirmAutomatically}, preset={bindings.PresetName}, keys={bindings.GalaxyMap.DisplayName}/{bindings.NextPanel.DisplayName}/{bindings.Select.DisplayName}");
+            Logger.Logger.Info($"Galaxy Map handoff started: target={targetSystem}, automatic={confirmAutomatically}, preset={bindings.PresetName}, file={Path.GetFileName(bindings.FilePath)}, keys={bindings.GalaxyMap.DisplayName}/{bindings.NextPanel.DisplayName}/{bindings.Select.DisplayName}");
             bool activationReported = WindowsAPI.TryActivateWindow(gameWindow);
             Logger.Logger.Info($"Galaxy Map handoff focus request: reported={activationReported}, foreground={WindowsAPI.GetForegroundWindow()}, target={gameWindow}");
             await WaitFocusedAsync(gameWindow, 1500, cancellationToken);

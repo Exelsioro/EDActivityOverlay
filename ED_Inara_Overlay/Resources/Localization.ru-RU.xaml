@@ -860,4 +860,9 @@
     <sys:String x:Key="Loc_EXPLORATION_DEFER_SHORT">ОТЛОЖИТЬ</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_RESUME_SHORT">ВЕРНУТЬ</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_COPY_BODY_SHORT">КОПИРОВАТЬ</sys:String>
+    <sys:String x:Key="Loc_ELITE_BINDINGS_FILE">Файл управления Elite (.binds)</sys:String>
+    <sys:String x:Key="Loc_ELITE_BINDINGS_FILE_HINT">Выберите точный файл управления, который используется текущим профилем Elite. Файлы берутся из %LOCALAPPDATA%\Frontier Developments\Elite Dangerous\Options\Bindings.</sys:String>
+    <sys:String x:Key="Loc_OPEN_BINDINGS_FOLDER">ОТКРЫТЬ ПАПКУ BINDS</sys:String>
+    <sys:String x:Key="Loc_BINDINGS_FILE_MISSING_FORMAT">ФАЙЛ НЕ НАЙДЕН: {0}</sys:String>
+    <sys:String x:Key="Loc_NAVIGATION_BINDINGS_FILE_STATUS">Файл: {0}&#10;Preset: {1} · карта: {2} · следующая панель: {3} · выбор: {4}</sys:String>
 </ResourceDictionary>
