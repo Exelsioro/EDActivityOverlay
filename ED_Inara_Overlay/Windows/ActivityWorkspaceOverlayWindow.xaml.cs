@@ -316,7 +316,20 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         NextRouteSystemLink.Visibility = route.NextStop is null ? Visibility.Collapsed : Visibility.Visible;
         RefreshRouteStops(route);
         ExplorationPoiSnapshot? poi = ExplorationPoiService.Instance.Current.Closest;
+        FullPoiPanel.Visibility = poi is null ? Visibility.Collapsed : Visibility.Visible;
+        FullPoiTitleText.Text = poi?.Name ?? string.Empty;
+        FullPoiMetaText.Text = poi is null
+            ? string.Empty
+            : string.Join("  •  ", new[]
+            {
+                poi.System,
+                poi.DistanceLy > 0 ? $"{poi.DistanceLy:0.#} ly" : string.Empty,
+                poi.Category,
+                poi.Region
+            }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        FullPoiSummaryText.Text = poi?.Summary ?? string.Empty;
         CopyPoiSystemButton.IsEnabled = !string.IsNullOrWhiteSpace(poi?.System);
+        PlotPoiRouteButton.IsEnabled = !string.IsNullOrWhiteSpace(poi?.System);
         OpenPoiDetailsButton.IsEnabled = Uri.TryCreate(poi?.Url, UriKind.Absolute, out _);
         ApplyCatalogFilter();
     }
@@ -492,6 +505,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         ExplorationVisitDisposition? disposition) => new(
         body,
         body.Name,
+        BuildVisitMarker(disposition),
         string.IsNullOrWhiteSpace(body.Subtype)
             ? body.Type
             : body.Subtype,
@@ -522,6 +536,16 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         disposition,
         BuildVisitStateLabel(disposition));
 
+    private static string BuildVisitMarker(
+        ExplorationVisitDisposition? disposition) =>
+        disposition switch
+        {
+            ExplorationVisitDisposition.Active => "●",
+            ExplorationVisitDisposition.Recommended => "›",
+            ExplorationVisitDisposition.Deferred => "↷",
+            ExplorationVisitDisposition.Complete => "✓",
+            _ => string.Empty
+        };
     private static string BuildVisitStateLabel(
         ExplorationVisitDisposition? disposition) =>
         disposition switch
@@ -567,8 +591,14 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 Loc.Get("Loc_Select_a_body");
             SelectedBodyReasonText.Text =
                 string.Empty;
-            SelectedBodyDetailsText.Text =
-                string.Empty;
+            SelectedBodyDetailsText.Text = string.Empty;
+            SelectedBodyProgressText.Text = string.Empty;
+            SelectedBodyPhysicalText.Text = string.Empty;
+            SelectedBodyValueText.Text = string.Empty;
+            SelectedBodyBiologyText.Text = string.Empty;
+            SelectedBodyBiologyPanel.Visibility = Visibility.Collapsed;
+            SelectedBodySourceText.Text = string.Empty;
+            DssGuideSelectedBodyButton.Visibility = Visibility.Collapsed;
             DssSelectedBodyText.Text =
                 Loc.Get("Loc_Select_a_body");
             DssMappingResultText.Text =
@@ -604,6 +634,25 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         {
             detailParts.Add(visitDetails);
         }
+
+        SelectedBodyProgressText.Text = visitDetails;
+        SelectedBodyPhysicalText.Text = string.Join(
+            Environment.NewLine,
+            Loc.Format("Loc_BODY_TYPE_DETAIL", row.Type),
+            Loc.Format("Loc_BODY_DISTANCE_DETAIL", body.DistanceFromArrivalLs),
+            Loc.Format("Loc_BODY_GRAVITY_DETAIL", body.GravityG),
+            Loc.Format("Loc_BODY_TEMPERATURE_DETAIL", body.SurfaceTemperatureKelvin),
+            Loc.Format("Loc_BODY_PRESSURE_DETAIL", body.SurfacePressureAtmospheres),
+            Loc.Format("Loc_BODY_ATMOSPHERE_DETAIL", EmptyAsUnknown(body.Atmosphere)),
+            Loc.Format("Loc_BODY_VOLCANISM_DETAIL", EmptyAsUnknown(body.Volcanism)));
+        SelectedBodyValueText.Text = string.Join(
+            Environment.NewLine,
+            Loc.Format("Loc_BODY_SCAN_VALUE_DETAIL", body.EstimatedScanValue),
+            Loc.Format("Loc_BODY_MAPPING_VALUE_DETAIL", body.EstimatedMappingValue));
+        SelectedBodySourceText.Text =
+            Loc.Format("Loc_BODY_SOURCE_DETAIL", LocalizeCatalogSource(body.Source));
+        DssGuideSelectedBodyButton.Visibility =
+            visit?.DssRequired == true ? Visibility.Visible : Visibility.Collapsed;
 
         detailParts.AddRange(
         [
@@ -663,6 +712,15 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             detailParts.Add(
                 BuildPredictionDetails(body));
         }
+
+        string biologyPresentation = !string.IsNullOrWhiteSpace(bioGuidance)
+            ? bioGuidance
+            : BuildPredictionDetails(body);
+        SelectedBodyBiologyText.Text = biologyPresentation;
+        SelectedBodyBiologyPanel.Visibility =
+            body.IsBiological && !string.IsNullOrWhiteSpace(biologyPresentation)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         SelectedBodyDetailsText.Text =
             string.Join(
@@ -990,6 +1048,11 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 JournalMonitorService.Instance.Current);
         }
     }
+    private void DssGuideSelectedBodyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ExplorationBodiesGrid.SelectedItem is not CatalogRow) return;
+        ExplorationTabs.SelectedItem = DssGuidanceTab;
+    }
     private void SetDssTarget(int target)
     {
         target = Math.Clamp(target, DssProbePatternCatalog.MinimumTarget, DssProbePatternCatalog.MaximumTarget);
@@ -1090,8 +1153,10 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         RefreshContent(JournalMonitorService.Instance.Current);
         CompactPanel.Visibility = Visibility.Collapsed;
         FullExplorationPanel.Visibility = Visibility.Visible;
-        MinWidth = 920;
-        MinHeight = 620;
+        Width = Math.Min(1240, Math.Max(1040, SystemParameters.WorkArea.Width * 0.86));
+        Height = Math.Min(760, Math.Max(660, SystemParameters.WorkArea.Height * 0.86));
+        MinWidth = Math.Min(1040, Width);
+        MinHeight = Math.Min(660, Height);
         PositionOverlay();
         parentWindow?.BeginExclusiveOverlayInteraction();
         Activate();
@@ -1390,9 +1455,37 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             Process.Start(new ProcessStartInfo(target.AbsoluteUri) { UseShellExecute = true });
     }
 
+    private async void PlotPoiRouteButton_Click(object sender, RoutedEventArgs e)
+    {
+        string target = ExplorationPoiService.Instance.Current.Closest?.System ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(target)) return;
+
+        routeNavigationCancellation?.Cancel();
+        routeNavigationCancellation?.Dispose();
+        routeNavigationCancellation = new CancellationTokenSource();
+        Clipboard.SetText(target);
+
+        if (fullExplorationVisible) CloseFullExplorationView();
+        WindowsAPI.SetClickThrough(this, true);
+        try
+        {
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            await EliteRouteNavigationService.Instance.PrepareAsync(
+                target,
+                targetWindow,
+                confirmAutomatically: false,
+                routeNavigationCancellation.Token);
+        }
+        finally
+        {
+            ApplyInteractionMode(interactive, showCursorWhenInteractive);
+        }
+    }
+
     private sealed record CatalogRow(
         ExplorationCatalogBody Body,
         string Name,
+        string RowMarker,
         string Type,
         string Highlights,
         string Distance,
@@ -1941,18 +2034,27 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private static string BuildFullOverview(GameStateSnapshot state, ExplorationDataState externalData)
     {
-        FuelRouteAssessment fuel = FuelRouteAdvisor.Evaluate(state);
+        ExplorationVisitQueueSnapshot queue = ExplorationVisitStateService.Instance.Current;
         var parts = new List<string>
         {
-            BuildExplorationProgress(state, externalData),
-            BuildEarningsSummary(ExplorationEarningsService.Instance.Current),
-            BuildRouteSummary(ExplorationRouteService.Instance.Current).Trim(),
-            BuildExplorationTargets(state, externalData)
+            BuildAdaptiveExplorationHeader(state, externalData, queue),
+            BuildEarningsSummary(ExplorationEarningsService.Instance.Current)
         };
-        string fuelText = BuildFuelAdvice(fuel);
-        if (!string.IsNullOrWhiteSpace(fuelText)) parts.Add(fuelText);
-        string poi = BuildPoiSummary(ExplorationPoiService.Instance.Current);
-        if (!string.IsNullOrWhiteSpace(poi)) parts.Add(poi);
+
+        if (QueueMatchesSystem(queue, state))
+        {
+            parts.Add(Loc.Format(
+                "Loc_EXPLORATION_QUEUE_FULL_FORMAT",
+                queue.RemainingCount,
+                queue.DeferredCount,
+                queue.CompletedCount));
+        }
+
+        string alert = BuildCompactRouteOrAlert(
+            state,
+            QueueMatchesSystem(queue, state) ? queue : null);
+        if (!string.IsNullOrWhiteSpace(alert)) parts.Add(alert);
+
         return string.Join(Environment.NewLine, parts.Where(value => !string.IsNullOrWhiteSpace(value)));
     }
 
