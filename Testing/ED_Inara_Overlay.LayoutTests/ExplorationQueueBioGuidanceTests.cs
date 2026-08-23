@@ -111,7 +111,7 @@ public sealed class ExplorationQueueBioGuidanceTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "Binding=\"{Binding VisitState}\"",
+            "Text=\"{Binding RowMarker}\"",
             xaml,
             StringComparison.Ordinal);
     }

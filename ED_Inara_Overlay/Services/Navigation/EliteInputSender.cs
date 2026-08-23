@@ -60,8 +60,13 @@ internal static class EliteInputSender
     [DllImport("user32.dll")]
     private static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
 
-    public static Task PressAsync(EliteKeyBinding binding, CancellationToken token = default) =>
-        PressAsync(binding.VirtualKey, binding.Modifiers, token);
+    public static Task PressAsync(
+        EliteKeyBinding binding,
+        CancellationToken token = default) =>
+        PressBindingAsync(
+            binding,
+            75,
+            token);
 
     public static Task PressAsync(ushort key, CancellationToken token = default, params ushort[] modifiers) =>
         PressAsync(key, modifiers, token);
@@ -70,7 +75,10 @@ internal static class EliteInputSender
         EliteKeyBinding binding,
         int durationMs,
         CancellationToken token = default) =>
-        HoldAsync(binding.VirtualKey, binding.Modifiers, durationMs, token);
+        PressBindingAsync(
+            binding,
+            durationMs,
+            token);
 
     public static async Task TypeTextAsync(string text, CancellationToken token = default)
     {
@@ -102,6 +110,105 @@ internal static class EliteInputSender
         await Task.Delay(100, token);
     }
 
+    private static async Task PressBindingAsync(
+        EliteKeyBinding binding,
+        int durationMs,
+        CancellationToken token)
+    {
+        Input BindingModifier(
+            int index,
+            bool up)
+        {
+            ushort scanCode =
+                index < binding.ModifierScanCodes.Count
+                    ? binding.ModifierScanCodes[index]
+                    : checked(
+                        (ushort)MapVirtualKey(
+                            binding.Modifiers[index],
+                            0));
+
+            bool extended =
+                index < binding.ModifierExtended.Count
+                    ? binding.ModifierExtended[index]
+                    : IsExtended(
+                        binding.Modifiers[index]);
+
+            return ScanKey(
+                scanCode,
+                extended,
+                up);
+        }
+
+        ushort mainScanCode =
+            binding.ScanCode != 0
+                ? binding.ScanCode
+                : checked(
+                    (ushort)MapVirtualKey(
+                        binding.VirtualKey,
+                        0));
+
+        var down =
+            new List<Input>(
+                binding.Modifiers.Count + 1);
+
+        for (
+            int index = 0;
+            index < binding.Modifiers.Count;
+            index++)
+        {
+            down.Add(
+                BindingModifier(
+                    index,
+                    up: false));
+        }
+
+        down.Add(
+            ScanKey(
+                mainScanCode,
+                binding.Extended,
+                up: false));
+
+        var up =
+            new List<Input>(
+                binding.Modifiers.Count + 1)
+            {
+                ScanKey(
+                    mainScanCode,
+                    binding.Extended,
+                    up: true)
+            };
+
+        for (
+            int index =
+                binding.Modifiers.Count - 1;
+            index >= 0;
+            index--)
+        {
+            up.Add(
+                BindingModifier(
+                    index,
+                    up: true));
+        }
+
+        Send(down);
+
+        try
+        {
+            await Task.Delay(
+                Math.Max(
+                    75,
+                    durationMs),
+                token);
+        }
+        finally
+        {
+            Send(up);
+        }
+
+        await Task.Delay(
+            35,
+            token);
+    }
     private static async Task PressAsync(ushort key, IReadOnlyList<ushort> modifiers, CancellationToken token)
     {
         await HoldAsync(key, modifiers, 75, token);
@@ -148,6 +255,26 @@ internal static class EliteInputSender
                 VirtualKey = 0,
                 ScanCode = checked((ushort)MapVirtualKey(key, 0)),
                 Flags = UseScanCode | (IsExtended(key) ? ExtendedKey : 0) | (up ? KeyUp : 0)
+            }
+        }
+    };
+
+    private static Input ScanKey(
+        ushort scanCode,
+        bool extended,
+        bool up) => new()
+    {
+        Type = InputKeyboard,
+        Data = new InputUnion
+        {
+            Keyboard = new KeyboardInput
+            {
+                VirtualKey = 0,
+                ScanCode = scanCode,
+                Flags =
+                    UseScanCode
+                    | (extended ? ExtendedKey : 0)
+                    | (up ? KeyUp : 0)
             }
         }
     };

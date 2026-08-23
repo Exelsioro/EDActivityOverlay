@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml.Linq;
 using ED_Inara_Overlay.Services;
 using ED_Inara_Overlay.Services.Navigation;
 using Xunit;
@@ -36,6 +37,184 @@ public sealed class EliteBindingsServiceTests
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    [Fact]
+    public void ExplicitBindingsFileOverridesActivePreset()
+    {
+        string directory =
+            Path.Combine(
+                Path.GetTempPath(),
+                $"ed-bindings-{Guid.NewGuid():N}");
+
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(directory, "StartPreset.4.start"),
+                "WrongPreset",
+                Encoding.UTF8);
+
+            string selectedFile =
+                Path.Combine(
+                    directory,
+                    "CurrentProfile.4.1.binds");
+
+            File.WriteAllText(
+                selectedFile,
+                """
+                <Root PresetName="CurrentProfile">
+                  <GalaxyMapOpen><Primary Device="Keyboard" Key="Key_G"/></GalaxyMapOpen>
+                  <CycleNextPanel><Primary Device="Keyboard" Key="Key_E"/></CycleNextPanel>
+                  <UI_Select><Primary Device="Keyboard" Key="Key_Space"/></UI_Select>
+                </Root>
+                """,
+                Encoding.UTF8);
+
+            EliteNavigationBindings result =
+                EliteBindingsService.Detect(
+                    directory,
+                    fileOverride: selectedFile);
+
+            Assert.Equal(
+                Path.GetFullPath(selectedFile),
+                result.FilePath);
+
+            Assert.Equal(
+                "CurrentProfile",
+                result.PresetName);
+
+            Assert.Equal(
+                (ushort)'G',
+                result.GalaxyMap.VirtualKey);
+        }
+        finally
+        {
+            Directory.Delete(
+                directory,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ListsBindingsFilesNewestFirst()
+    {
+        string directory =
+            Path.Combine(
+                Path.GetTempPath(),
+                $"ed-bindings-{Guid.NewGuid():N}");
+
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            string oldFile =
+                Path.Combine(directory, "Old.binds");
+            string newFile =
+                Path.Combine(directory, "New.binds");
+
+            File.WriteAllText(
+                oldFile,
+                "<Root PresetName=\"Old\"/>",
+                Encoding.UTF8);
+
+            File.WriteAllText(
+                newFile,
+                "<Root PresetName=\"New\"/>",
+                Encoding.UTF8);
+
+            File.SetLastWriteTimeUtc(
+                oldFile,
+                DateTime.UtcNow.AddMinutes(-10));
+
+            File.SetLastWriteTimeUtc(
+                newFile,
+                DateTime.UtcNow);
+
+            IReadOnlyList<EliteBindingsFileOption> files =
+                EliteBindingsService.ListBindingFiles(directory);
+
+            Assert.Equal(2, files.Count);
+            Assert.Equal("New.binds", files[0].FileName);
+            Assert.Equal("New", files[0].PresetName);
+            Assert.Contains("[New]", files[0].DisplayName);
+        }
+        finally
+        {
+            Directory.Delete(
+                directory,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DetectsRussianLayoutFromCyrillicBindings()
+    {
+        XElement root =
+            XElement.Parse(
+                """
+                <Root>
+                  <GalaxyMapOpen>
+                    <Primary Device="Keyboard" Key="Key_Period"/>
+                  </GalaxyMapOpen>
+                  <CycleFireGroupNext>
+                    <Primary Device="Keyboard" Key="Key_ю"/>
+                  </CycleFireGroupNext>
+                </Root>
+                """);
+
+        Assert.Equal(
+            EliteKeyboardLayout.Russian,
+            EliteBindingsService.DetectKeyboardLayout(root));
+    }
+
+    [Fact]
+    public void RussianPeriodAndCyrillicYuResolveToDifferentPhysicalKeys()
+    {
+        EliteResolvedKey galaxyMap =
+            EliteBindingsService.ResolvePhysicalKey(
+                "Key_Period",
+                EliteKeyboardLayout.Russian);
+
+        EliteResolvedKey fireGroup =
+            EliteBindingsService.ResolvePhysicalKey(
+                "Key_ю",
+                EliteKeyboardLayout.Russian);
+
+        Assert.NotEqual(
+            galaxyMap.ScanCode,
+            fireGroup.ScanCode);
+
+        Assert.Equal(
+            0x35,
+            galaxyMap.ScanCode);
+
+        Assert.Equal(
+            0x34,
+            fireGroup.ScanCode);
+    }
+
+    [Theory]
+    [InlineData("Key_Comma", "Key_б")]
+    [InlineData("Key_Period", "Key_ю")]
+    public void RussianNamedPunctuationAndCyrillicLettersDoNotCollapse(
+        string namedKey,
+        string cyrillicKey)
+    {
+        EliteResolvedKey named =
+            EliteBindingsService.ResolvePhysicalKey(
+                namedKey,
+                EliteKeyboardLayout.Russian);
+
+        EliteResolvedKey cyrillic =
+            EliteBindingsService.ResolvePhysicalKey(
+                cyrillicKey,
+                EliteKeyboardLayout.Russian);
+
+        Assert.NotEqual(
+            named.ScanCode,
+            cyrillic.ScanCode);
     }
 
     [Fact]
