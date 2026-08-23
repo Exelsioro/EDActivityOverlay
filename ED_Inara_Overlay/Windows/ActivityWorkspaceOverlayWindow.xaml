@@ -291,84 +291,85 @@
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" Margin="0,14,0,12">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+            <Grid Grid.Row="1" Margin="0,12,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.05*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="0.95*"/>
+                </Grid.ColumnDefinitions>
 
                 <Border Padding="11,9"
                         Background="{DynamicResource HighlightBackgroundBrush}"
-                        BorderBrush="{DynamicResource AccentColorBrush}" BorderThickness="2,0,0,0">
+                        BorderBrush="{DynamicResource AccentColorBrush}"
+                        BorderThickness="2,0,0,0">
                     <TextBlock x:Name="FullOverviewText"
-                               FontSize="12" FontWeight="SemiBold"
+                               FontSize="11"
+                               FontWeight="SemiBold"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource PrimaryTextColorBrush}"/>
                 </Border>
 
-                <Border x:Name="FullPoiPanel" Grid.Row="1" Margin="0,8,0,0" Padding="11,9"
+                <Border x:Name="FullPoiPanel"
+                        Grid.Column="2"
+                        Padding="11,9"
                         Visibility="Collapsed"
                         Background="{DynamicResource SecondaryBackgroundColorBrush}"
-                        BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource BorderColorBrush}"
+                        BorderThickness="1">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
                         <StackPanel>
-                            <TextBlock Text="POI · INTERESTING NEARBY" FontSize="9" FontWeight="Bold"
+                            <TextBlock Text="{DynamicResource Loc_EXPLORATION_POI_NEARBY}"
+                                       FontSize="9"
+                                       FontWeight="Bold"
                                        Foreground="{DynamicResource AccentColorBrush}"/>
-                            <TextBlock x:Name="FullPoiTitleText" Margin="0,2,0,0"
-                                       FontSize="14" FontWeight="Bold" TextWrapping="Wrap"
+                            <TextBlock x:Name="FullPoiTitleText"
+                                       Margin="0,2,0,0"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"
                                        Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                            <TextBlock x:Name="FullPoiMetaText" Margin="0,2,0,0"
-                                       FontSize="10" TextWrapping="Wrap"
+                            <TextBlock x:Name="FullPoiMetaText"
+                                       Margin="0,2,0,0"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
                                        Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                            <TextBlock x:Name="FullPoiSummaryText" Margin="0,4,16,0"
-                                       FontSize="10" TextWrapping="Wrap" MaxHeight="38"
+                            <TextBlock x:Name="FullPoiSummaryText"
+                                       Margin="0,4,0,0"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       MaxHeight="36"
                                        TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource MutedTextColorBrush}"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button x:Name="PlotPoiRouteButton" MinWidth="155" Padding="9,4"
+
+                        <WrapPanel Grid.Row="1"
+                                   Margin="0,7,0,0"
+                                   HorizontalAlignment="Right">
+                            <Button x:Name="PlotPoiRouteButton"
+                                    Padding="8,3"
                                     IsEnabled="False"
                                     Content="{DynamicResource Loc_PREPARE_IN_GALAXY_MAP}"
                                     Click="PlotPoiRouteButton_Click"/>
-                            <Button x:Name="OpenPoiDetailsButton" MinWidth="115" Margin="7,0,0,0" Padding="9,4"
+                            <Button x:Name="OpenPoiDetailsButton"
+                                    Margin="6,0,0,0"
+                                    Padding="8,3"
                                     IsEnabled="False"
                                     Content="{DynamicResource Loc_EXPLORATION_INFO_SHORT}"
                                     Click="OpenPoiDetailsButton_Click"/>
-                            <Button x:Name="CopyPoiSystemButton" MinWidth="115" Margin="7,0,0,0" Padding="9,4"
+                            <Button x:Name="CopyPoiSystemButton"
+                                    Margin="6,0,0,0"
+                                    Padding="8,3"
                                     IsEnabled="False"
                                     Content="{DynamicResource Loc_EXPLORATION_COPY_SHORT}"
                                     Click="CopyPoiSystemButton_Click"/>
-                        </StackPanel>
+                        </WrapPanel>
                     </Grid>
                 </Border>
-
-                <Grid Grid.Row="2"
-                      Margin="0,7,0,0"
-                      HorizontalAlignment="Left">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
-                        <ColumnDefinition Width="8"/>
-                        <ColumnDefinition Width="150"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox x:Name="CatalogSearchTextBox"
-                             Height="27"
-                             Padding="6,2"
-                             Style="{DynamicResource TextBoxStyle}"
-                             ToolTip="{DynamicResource Loc_Exploration_search_hint}"
-                             TextChanged="CatalogFilterChanged"/>
-                    <ComboBox x:Name="CatalogFilterComboBox"
-                              Grid.Column="2"
-                              Height="27"
-                              Padding="5,1"
-                              Style="{DynamicResource ComboBoxStyle}"
-                              DisplayMemberPath="Label"
-                              SelectionChanged="CatalogFilterChanged"/>
-                </Grid>
             </Grid>
 
             <TabControl x:Name="ExplorationTabs" Grid.Row="2" Style="{DynamicResource EliteTabControlStyle}">
@@ -379,8 +380,45 @@
                     <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="390"/>
                 </Grid.ColumnDefinitions>
-                <DataGrid x:Name="ExplorationBodiesGrid" SelectionChanged="ExplorationBodiesGrid_SelectionChanged"
-                          AlternationCount="2" SelectionMode="Single">
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Margin="0,0,0,7"
+                          HorizontalAlignment="Left">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="170"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="170"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="CatalogSearchTextBox"
+                                 Width="170"
+                                 Height="28"
+                                 Padding="7,0"
+                                 VerticalContentAlignment="Center"
+                                 Style="{DynamicResource TextBoxStyle}"
+                                 ToolTip="{DynamicResource Loc_Exploration_search_hint}"
+                                 TextChanged="CatalogFilterChanged"/>
+
+                        <ComboBox x:Name="CatalogFilterComboBox"
+                                  Grid.Column="2"
+                                  Width="170"
+                                  Height="28"
+                                  Padding="7,0"
+                                  VerticalContentAlignment="Center"
+                                  Style="{DynamicResource ComboBoxStyle}"
+                                  DisplayMemberPath="Label"
+                                  SelectionChanged="CatalogFilterChanged"/>
+                    </Grid>
+
+                    <DataGrid x:Name="ExplorationBodiesGrid"
+                              Grid.Row="1"
+                              SelectionChanged="ExplorationBodiesGrid_SelectionChanged"
+                              AlternationCount="2"
+                              SelectionMode="Single">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="{DynamicResource Loc_BODY}" Width="2.1*" MinWidth="190">
                             <DataGridTemplateColumn.CellTemplate>
@@ -441,7 +479,8 @@
                         <DataGridTextColumn Header="{DynamicResource Loc_EXPLORATION_ARRIVAL_SHORT}" Binding="{Binding Distance}"
                                             Width="0.85*" MinWidth="82"/>
                     </DataGrid.Columns>
-                </DataGrid>
+                    </DataGrid>
+                </Grid>
 
                 <Border Grid.Column="2" Padding="13" Background="{DynamicResource SecondaryBackgroundColorBrush}"
                         BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1">
@@ -464,16 +503,16 @@
                         <ScrollViewer Grid.Row="1" Margin="0,12,0,10" VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">
                             <StackPanel>
-                                <TextBlock Text="BODY" FontSize="9" FontWeight="Bold"
+                                <TextBlock Text="{DynamicResource Loc_EXPLORATION_BODY_SECTION}" FontSize="9" FontWeight="Bold"
                                            Foreground="{DynamicResource AccentColorBrush}"/>
                                 <TextBlock x:Name="SelectedBodyPhysicalText" Margin="0,4,0,0" TextWrapping="Wrap"/>
                                 <Border Margin="0,10,0,8" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,1,0,0"/>
-                                <TextBlock Text="VALUE" FontSize="9" FontWeight="Bold"
+                                <TextBlock Text="{DynamicResource Loc_EXPLORATION_VALUE_SECTION}" FontSize="9" FontWeight="Bold"
                                            Foreground="{DynamicResource AccentColorBrush}"/>
                                 <TextBlock x:Name="SelectedBodyValueText" Margin="0,4,0,0" TextWrapping="Wrap"/>
                                 <StackPanel x:Name="SelectedBodyBiologyPanel" Margin="0,10,0,0" Visibility="Collapsed">
                                     <Border Margin="0,0,0,8" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="0,1,0,0"/>
-                                    <TextBlock Text="BIOLOGY" FontSize="9" FontWeight="Bold"
+                                    <TextBlock Text="{DynamicResource Loc_EXPLORATION_BIOLOGY_SECTION}" FontSize="9" FontWeight="Bold"
                                                Foreground="{DynamicResource AccentColorBrush}"/>
                                     <TextBlock x:Name="SelectedBodyBiologyText" Margin="0,4,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>

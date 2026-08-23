@@ -568,22 +568,22 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         void Add(
             ExplorationBodyHighlights flag,
-            string label)
+            string key)
         {
             if (body.Highlights.HasFlag(flag))
             {
-                values.Add(label);
+                values.Add(Loc.Get(key));
             }
         }
 
-        Add(ExplorationBodyHighlights.EarthLike, "ELW");
-        Add(ExplorationBodyHighlights.WaterWorld, "WW");
-        Add(ExplorationBodyHighlights.AmmoniaWorld, "AW");
-        Add(ExplorationBodyHighlights.Terraformable, "TERRAFORMABLE");
-        Add(ExplorationBodyHighlights.Biological, "BIO");
-        Add(ExplorationBodyHighlights.Valuable, "HIGH VALUE");
-        Add(ExplorationBodyHighlights.NeutronStar, "NEUTRON");
-        Add(ExplorationBodyHighlights.BlackHole, "BLACK HOLE");
+        Add(ExplorationBodyHighlights.EarthLike, "Loc_EXPLORATION_INTEREST_ELW_SHORT");
+        Add(ExplorationBodyHighlights.WaterWorld, "Loc_EXPLORATION_INTEREST_WW_SHORT");
+        Add(ExplorationBodyHighlights.AmmoniaWorld, "Loc_EXPLORATION_INTEREST_AW_SHORT");
+        Add(ExplorationBodyHighlights.Terraformable, "Loc_EXPLORATION_INTEREST_TERRAFORMABLE_SHORT");
+        Add(ExplorationBodyHighlights.Biological, "Loc_EXPLORATION_INTEREST_BIO_SHORT");
+        Add(ExplorationBodyHighlights.Valuable, "Loc_EXPLORATION_INTEREST_VALUE_SHORT");
+        Add(ExplorationBodyHighlights.NeutronStar, "Loc_EXPLORATION_INTEREST_NEUTRON_SHORT");
+        Add(ExplorationBodyHighlights.BlackHole, "Loc_EXPLORATION_INTEREST_BLACK_HOLE_SHORT");
 
         return values.Count == 0
             ? "—"
