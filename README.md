@@ -118,6 +118,9 @@ Installer output is written to `Installer/`.
 
 Existing application data from the pre-rebrand installation is migrated automatically to the new `EDActivityOverlay` application-data folders on startup.
 
+## Documentation
+
+See the [Documentation index](Documentation/README.md) for maintained feature, architecture, testing, hardware and attribution documentation.
 ## License
 
 MIT

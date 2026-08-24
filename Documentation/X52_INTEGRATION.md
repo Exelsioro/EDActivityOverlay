@@ -1,4 +1,4 @@
-# Optional Logitech X52 Pro integration
+﻿# Optional Logitech X52 Pro integration
 
 The application can use the X52 Pro MFD and button LEDs directly through the
 64-bit Logitech `DirectOutput.dll`. EDDiscovery and the EDDX52 plugin are not
@@ -38,8 +38,7 @@ the driver.
 ## Input coverage and expansion
 
 DirectOutput exposes only the right MFD encoder to user applications: up, down
-and push. Rotation selects the previous/next activity. A single push toggles interactive focus mode; a double push hides/restores the whole overlay set. The single-push action is deferred until the double-click window expires, so the first click of a valid double click is never executed as a single click. The single-push action is
-delayed briefly so the application can distinguish it from a double push.
+and push. Rotation selects the previous/next activity. A single push toggles interactive focus mode; a double push hides/restores the whole overlay set. The single-push action is deferred until the double-click window expires, so the first click of a valid double click is never executed as a single click.
 The left encoder and clock/stopwatch buttons are owned by the device firmware
 and should not be repurposed.
 

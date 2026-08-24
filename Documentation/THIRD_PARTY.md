@@ -1,79 +1,105 @@
-# Third-party data attribution
+﻿# Third-party attribution and data
 
-The fallback Russian names for Elite Dangerous engineering materials in
-`EngineeringLocalization.cs` are adapted from the Russian translation table in
-[EDDiscovery/EliteDangerousCore](https://github.com/EDDiscovery/EliteDangerousCore/blob/master/EliteDangerous/Translations/translation-russian-ed.tlp).
+This document records third-party code/data sources that are either adapted into the repository, used as interoperability references, or queried at runtime.
 
-EliteDangerousCore is distributed under the
-[Apache License 2.0](https://github.com/EDDiscovery/EliteDangerousCore/blob/master/LICENSE).
-The data was reduced to engineering-material identifier/name pairs and changed
-into a C# lookup table. Values supplied directly by the local Player Journal
-take precedence over this fallback table.
+## EDDiscovery / EliteDangerousCore
 
-Russian names for Coriolis engineering blueprints, experimental effects,
-modules and recipe ingredients in `CoriolisRussianLocalization.cs` are adapted
-from [EDCD/coriolis](https://github.com/EDCD/coriolis/blob/master/src/app/i18n/ru.json).
-The Coriolis project is distributed under the
-[MIT License](https://github.com/EDCD/coriolis/blob/master/LICENSE).
+Fallback Russian names for Elite Dangerous engineering materials in `EngineeringLocalization.cs` are adapted from the Russian translation table in `EDDiscovery/EliteDangerousCore`.
 
-Ship engineer locations and unlock stages in `EngineerCatalog.cs` are adapted
-from [EDDiscovery/EliteDangerousCore](https://github.com/EDDiscovery/EliteDangerousCore/blob/master/EliteDangerous/FrontierData/Items/Engineers.cs).
-EliteDangerousCore is distributed under the Apache License 2.0. The application
-ships a reduced offline directory and overlays the commander's live Journal
-progress instead of copying EDDiscovery's implementation.
+Ship engineer locations/unlock stages and engineering recipe assignments are also derived from reduced Frontier-data tables in EliteDangerousCore.
 
-The engineering catalog also downloads the engineer assignments from
-[`RecipesEngineering.cs`](https://github.com/EDDiscovery/EliteDangerousCore/blob/master/EliteDangerous/FrontierData/Items/RecipesEngineering.cs),
-caches the source beside the Coriolis catalog, and joins assignments to recipes
-by Frontier blueprint identifier and grade. No EDDiscovery executable code is
-loaded or executed.
+Universal Cartographics scan and surface-mapping estimates in `ExplorationValueCalculator.cs` are adapted from the post-3.3 calculation in EliteDangerousCore's `EstimatedValues.cs`.
 
-Universal Cartographics scan and surface-mapping estimates in
-`ExplorationValueCalculator.cs` are adapted from the post-3.3 calculation in
-[`EstimatedValues.cs`](https://github.com/EDDiscovery/EliteDangerousCore/blob/master/EliteDangerous/FrontierData/Enumerations/EstimatedValues.cs).
-The formula was reduced to an independent journal-string based module; no
-EliteDangerousCore assembly, EDDiscovery installation, database, or process is
-required. Copyright 2021-2023 EDDiscovery development team, Apache License 2.0.
+EliteDangerousCore is distributed under the Apache License 2.0:
 
-The general-purpose part of
-[EDDiscoveryData](https://github.com/EDDiscovery/EDDiscoveryData) was reviewed as
-well. Its relevant exploration files are curated expedition routes rather than
-reusable calculation modules, so they are deliberately not bundled or loaded.
+- https://github.com/EDDiscovery/EliteDangerousCore
+- https://github.com/EDDiscovery/EliteDangerousCore/blob/master/LICENSE
 
-The optional X52 Pro integration uses a clean C# dynamic binding based on the
-DirectOutput function signatures, MFD button masks and LED component indices in
-[Theaninova/EDDX52](https://github.com/Theaninova/EDDX52) (formerly
-wulkanat/EDDX52). EDDX52 is distributed under the Apache License 2.0. The code
-was rewritten for managed lifetime, optional settings and immutable journal
-state; neither its binary nor EDDiscovery is loaded. Logitech's proprietary
-`DirectOutput.dll` is not distributed and is used only from the user's installed
-driver package.
+The application does not require or load an EDDiscovery installation.
 
-Exobiology colony distances and conservative genus value ranges in
-`ExobiologyCatalog.cs` are derived from the Canonn Bioforge dataset published
-by [Elite Dangerous Warboard](https://github.com/njthomson/Elite-Dangerous-Warboard).
-Elite Dangerous Warboard is distributed under the
-[MIT License](https://github.com/njthomson/Elite-Dangerous-Warboard/blob/main/LICENSE).
-Only a compact offline summary by genus is shipped; the application does not
-copy Warboard's UI or executable code.
+## EDCD / Coriolis
 
-Nearby exploration POIs are requested at runtime from the documented
-[EDAstro Galactic Exploration Catalog API](https://edastro.com/gec/APIinfo) and
-from Canonn's public Guardian/Thargoid patrol datasets used by the
-[Canonn EDMC plugin](https://github.com/canonn-science/EDMC-Canonn). Responses
-are cached locally and remain identified by provider; no provider code is
-loaded into the application.
+Russian names for Coriolis engineering blueprints, experimental effects, modules and recipe ingredients in `CoriolisRussianLocalization.cs` are adapted from the Coriolis Russian translation data.
 
-Exploration routes can be imported from files explicitly exported by
-[Spansh](https://spansh.co.uk/). The app can also opt into direct Road to Riches
-calculation using Spansh's public form/job protocol (`/api/riches/route` and
-`/api/results/{job}`), independently implemented after interoperability review
-of [EDMC-SpanshTools](https://github.com/wuuthradd/EDMC-SpanshTools). No plugin
-code, credentials or browser cookies are loaded. The endpoint is not part of
-the documented system-data OpenAPI API, so file import remains the stable
-fallback.
+- https://github.com/EDCD/coriolis
+- MIT License: https://github.com/EDCD/coriolis/blob/master/LICENSE
 
-DSS result fields and their timing follow Frontier Developments'
-Elite Dangerous Player Journal documentation for `SAAScanComplete`. The probe
-layout diagrams are original configurable guidance and are not copied from a
-third-party application.
+The engineering catalog also consumes public `EDCD/coriolis-data` data at runtime/cache time.
+
+## Logitech X52 / EDDX52 interoperability reference
+
+The optional X52 Pro integration uses a clean C# dynamic binding based on DirectOutput function signatures, MFD button masks and LED component indices reviewed from EDDX52.
+
+- https://github.com/Theaninova/EDDX52
+- Apache License 2.0
+
+The implementation in this repository was rewritten for the application's own lifetime/state model. EDDX52 binaries are not loaded.
+
+Logitech's proprietary `DirectOutput.dll` is not distributed. It is loaded only from the user's installed Logitech/Saitek driver package.
+
+## Canonn Bioforge / Elite Dangerous Warboard
+
+The files under:
+
+```text
+EDActivityOverlay/Resources/ExobiologyBioforge
+```
+
+are a snapshot/reduced representation of exobiology histogram data distributed by Elite Dangerous Warboard and attributed there to Canonn Bioforge.
+
+Current source repository:
+
+- https://github.com/Mirooz/EliteDangerousWarboard
+- https://bioforge.canonn.tech/
+
+Elite Dangerous Warboard is distributed under the MIT License.
+
+Required MIT notice for the distributed source data:
+
+> Copyright (c) 2025 Elite Dangerous Warboard contributors
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+The application's prediction implementation is native C# and treats these histograms as statistical hints. Journal events remain authoritative for commander discoveries and organic sampling progress.
+
+## EDAstro and Canonn runtime data
+
+Nearby exploration POIs may be requested at runtime from:
+
+- EDAstro Galactic Exploration Catalog API: https://edastro.com/gec/APIinfo
+- Canonn public Guardian/Thargoid datasets used by the Canonn EDMC plugin: https://github.com/canonn-science/EDMC-Canonn
+
+Responses are cached locally and remain identified by provider.
+
+## Spansh
+
+Exploration routes can be imported from files explicitly exported by Spansh.
+
+The application can also use the public form/job protocol for Road to Riches calculations. That protocol is treated as less stable than explicit file import because it is not part of the documented system-data OpenAPI surface.
+
+- https://spansh.co.uk/
+- interoperability reference reviewed: https://github.com/wuuthradd/EDMC-SpanshTools
+
+No third-party plugin code, credentials or browser cookies are loaded.
+
+## Frontier Developments
+
+Journal event semantics and fields are based on Frontier Developments' Elite Dangerous Player Journal documentation.
+
+Elite Dangerous game data, names and trademarks remain the property of their respective owners. This project is an independent community tool.

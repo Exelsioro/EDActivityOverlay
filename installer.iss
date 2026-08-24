@@ -3,7 +3,7 @@
 #define MyAppName "ED Activity Overlay"
 #define MyAppVersion "1.2.0"
 #define MyAppPublisher "ED Activity Overlay"
-#define MyAppURL "https://github.com/Exelsioro/ED-Activity-Overlay"
+#define MyAppURL "https://github.com/Exelsioro/EDActivityOverlay"
 #define MyAppExeName "EDActivityOverlay.exe"
 
 #define MyAppAssocName "ED Activity Overlay File"
