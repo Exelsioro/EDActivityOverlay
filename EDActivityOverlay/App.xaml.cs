@@ -32,6 +32,7 @@ namespace EDActivityOverlay
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            AppDataMigrationService.MigrateLegacyDirectories();
             // Get target process from command line args or default to notepad
             if (e.Args.Length > 0)
             {
