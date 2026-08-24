@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using ED_Inara_Overlay.Models.Trading;
+using EDActivityOverlay.Models.Trading;
 
-namespace ED_Inara_Overlay._0
+namespace EDActivityOverlay._0
 {
     public static class TestDataGenerator
     {

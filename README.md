@@ -31,15 +31,15 @@ A .NET 8 WPF overlay for Elite Dangerous that displays trade routes sourced from
 - Theme system with import/export
 <<<<<<< HEAD
 - Runtime UI language selection (Russian / English) under **Settings > Appearance**
-- JSON settings persistence in `%APPDATA%/ED_Inara_Overlay`
+- JSON settings persistence in `%APPDATA%/EDActivityOverlay`
 =======
 >>>>>>> 5a4b18874f545042cfb0305fd982818d207fcafd
 
 ## Repository Layout
 
 ```text
-ED_Inara_Overlay/
-|- ED_Inara_Overlay/                # Main WPF app
+EDActivityOverlay/
+|- EDActivityOverlay/                # Main WPF app
 |- InaraTools/                      # INARA communication and parsing
 |- Logger/                          # Shared logging library
 |- Testing/                         # Test harnesses and scripts
@@ -51,13 +51,13 @@ ED_Inara_Overlay/
 ## Build
 
 ```bash
-dotnet build ED_Inara_Overlay/ED_Inara_Overlay.sln
+dotnet build EDActivityOverlay/EDActivityOverlay.sln
 ```
 
 ## Run
 
 ```bash
-dotnet run --project ED_Inara_Overlay/ED_Inara_Overlay.csproj
+dotnet run --project EDActivityOverlay/EDActivityOverlay.csproj
 ```
 
 ## Player Journal
@@ -69,7 +69,7 @@ See [Exploration Assistant](Documentation/EXPLORATION_ASSISTANT.md) for the curr
 
 ## Engineering Assistant
 
-Open **Engineering Assistant** from the startup window or the tray menu. Material counts are read locally from the Player Journal, `Backpack.json`, and `ShipLocker.json`. Wishlist and cached commander state are stored in `%APPDATA%/ED_Inara_Overlay/companion.db`.
+Open **Engineering Assistant** from the startup window or the tray menu. Material counts are read locally from the Player Journal, `Backpack.json`, and `ShipLocker.json`. Wishlist and cached commander state are stored in `%APPDATA%/EDActivityOverlay/companion.db`.
 
 Select **ИНЖЕНЕРИЯ** in the compact activity drop-down or press its configured shortcut (`Ctrl+2` by default). The complete Engineering Assistant opens inside the game overlay. Press `Ctrl+6` to enable its controls and the cursor.
 
@@ -81,7 +81,7 @@ Choose the panel shell in **Settings > Appearance > Panel style**. Compact uses 
 
 Settings are organized into Appearance, Overlay, Hotkeys, and Journal tabs. Opening Settings from an in-game panel creates a centered interactive overlay window above Elite Dangerous; opening it from the tray or startup window uses a regular desktop window.
 
-The full ship-engineering recipe catalog is downloaded from the public `EDCD/coriolis-data` repository and cached under `%APPDATA%/ED_Inara_Overlay/catalogs`. A small built-in starter catalog remains available offline.
+The full ship-engineering recipe catalog is downloaded from the public `EDCD/coriolis-data` repository and cached under `%APPDATA%/EDActivityOverlay/catalogs`. A small built-in starter catalog remains available offline.
 
 See [Engineering Assistant](Documentation/ENGINEERING_ASSISTANT.md) for behavior and limitations.
 

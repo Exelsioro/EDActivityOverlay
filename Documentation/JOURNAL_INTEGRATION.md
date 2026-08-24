@@ -1,4 +1,4 @@
-# Player Journal integration
+﻿# Player Journal integration
 
 The overlay reads local Elite Dangerous files from the Windows Saved Games known folder:
 
@@ -43,7 +43,7 @@ Domain consumers subscribe through `JournalEventHub`. The trading reducer remain
   previous sample coordinates
 
 Incomplete exobiology sampling is persisted locally in
-`%LOCALAPPDATA%\ED_Inara_Overlay\exploration-progress.json`, so changing
+`%LOCALAPPDATA%\EDActivityOverlay\exploration-progress.json`, so changing
 systems or restarting the overlay does not silently lose the sampling state.
 
 Unknown events are ignored deliberately, allowing newer game versions to add events without breaking the monitor.
@@ -60,7 +60,7 @@ supplements the current system from the following public providers:
 
 Only the current system name/address is requested. Successful responses are
 cached per system under
-`%LOCALAPPDATA%\ED_Inara_Overlay\exploration-system-cache`. Stale cache entries
+`%LOCALAPPDATA%\EDActivityOverlay\exploration-system-cache`. Stale cache entries
 remain usable when both providers are unavailable. The application does not
 download a galaxy dump and has no dependency on an EDDiscovery installation.
 

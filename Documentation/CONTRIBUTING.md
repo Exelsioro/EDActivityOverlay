@@ -8,7 +8,7 @@ This is a unified repository with these main components:
 
 | Project | Purpose | Tech |
 |---|---|---|
-| `ED_Inara_Overlay/` | Main overlay application | C# / .NET 8 / WPF |
+| `EDActivityOverlay/` | Main overlay application | C# / .NET 8 / WPF |
 | `InaraTools/` | INARA communication and parsing | C# / .NET 8 |
 | `Logger/` | Shared logging | C# / .NET 8 |
 | `Testing/` | Test scripts and harness projects | PowerShell / C# |
@@ -18,14 +18,14 @@ This is a unified repository with these main components:
 
 ```bash
 git clone <your-fork-url>
-cd ED_Inara_Overlay
-dotnet build ED_Inara_Overlay/ED_Inara_Overlay.sln
+cd EDActivityOverlay
+dotnet build EDActivityOverlay/EDActivityOverlay.sln
 ```
 
 Run app:
 
 ```bash
-dotnet run --project ED_Inara_Overlay/ED_Inara_Overlay.csproj
+dotnet run --project EDActivityOverlay/EDActivityOverlay.csproj
 ```
 
 ## Development Workflow
@@ -42,7 +42,7 @@ dotnet run --project ED_Inara_Overlay/ED_Inara_Overlay.csproj
 - Keep changes small and scoped.
 - Use clear naming and avoid dead code.
 - Prefer shared logic in `InaraTools` and `Logger` over duplication.
-- Keep UI behavior changes inside `ED_Inara_Overlay`.
+- Keep UI behavior changes inside `EDActivityOverlay`.
 - Add or update docs when behavior changes.
 
 ## Testing
@@ -73,7 +73,7 @@ Include:
 - Expected behavior
 - Actual behavior
 - Environment (Windows version, .NET version)
-- Relevant logs from `ED_Inara_Overlay/bin/<Configuration>/net8.0-windows/logs/`
+- Relevant logs from `EDActivityOverlay/bin/<Configuration>/net8.0-windows/logs/`
 
 ## License
 

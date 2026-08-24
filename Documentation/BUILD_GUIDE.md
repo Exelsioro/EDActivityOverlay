@@ -15,13 +15,13 @@ This guide describes how to build the project from the unified repository.
 From repository root:
 
 ```powershell
-dotnet build ED_Inara_Overlay/ED_Inara_Overlay.sln
+dotnet build EDActivityOverlay/EDActivityOverlay.sln
 ```
 
 ## Build Individual Projects
 
 ```powershell
-dotnet build ED_Inara_Overlay/ED_Inara_Overlay.csproj
+dotnet build EDActivityOverlay/EDActivityOverlay.csproj
 dotnet build InaraTools/InaraTools.csproj
 dotnet build Logger/Logger.csproj
 dotnet build Testing/MockTargetApp/MockTargetApp.csproj
@@ -30,7 +30,7 @@ dotnet build Testing/MockTargetApp/MockTargetApp.csproj
 ## Run Application
 
 ```powershell
-dotnet run --project ED_Inara_Overlay/ED_Inara_Overlay.csproj
+dotnet run --project EDActivityOverlay/EDActivityOverlay.csproj
 ```
 
 ## Build Installer
@@ -73,4 +73,4 @@ powershell -ExecutionPolicy Bypass -File Testing/RunTests.ps1
 - Missing app executable: run full solution build.
 - Missing mock target executable: build `Testing/MockTargetApp/MockTargetApp.csproj`.
 - Overlay not visible during tests: verify target process name (`MockTargetApp` or `EliteDangerous64`).
-- Build file lock errors: close running `ED_Inara_Overlay.exe` and rebuild.
+- Build file lock errors: close running `EDActivityOverlay.exe` and rebuild.

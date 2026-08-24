@@ -28,5 +28,5 @@ Supporting app:
 
 ## Artifacts
 
-- Runtime logs: `ED_Inara_Overlay/bin/<Configuration>/net8.0-windows/logs/`
+- Runtime logs: `EDActivityOverlay/bin/<Configuration>/net8.0-windows/logs/`
 - Console output from test scripts

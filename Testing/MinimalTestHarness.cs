@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
-using ED_Inara_Overlay._0;
+using EDActivityOverlay._0;
 
 namespace MinimalTestHarness
 {
@@ -32,7 +32,7 @@ namespace MinimalTestHarness
                     Console.WriteLine("Starting overlay targeting notepad...");
                     
                     // Create and show the overlay
-                    var overlay = new ED_Inara_Overlay.MainWindow("notepad");
+                    var overlay = new EDActivityOverlay.MainWindow("notepad");
                     
                     // Start WPF application
                     var app = new System.Windows.Application();

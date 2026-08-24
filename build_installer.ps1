@@ -1,4 +1,4 @@
-# Build & Publish script for Elite Dangerous Inara Overlay
+﻿# Build & Publish script for Elite Dangerous Inara Overlay
 # Requires: dotnet SDK + Inno Setup (ISCC in PATH)
 
 param(
@@ -36,7 +36,7 @@ if (-not $SkipBuild) {
     }
 
     dotnet publish `
-        ".\ED_Inara_Overlay\ED_Inara_Overlay.csproj" `
+        ".\EDActivityOverlay\EDActivityOverlay.csproj" `
         -c $Configuration `
         -r $Runtime `
         --self-contained true `
@@ -47,7 +47,7 @@ if (-not $SkipBuild) {
         exit 1
     }
 
-    if (-not (Test-Path ".\Release\ED_Inara_Overlay.exe")) {
+    if (-not (Test-Path ".\Release\EDActivityOverlay.exe")) {
         Write-Host "Executable not found in Release folder." -ForegroundColor Red
         exit 1
     }

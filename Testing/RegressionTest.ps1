@@ -3,13 +3,13 @@ $ErrorActionPreference = 'Stop'
 
 $scriptRoot = $PSScriptRoot
 $repoRoot = Split-Path -Parent $scriptRoot
-$appExe = Join-Path $repoRoot 'ED_Inara_Overlay\bin\Debug\net8.0-windows\ED_Inara_Overlay.exe'
+$appExe = Join-Path $repoRoot 'EDActivityOverlay\bin\Debug\net8.0-windows\EDActivityOverlay.exe'
 $mockExe = Join-Path $repoRoot 'Testing\MockTargetApp\bin\Debug\net8.0-windows\MockTargetApp.exe'
-$solution = Join-Path $repoRoot 'ED_Inara_Overlay\ED_Inara_Overlay.sln'
+$solution = Join-Path $repoRoot 'EDActivityOverlay\EDActivityOverlay.sln'
 $mockProj = Join-Path $repoRoot 'Testing\MockTargetApp\MockTargetApp.csproj'
 
 function Stop-TestProcesses {
-    foreach ($name in @('ED_Inara_Overlay','MockTargetApp','notepad')) {
+    foreach ($name in @('EDActivityOverlay','MockTargetApp','notepad')) {
         Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     }
 }
@@ -73,7 +73,7 @@ Write-Host '6) Press Ctrl+5 with target focused. Trade route window should toggl
 $hotkeyOk = Ask-PassFail 'Did global hotkey toggle work?'
 Add-Result 'Global hotkey' $hotkeyOk 'Ctrl+5 toggles route window'
 
-$proc = Get-Process -Name 'ED_Inara_Overlay' -ErrorAction SilentlyContinue
+$proc = Get-Process -Name 'EDActivityOverlay' -ErrorAction SilentlyContinue
 $memOk = $false
 if ($proc) {
     $mem = [math]::Round($proc.WorkingSet64 / 1MB, 2)

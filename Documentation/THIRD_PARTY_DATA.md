@@ -1,8 +1,8 @@
-# Third-party data
+﻿# Third-party data
 
 ## Canonn Bioforge exobiology histograms
 
-The files in `ED_Inara_Overlay/Resources/ExobiologyBioforge` are a snapshot of the
+The files in `EDActivityOverlay/Resources/ExobiologyBioforge` are a snapshot of the
 exobiology histogram data distributed by
 [Elite Dangerous Warboard](https://github.com/Mirooz/EliteDangerousWarboard),
 which attributes the underlying observations to

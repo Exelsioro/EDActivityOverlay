@@ -4,17 +4,17 @@
 
 The application supports XML themes loaded from:
 
-- built-in: `ED_Inara_Overlay/Themes/*.xml`
-- user: `%APPDATA%/ED_Inara_Overlay/Themes/*.xml`
+- built-in: `EDActivityOverlay/Themes/*.xml`
+- user: `%APPDATA%/EDActivityOverlay/Themes/*.xml`
 
-Selected theme is persisted in `%APPDATA%/ED_Inara_Overlay/settings.json`.
+Selected theme is persisted in `%APPDATA%/EDActivityOverlay/settings.json`.
 
 ## Components
 
-- `ED_Inara_Overlay/Services/ThemeManager.cs`
-- `ED_Inara_Overlay/Services/SettingsService.cs`
-- `ED_Inara_Overlay/Models/Theme.cs`
-- `ED_Inara_Overlay/Windows/SettingsWindow.xaml(.cs)`
+- `EDActivityOverlay/Services/ThemeManager.cs`
+- `EDActivityOverlay/Services/SettingsService.cs`
+- `EDActivityOverlay/Models/Theme.cs`
+- `EDActivityOverlay/Windows/SettingsWindow.xaml(.cs)`
 
 ## Usage
 

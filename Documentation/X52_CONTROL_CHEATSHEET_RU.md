@@ -1,4 +1,4 @@
-# X52 Pro — шпаргалка ED_Inara_Overlay
+﻿# X52 Pro — шпаргалка EDActivityOverlay
 
 Актуально для профиля Logitech `X52ProEliteV223EX_Overlay.pr0` и пресета Elite
 `X52ProElite v2.2.3 FIXED`.

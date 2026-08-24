@@ -1,0 +1,346 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="EDActivityOverlay.Windows.TradeRouteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EDActivityOverlay.Windows"
+        mc:Ignorable="d"
+        Title="{DynamicResource Loc_Trade_route_search}"
+        Width="460"
+        SizeToContent="Height"
+        WindowStyle="None" 
+        AllowsTransparency="True" 
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        ResizeMode="NoResize">
+
+    <!-- Main container with dark background -->
+
+    <Border x:Name="OverlayFrame" Style="{DynamicResource WindowBorderStyle}" >
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title Bar -->
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="304*"/>
+                    <ColumnDefinition Width="71*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{DynamicResource Loc_TRADE_ROUTES_INARA}"
+                          Style="{DynamicResource HeaderTextStyle}"
+                          HorizontalAlignment="Left"/>
+                <Button x:Name="CloseButton" 
+                       Content="✕" 
+                       Width="30" Height="30"
+                       HorizontalAlignment="Left"
+                       Background="{DynamicResource ButtonBackgroundColorBrush}"
+                       Foreground="{DynamicResource AccentColorBrush}"
+                       BorderBrush="{DynamicResource BorderColorBrush}"
+                       BorderThickness="1"
+                       FontWeight="Bold"
+                       Click="CloseButton_Click" Grid.Column="1" Margin="41,0,0,0"/>
+            </Grid>
+
+            <Border Grid.Row="1" Background="{DynamicResource HighlightBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1,0,0,0"
+                    Padding="10,7" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock x:Name="JournalSourceText" Text="{DynamicResource Loc_JOURNAL_WAITING_2}"
+                                   Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" FontSize="11"/>
+                        <TextBlock x:Name="JournalDetailsText" Text="{DynamicResource Loc_Game_values_are_detected_automatically}"
+                                   Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Button x:Name="UseJournalValuesButton" Grid.Column="1" Content="{DynamicResource Loc_SYNC}" Margin="10,0,0,0"
+                            Padding="12,4" VerticalAlignment="Center" Click="UseJournalValuesButton_Click"/>
+                </Grid>
+            </Border>
+
+            <!-- Basic Search Parameters -->
+            <GroupBox Grid.Row="2" Header="{DynamicResource Loc_ROUTE_PARAMETERS}"
+                      Style="{DynamicResource GroupBoxStyle}" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Near Star System -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Loc_Near_star_system}"
+                              Style="{DynamicResource BodyTextStyle}" 
+                              VerticalAlignment="Center" Margin="0,5,10,5"/>
+                    <TextBox x:Name="NearStarSystemTextBox" Grid.Row="0" Grid.Column="1" 
+                            Background="{DynamicResource SecondaryBackgroundColorBrush}" 
+                            Foreground="{DynamicResource PrimaryTextColorBrush}" 
+                            BorderBrush="{DynamicResource BorderColorBrush}"
+                            Text="Sol" Padding="5" Margin="0,5,10,5"/>
+
+                    <!-- Cargo Capacity -->
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="{DynamicResource Loc_Free_cargo_space}"
+                              Style="{DynamicResource BodyTextStyle}" 
+                              VerticalAlignment="Center" Margin="0,5,10,5"/>
+                    <TextBox x:Name="CargoCapacityTextBox" Grid.Row="0" Grid.Column="3" 
+                            Background="{DynamicResource SecondaryBackgroundColorBrush}" 
+                            Foreground="{DynamicResource PrimaryTextColorBrush}" 
+                            BorderBrush="{DynamicResource BorderColorBrush}"
+                            Text="720" Padding="5" Margin="0,5,0,5"/>
+
+                    <!-- Max Route Distance -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Loc_Max_route_distance}"
+                              Style="{StaticResource BodyTextStyle}" 
+                              VerticalAlignment="Center" Margin="0,5,10,5"/>
+                    <ComboBox x:Name="MaxRouteDistanceComboBox" Grid.Row="1" Grid.Column="1" 
+                             Style="{StaticResource ComboBoxStyle}"
+                             SelectedIndex="7" Margin="0,5,0,5">
+                        <ComboBoxItem Content="{DynamicResource Loc_10_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_20_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_30_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_40_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_50_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_60_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_70_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_80_Ly}" Style="{StaticResource ComboBoxItemStyle}"/>
+                    </ComboBox>
+
+                    <!-- Max Price Age -->
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{DynamicResource Loc_Max_price_age}"
+                              Style="{StaticResource BodyTextStyle}" 
+                              VerticalAlignment="Center" Margin="0,5,10,5"/>
+                    <ComboBox x:Name="MaxPriceAgeComboBox" Grid.Row="1" Grid.Column="3" 
+                             Style="{StaticResource ComboBoxStyle}"
+                             SelectedIndex="4" Margin="0,5,0,5">
+                        <ComboBoxItem Content="{DynamicResource Loc_8_hours}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_16_hours}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_1_day}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_2_days}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        <ComboBoxItem Content="{DynamicResource Loc_3_days}" Style="{StaticResource ComboBoxItemStyle}"/>
+                    </ComboBox>
+
+                    <!-- Checkboxes -->
+                    <CheckBox x:Name="IncludeRoundTripsCheckBox" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                             Content="{DynamicResource Loc_Include_round_trips}"
+                             Foreground="{DynamicResource PrimaryTextColorBrush}" 
+                             IsChecked="True" Margin="0,5,10,5"/>
+                    <CheckBox x:Name="DisplayPowerplayBonusesCheckBox" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2"
+                              Content="{DynamicResource Loc_Include_Powerplay_bonuses}"
+                             Foreground="{DynamicResource PrimaryTextColorBrush}" 
+                             Margin="0,5,0,5"/>
+                </Grid>
+            </GroupBox>
+
+            <!-- Show Additional Filters Button -->
+            <Button x:Name="ShowFiltersButton" Grid.Row="3"
+                   Content="{DynamicResource Loc_ADVANCED_FILTERS}"
+                   Style="{StaticResource InvertHoverButtonStyle}"
+                   FontWeight="Bold" 
+                   Padding="10,5" 
+                   Margin="0,0,0,10"
+                   Click="ShowFiltersButton_Click"/>
+
+            <!-- Additional Filters Section -->
+            <GroupBox x:Name="AdditionalFiltersGroupBox" Grid.Row="4"
+                     Header="{DynamicResource Loc_ADVANCED_FILTERS}"
+                     Style="{DynamicResource GroupBoxStyle}"
+                     Visibility="Collapsed"
+                     Margin="0,0,0,10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Min Landing Pad -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Loc_Min_landing_pad}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="MinLandingPadComboBox" Grid.Row="0" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Small}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Medium}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Large}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Max Station Distance -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Loc_Max_station_distance}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="MaxStationDistanceComboBox" Grid.Row="1" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Any}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_100_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_500_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_1000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_2000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_5000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_10000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_15000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_20000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_25000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_50000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_100000_Ls}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Use Surface Stations -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Loc_Surface_stations}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="UseSurfaceStationsComboBox" Grid.Row="2" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Any}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Yes_including_Odyssey_stations}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Yes_excluding_Odyssey_stations}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_No}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Source Station Power -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Loc_Source_station_Power}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="SourceStationPowerComboBox" Grid.Row="3" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Any}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Aisling Duval" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Archon Delaine" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Arissa Lavigny-Duval" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Denton Patreus" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Edmund Mahon" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Felicia Winters" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Jerome Archer" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Li Yong-Rui" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Nakato Kaine" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Pranav Antal" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Yuri Grom" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Zemina Torval" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Target Station Power -->
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Loc_Target_station_Power}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="TargetStationPowerComboBox" Grid.Row="4" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Any}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Aisling Duval" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Archon Delaine" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Arissa Lavigny-Duval" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Denton Patreus" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Edmund Mahon" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Felicia Winters" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Jerome Archer" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Li Yong-Rui" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Nakato Kaine" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Pranav Antal" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Yuri Grom" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="Zemina Torval" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Min Supply -->
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource Loc_Min_supply}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="MinSupplyComboBox" Grid.Row="5" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Any}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_100_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_500_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_1_000_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_2_500_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_5_000_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_10_000_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_50_000_units}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Min Demand -->
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource Loc_Min_demand}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="MinDemandComboBox" Grid.Row="6" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="0" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Any}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_100_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_500_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_1_000_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_2_500_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_5_000_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_10_000_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_50_000_units_or_unrestricted}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                        <!-- Order By -->
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource Loc_Order_by}" Foreground="{DynamicResource PrimaryTextColorBrush}" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox x:Name="OrderByComboBox" Grid.Row="7" Grid.Column="1" 
+                                 Style="{StaticResource ComboBoxStyle}"
+                                 SelectedIndex="4" Margin="0,5,0,5">
+                            <ComboBoxItem Content="{DynamicResource Loc_Maximum_profit}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Profit_per_hour_estimated}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Update_time}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Route_length}" Style="{StaticResource ComboBoxItemStyle}"/>
+                            <ComboBoxItem Content="{DynamicResource Loc_Distance}" Style="{StaticResource ComboBoxItemStyle}"/>
+                        </ComboBox>
+
+                    </Grid>
+                </ScrollViewer>
+            </GroupBox>
+
+            <!-- Search Buttons -->
+            <Grid Grid.Row="5" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="SearchButton" Grid.Column="0" 
+                       Content="{DynamicResource Loc_SEARCH_ROUTES}"
+                       Style="{StaticResource InvertHoverButtonStyle}"
+                       FontWeight="Bold" 
+                       Padding="10,5" 
+                       Click="SearchButton_Click">
+                </Button>
+
+                <Button x:Name="TestDataButton" Grid.Column="2" 
+                       Content="{DynamicResource Loc_Load_test_data}"
+                       Style="{StaticResource InvertHoverButtonStyle}"
+                       FontWeight="Bold" 
+                       Visibility="Collapsed"
+                       Padding="10,5" 
+                       Click="TestDataButton_Click"/>
+            </Grid>
+
+            <!-- Status Bar -->
+            <StatusBar Grid.Row="6" Background="{DynamicResource SecondaryBackgroundColorBrush}" Foreground="{DynamicResource AccentColorBrush}" Height="25">
+                <StatusBarItem>
+                    <TextBlock x:Name="StatusText" Text="{DynamicResource Loc_Ready_to_search}"/>
+                </StatusBarItem>
+            </StatusBar>
+        </Grid>
+    </Border>
+</Window>

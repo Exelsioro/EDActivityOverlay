@@ -3,11 +3,11 @@ $ErrorActionPreference = 'Stop'
 
 $scriptRoot = $PSScriptRoot
 $repoRoot = Split-Path -Parent $scriptRoot
-$appExe = Join-Path $repoRoot 'ED_Inara_Overlay\bin\Debug\net8.0-windows\ED_Inara_Overlay.exe'
-$solution = Join-Path $repoRoot 'ED_Inara_Overlay\ED_Inara_Overlay.sln'
+$appExe = Join-Path $repoRoot 'EDActivityOverlay\bin\Debug\net8.0-windows\EDActivityOverlay.exe'
+$solution = Join-Path $repoRoot 'EDActivityOverlay\EDActivityOverlay.sln'
 
 function Stop-TestProcesses {
-    foreach ($name in @('ED_Inara_Overlay','MockTargetApp','notepad')) {
+    foreach ($name in @('EDActivityOverlay','MockTargetApp','notepad')) {
         Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     }
 }
@@ -49,7 +49,7 @@ if ($overlay.HasExited) {
 }
 
 $total++
-$proc = Get-Process -Name 'ED_Inara_Overlay' -ErrorAction SilentlyContinue
+$proc = Get-Process -Name 'EDActivityOverlay' -ErrorAction SilentlyContinue
 if ($proc) {
     $memMb = [math]::Round($proc.WorkingSet64 / 1MB, 2)
     Write-Host "Memory: $memMb MB" -ForegroundColor White
@@ -62,7 +62,7 @@ if ($proc) {
 $total++
 $stable = $true
 for ($i = 0; $i -lt 10; $i++) {
-    if (-not (Get-Process -Name 'ED_Inara_Overlay' -ErrorAction SilentlyContinue)) {
+    if (-not (Get-Process -Name 'EDActivityOverlay' -ErrorAction SilentlyContinue)) {
         $stable = $false
         break
     }
@@ -78,7 +78,7 @@ if ($stable) {
 $total++
 $notepad = Start-Process -FilePath 'notepad.exe' -PassThru
 Start-Sleep -Seconds 2
-if (Get-Process -Name 'ED_Inara_Overlay' -ErrorAction SilentlyContinue) {
+if (Get-Process -Name 'EDActivityOverlay' -ErrorAction SilentlyContinue) {
     Write-Host '[PASS] Overlay process survived target creation' -ForegroundColor Green
     $passed++
 } else {
@@ -90,7 +90,7 @@ if ($notepad -and -not $notepad.HasExited) {
     Start-Sleep -Seconds 1
 }
 
-$overlay = Get-Process -Name 'ED_Inara_Overlay' -ErrorAction SilentlyContinue
+$overlay = Get-Process -Name 'EDActivityOverlay' -ErrorAction SilentlyContinue
 if ($overlay) {
     $overlay.CloseMainWindow() | Out-Null
     Start-Sleep -Seconds 3

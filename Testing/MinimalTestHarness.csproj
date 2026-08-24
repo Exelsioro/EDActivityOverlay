@@ -13,12 +13,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ED_Inara_Overlay\ED_Inara_Overlay.csproj" />
+    <ProjectReference Include="..\EDActivityOverlay\EDActivityOverlay.csproj" />
     <ProjectReference Include="..\Logger\Logger.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="ED_Inara_Overlay.LayoutTests\**\*.cs" />
+    <Compile Remove="EDActivityOverlay.Tests\**\*.cs" />
     <Compile Remove="MockTargetApp\Program.cs" />
     <Compile Remove="MockTargetApp\**\*.cs" />
     <Compile Remove="TestHarnessApp.xaml.cs" />
