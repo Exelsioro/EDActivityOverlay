@@ -5,8 +5,6 @@ VisualStudioVersion = 17.13.35828.75
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ED_Inara_Overlay", "ED_Inara_Overlay.csproj", "{49339430-98A2-4096-B69F-4BFD45CB1D61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InaraTools", "..\InaraTools\InaraTools.csproj", "{E75D412E-1ED6-4763-8EBF-66959A05ECC3}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logger", "..\Logger\Logger.csproj", "{EB20B7BB-61EF-4BA2-A6F2-1A179A5A3D99}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OverlayTestHarness", "..\Testing\OverlayTestHarness.csproj", "{48410110-B9DF-4EA8-BC24-6D7D297CE3B7}"
@@ -25,10 +23,6 @@ Global
 		{49339430-98A2-4096-B69F-4BFD45CB1D61}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{49339430-98A2-4096-B69F-4BFD45CB1D61}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{49339430-98A2-4096-B69F-4BFD45CB1D61}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E75D412E-1ED6-4763-8EBF-66959A05ECC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E75D412E-1ED6-4763-8EBF-66959A05ECC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E75D412E-1ED6-4763-8EBF-66959A05ECC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E75D412E-1ED6-4763-8EBF-66959A05ECC3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EB20B7BB-61EF-4BA2-A6F2-1A179A5A3D99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EB20B7BB-61EF-4BA2-A6F2-1A179A5A3D99}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EB20B7BB-61EF-4BA2-A6F2-1A179A5A3D99}.Release|Any CPU.ActiveCfg = Release|Any CPU

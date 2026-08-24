@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
 using ED_Inara_Overlay.Models;
@@ -6,7 +6,7 @@ using ED_Inara_Overlay.Services;
 using ED_Inara_Overlay.Services.Journal;
 using ED_Inara_Overlay.Utils;
 using ED_Inara_Overlay.Windows;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 
 namespace ED_Inara_Overlay
 {

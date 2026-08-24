@@ -1,7 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using ED_Inara_Overlay.Models;
 using ED_Inara_Overlay.Services;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 
 namespace ED_Inara_Overlay.Services.Journal;
 

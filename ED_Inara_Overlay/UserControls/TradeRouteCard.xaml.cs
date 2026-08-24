@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +9,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 using ED_Inara_Overlay.Utils;
 using ED_Inara_Overlay.Services;
 

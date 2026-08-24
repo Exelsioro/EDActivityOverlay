@@ -1,9 +1,9 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Interop;
 using System.Windows.Media;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 using Logger;
 using ED_Inara_Overlay.Utils;
 using ED_Inara_Overlay.Services;

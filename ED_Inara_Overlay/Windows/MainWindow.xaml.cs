@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,7 +10,7 @@ using ED_Inara_Overlay.Utils;
 using ED_Inara_Overlay.Windows;
 using ED_Inara_Overlay.Services;
 using System.Diagnostics;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 using ED_Inara_Overlay.Models;
 using ED_Inara_Overlay.Services.Journal;
 using ED_Inara_Overlay.Services.Notifications;

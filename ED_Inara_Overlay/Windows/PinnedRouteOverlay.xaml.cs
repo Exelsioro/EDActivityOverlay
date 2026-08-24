@@ -1,11 +1,11 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ED_Inara_Overlay.Services.Journal;
 using ED_Inara_Overlay.Services;
 using ED_Inara_Overlay.Services.Navigation;
 using ED_Inara_Overlay.Utils;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 
 namespace ED_Inara_Overlay.Windows;
 

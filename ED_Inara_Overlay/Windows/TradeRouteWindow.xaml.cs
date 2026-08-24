@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 using ED_Inara_Overlay.Utils;
 using System.Windows.Interop;
 using System.Windows.Media;

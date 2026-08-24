@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 
-namespace InaraTools
+namespace ED_Inara_Overlay.Models.Trading
 {
 public class TradeLeg
     {

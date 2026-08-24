@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using InaraTools;
+using ED_Inara_Overlay.Models.Trading;
 
 namespace ED_Inara_Overlay
 {
