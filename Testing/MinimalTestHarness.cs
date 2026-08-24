@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
-using EDActivityOverlay._0;
 
 namespace MinimalTestHarness
 {
