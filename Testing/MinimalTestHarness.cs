@@ -12,7 +12,7 @@ namespace MinimalTestHarness
         [STAThread]
         public static async Task Main()
         {
-            Console.WriteLine("Starting Minimal Test Harness for ED Inara Overlay");
+            Console.WriteLine("Starting Minimal Test Harness for ED Activity Overlay");
             
             try
             {

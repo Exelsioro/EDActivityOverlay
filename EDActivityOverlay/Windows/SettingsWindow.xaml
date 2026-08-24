@@ -231,7 +231,7 @@
                         <Border Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
                             <StackPanel>
                                 <TextBlock Text="{DynamicResource Loc_PLAYER_JOURNAL}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                <TextBlock Text="{DynamicResource Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files_INARA_remains_the_route_provider}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+                                <TextBlock Text="{DynamicResource Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,14"/>
                                 <CheckBox x:Name="EnableJournalCheckBox" Content="{DynamicResource Loc_Enable_Journal_integration}" Margin="0,0,0,14"/>
                                 <TextBlock Text="{DynamicResource Loc_Journal_directory}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
                                 <Grid Margin="0,5,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>

@@ -17,7 +17,7 @@ public sealed class SpanshRouteClient : IDisposable
     public SpanshRouteClient()
     {
         httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ED-Inara-Overlay", "1.0"));
+        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("EDActivityOverlay", "1.0"));
     }
 
     public async Task<ExplorationRoutePlan> CalculateRoadToRichesAsync(SpanshRoadToRichesRequest request)

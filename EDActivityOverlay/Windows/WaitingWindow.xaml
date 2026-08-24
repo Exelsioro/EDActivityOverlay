@@ -21,7 +21,7 @@
                 <StackPanel>
                     <TextBlock Text="{DynamicResource Loc_ED_TRADE_OVERLAY}" FontSize="20" FontWeight="Bold"
                                Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                    <TextBlock Text="{DynamicResource Loc_INARA_ROUTES_LOCAL_JOURNAL}"
+                    <TextBlock Text="{DynamicResource Loc_ROUTES_LOCAL_JOURNAL}"
                                Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" Margin="0,4,0,0"/>
                 </StackPanel>
                 <Grid Grid.Column="1" Width="28" Height="28">

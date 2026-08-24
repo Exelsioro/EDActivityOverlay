@@ -31,7 +31,7 @@ public sealed class ExplorationDataService : IDisposable
     private ExplorationDataService()
     {
         httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
-        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ED-Inara-Overlay", "1.0"));
+        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("EDActivityOverlay", "1.0"));
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         loader = new ExplorationDataLoader(
             new ExplorationSystemCache(),

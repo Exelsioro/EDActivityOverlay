@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Theme Name="Green" Description="Green Elite Dangerous theme" Author="ED Inara Overlay Team" Version="1.0">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Theme Name="Green" Description="Green Elite Dangerous theme" Author="ED Activity Overlay" Version="1.0">
   <Colors>
     <Color Key="PrimaryBackgroundColor" Value="#B31E2E1E" Description="Primary background color"/>
     <Color Key="SecondaryBackgroundColor" Value="#B32A3E2A" Description="Secondary background color"/>

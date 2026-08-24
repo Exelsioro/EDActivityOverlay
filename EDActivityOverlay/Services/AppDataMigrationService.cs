@@ -6,7 +6,7 @@ namespace EDActivityOverlay.Services;
 /// <summary>
 /// One-time compatibility migration from the pre-rebrand application folders.
 /// This is intentionally the only runtime code that knows the legacy product
-/// folder name. It does not communicate with or depend on INARA.
+/// folder name. It does not communicate with or depend on any external market-data provider.
 /// </summary>
 internal static class AppDataMigrationService
 {

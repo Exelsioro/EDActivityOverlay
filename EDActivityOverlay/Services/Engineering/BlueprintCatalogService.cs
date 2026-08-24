@@ -53,7 +53,7 @@ public sealed class BlueprintCatalogService
         try
         {
             using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(12) };
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("ED-Inara-Overlay/engineering-assistant");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("EDActivityOverlay/engineering-assistant");
             Task<string> blueprintsTask = client.GetStringAsync(BlueprintUrl, cancellationToken);
             Task<string> experimentalsTask = client.GetStringAsync(ExperimentalUrl, cancellationToken);
             Task<string> engineerRecipesTask = client.GetStringAsync(EngineerRecipeUrl, cancellationToken);

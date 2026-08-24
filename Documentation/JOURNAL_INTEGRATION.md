@@ -66,7 +66,7 @@ download a galaxy dump and has no dependency on an EDDiscovery installation.
 
 ## Route provider boundary
 
-INARA continues to provide candidate trade routes. Journal data only supplies the commander's local context and observes route execution. Future EDDN ingestion should be implemented behind a separate market-data provider and must not be coupled to the Journal reader.
+The Journal module supplies local commander/game context and observes route execution. Remote trade-route discovery is intentionally separated from Journal ingestion behind a provider-neutral market-data boundary. Trade discovery is currently disabled while that provider/query architecture is being redesigned.
 
 ## Privacy
 

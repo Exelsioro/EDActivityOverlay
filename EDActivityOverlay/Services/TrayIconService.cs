@@ -52,7 +52,7 @@ namespace EDActivityOverlay.Services
             taskbarIcon = new TaskbarIcon
             {
                 IconSource = LoadTrayIconSource(),
-                ToolTipText = "ED Inara Overlay",
+                ToolTipText = "ED Activity Overlay",
                 ContextMenu = menu
             };
             taskbarIcon.TrayMouseDoubleClick += TaskbarIcon_TrayMouseDoubleClick;
@@ -66,7 +66,7 @@ namespace EDActivityOverlay.Services
             }
 
             taskbarIcon.ShowBalloonTip(
-                "ED Inara Overlay",
+                "ED Activity Overlay",
                 Loc.Get("Loc_The_overlay_is_running_in_the_tray_and_is_waiting_for_the_game_Use_the_tray_menu_to_exit"),
                 BalloonIcon.Info);
         }

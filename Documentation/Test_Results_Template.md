@@ -1,4 +1,4 @@
-﻿# ED Inara Overlay - Test Results Template
+﻿# ED Activity Overlay - Test Results Template
 
 ## Session Info
 

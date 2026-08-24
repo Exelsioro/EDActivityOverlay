@@ -298,7 +298,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2024-07-12
 
 ### Added
-- Initial release of Elite Dangerous Inara Overlay
+- Initial release of ED Activity Overlay
 - WPF-based overlay system with automatic target detection
 - State-machine based visibility management (Waiting  ForceShow  Auto)
 - Timer-based retry mechanism for target process detection

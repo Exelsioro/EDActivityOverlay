@@ -62,8 +62,8 @@
     <sys:String x:Key="Loc_FROM">FROM</sys:String>
     <sys:String x:Key="Loc_TO">TO</sys:String>
     <sys:String x:Key="Loc_Route_search_results">Route search results</sys:String>
-    <sys:String x:Key="Loc_ROUTES_INARA">ROUTES  /  INARA</sys:String>
-    <sys:String x:Key="Loc_EDActivityOverlay_Settings">ED Inara Overlay — Settings</sys:String>
+    <sys:String x:Key="Loc_ROUTES">ROUTES</sys:String>
+    <sys:String x:Key="Loc_EDActivityOverlay_Settings">ED Activity Overlay — Settings</sys:String>
     <sys:String x:Key="Loc_Overlay_controls_appearance_and_local_game_data">Overlay, controls, appearance and local game data</sys:String>
     <sys:String x:Key="Loc_IN_GAME_OVERLAY">IN-GAME OVERLAY</sys:String>
     <sys:String x:Key="Loc_Appearance">Appearance</sys:String>
@@ -100,7 +100,7 @@
     <sys:String x:Key="Loc_Fixed_shortcut_Ctrl_7_unpins_the_current_route_Activities_default_to_Ctrl_1_Ctrl_4">Fixed shortcut: Ctrl+7 unpins the current route. Activities default to Ctrl+1…Ctrl+4.</sys:String>
     <sys:String x:Key="Loc_Journal">Journal</sys:String>
     <sys:String x:Key="Loc_PLAYER_JOURNAL">PLAYER JOURNAL</sys:String>
-    <sys:String x:Key="Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files_INARA_remains_the_route_provider">Local game state is read only from Elite Dangerous files. INARA remains the route provider.</sys:String>
+    <sys:String x:Key="Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files">Local game state is read only from Elite Dangerous files.</sys:String>
     <sys:String x:Key="Loc_Enable_Journal_integration">Enable Journal integration</sys:String>
     <sys:String x:Key="Loc_Journal_directory">Journal directory</sys:String>
     <sys:String x:Key="Loc_Leave_empty_to_use_the_Windows_Saved_Games_folder">Leave empty to use the Windows Saved Games folder</sys:String>
@@ -109,7 +109,7 @@
     <sys:String x:Key="Loc_CURRENT_STATUS">CURRENT STATUS</sys:String>
     <sys:String x:Key="Loc_APPLY">APPLY</sys:String>
     <sys:String x:Key="Loc_Trade_route_search">Trade route search</sys:String>
-    <sys:String x:Key="Loc_TRADE_ROUTES_INARA">TRADE ROUTES  /  INARA</sys:String>
+    <sys:String x:Key="Loc_TRADE_ROUTES">TRADE ROUTES</sys:String>
     <sys:String x:Key="Loc_JOURNAL_WAITING_2">JOURNAL  •  WAITING</sys:String>
     <sys:String x:Key="Loc_Game_values_are_detected_automatically">Game values are detected automatically</sys:String>
     <sys:String x:Key="Loc_SYNC">SYNC</sys:String>
@@ -150,7 +150,7 @@
     <sys:String x:Key="Loc_Ready_to_search">Ready to search</sys:String>
     <sys:String x:Key="Loc_ED_Trade_Overlay">ED Trade Overlay</sys:String>
     <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ED TRADE OVERLAY</sys:String>
-    <sys:String x:Key="Loc_INARA_ROUTES_LOCAL_JOURNAL">INARA ROUTES  •  LOCAL JOURNAL</sys:String>
+    <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">ROUTES  •  LOCAL JOURNAL</sys:String>
     <sys:String x:Key="Loc_Welcome_commander">Welcome, commander...</sys:String>
     <sys:String x:Key="Loc_QUICK_ACCESS">QUICK ACCESS</sys:String>
     <sys:String x:Key="Loc_Ctrl_5_visibility_Ctrl_6_interaction_Ctrl_7_unpin">Ctrl+5  visibility     Ctrl+6  interaction     Ctrl+7  unpin</sys:String>
@@ -215,8 +215,6 @@
     <sys:String x:Key="Loc_Cargo_capacity_must_be_a_positive_integer">Cargo capacity must be a positive integer.</sys:String>
     <sys:String x:Key="Loc_Enter_a_star_system_or_sync_it_from_Journal">Enter a star system or sync it from Journal.</sys:String>
     <sys:String x:Key="Loc_Searching">Searching...</sys:String>
-    <sys:String x:Key="Loc_INARA_rate_limited_requests_Retry_later_up_to_1_hour">INARA rate-limited requests. Retry later (up to ~1 hour).</sys:String>
-    <sys:String x:Key="Loc_INARA_is_temporarily_unavailable_503_Try_again_in_12_minutes">INARA is temporarily unavailable (503). Try again in 1–2 minutes.</sys:String>
     <sys:String x:Key="Loc_Error_during_route_search">Error during route search.</sys:String>
     <sys:String x:Key="Loc_Loading_test_data">Loading test data...</sys:String>
     <sys:String x:Key="Loc_Error_loading_test_data">Error loading test data.</sys:String>
@@ -275,7 +273,7 @@
     <sys:String x:Key="Loc_Author_unknown">Author: unknown</sys:String>
     <sys:String x:Key="Loc_Unknown_material">Unknown material</sys:String>
     <sys:String x:Key="Loc_Failed_to_start_overlay_0">Failed to start overlay: {0}</sys:String>
-    <sys:String x:Key="Loc_EDActivityOverlay_Error">ED Inara Overlay Error</sys:String>
+    <sys:String x:Key="Loc_EDActivityOverlay_Error">ED Activity Overlay Error</sys:String>
     <sys:String x:Key="Loc_System_Format">SYSTEM  {0}</sys:String>
     <sys:String x:Key="Loc_Docked_Format">DOCKED  •  {0}</sys:String>
     <sys:String x:Key="Loc_Destination_Format">DESTINATION  •  {0}</sys:String>
@@ -290,8 +288,8 @@
     <sys:String x:Key="Loc_Jumps_Format">JUMPS: {0}</sys:String>
     <sys:String x:Key="Loc_Actual_Profit_Format">ACTUAL PROFIT  {0:N0} CR</sys:String>
     <sys:String x:Key="Loc_Planned_Profit_Format">PLANNED PROFIT  {0:N0} CR</sys:String>
-    <sys:String x:Key="Loc_Routes_Limited_Format">ROUTES  /  INARA  •  {0} OF {1}</sys:String>
-    <sys:String x:Key="Loc_Routes_Count_Format">ROUTES  /  INARA  •  {0}</sys:String>
+    <sys:String x:Key="Loc_Routes_Limited_Format">ROUTES  •  {0} OF {1}</sys:String>
+    <sys:String x:Key="Loc_Routes_Count_Format">ROUTES  •  {0}</sys:String>
     <sys:String x:Key="Loc_Free_Cargo_Format">{0}/{1} t free</sys:String>
     <sys:String x:Key="Loc_Found_Routes_Format">Found {0} routes</sys:String>
     <sys:String x:Key="Loc_Loaded_Test_Routes_Format">Loaded {0} test routes</sys:String>

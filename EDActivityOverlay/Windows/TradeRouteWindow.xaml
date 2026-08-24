@@ -37,7 +37,7 @@
                     <ColumnDefinition Width="304*"/>
                     <ColumnDefinition Width="71*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{DynamicResource Loc_TRADE_ROUTES_INARA}"
+                <TextBlock Text="{DynamicResource Loc_TRADE_ROUTES}"
                           Style="{DynamicResource HeaderTextStyle}"
                           HorizontalAlignment="Left"/>
                 <Button x:Name="CloseButton" 

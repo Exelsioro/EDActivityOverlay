@@ -93,7 +93,7 @@ internal sealed class DirectOutputClient : IDisposable
             removePage = Load<RemovePage>("DirectOutput_RemovePage");
             setLed = Load<SetLed>("DirectOutput_SetLed");
             setString = Load<SetString>("DirectOutput_SetString");
-            ThrowIfFailed(initialize("ED Inara Overlay"), "initialize DirectOutput");
+            ThrowIfFailed(initialize("ED Activity Overlay"), "initialize DirectOutput");
             initialized = true;
             ThrowIfFailed(registerDeviceCallback(deviceCallback, IntPtr.Zero), "register device callback");
             ThrowIfFailed(enumerate(enumerateCallback, IntPtr.Zero), "enumerate DirectOutput devices");

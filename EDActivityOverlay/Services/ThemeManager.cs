@@ -362,7 +362,7 @@ namespace EDActivityOverlay.Services
             {
                 Name = "Default",
                 Description = "Default Elite Dangerous inspired theme",
-                Author = "ED Inara Overlay",
+                Author = "ED Activity Overlay",
                 Version = "1.0"
             };
 

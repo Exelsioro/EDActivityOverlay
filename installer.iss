@@ -1,12 +1,12 @@
-; Inno Setup Script for Elite Dangerous Inara Overlay
+﻿; Inno Setup Script for ED Activity Overlay
 
-#define MyAppName "Elite Dangerous Inara Overlay"
+#define MyAppName "ED Activity Overlay"
 #define MyAppVersion "1.2.0"
-#define MyAppPublisher "ED Inara Overlay Team"
-#define MyAppURL "https://github.com/Exelsioro/Inara-overlay-for-Elite-Dangerous"
-#define MyAppExeName "ED_Inara_Overlay.exe"
+#define MyAppPublisher "ED Activity Overlay"
+#define MyAppURL "https://github.com/Exelsioro/ED-Activity-Overlay"
+#define MyAppExeName "EDActivityOverlay.exe"
 
-#define MyAppAssocName "Elite Dangerous Inara Overlay File"
+#define MyAppAssocName "ED Activity Overlay File"
 #define MyAppAssocExt ".edovl"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
@@ -24,7 +24,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 
 OutputDir=Installer
-OutputBaseFilename=ED_Inara_Overlay_Setup_{#MyAppVersion}
+OutputBaseFilename=EDActivityOverlay_Setup_{#MyAppVersion}
 
 Compression=lzma
 SolidCompression=yes
@@ -57,8 +57,6 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
-[UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\ED_Inara_Overlay"
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\*.old"

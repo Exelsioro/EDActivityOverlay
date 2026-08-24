@@ -32,7 +32,7 @@
 
                 WriteLog("INFO", "Logger initialized successfully");
                 WriteLog("INFO", $"Log file: {logFilePath}");
-                WriteLog("INFO", "=== ED Inara Overlay Session Started ===");
+                WriteLog("INFO", "=== ED Activity Overlay Session Started ===");
             }
             catch (Exception ex)
             {
@@ -111,7 +111,7 @@
         {
             try
             {
-                WriteLog("INFO", "=== ED Inara Overlay Session Ended ===");
+                WriteLog("INFO", "=== ED Activity Overlay Session Ended ===");
                 WriteLog("INFO", "Logger shutting down");
                 logWriter?.Close();
                 logWriter?.Dispose();

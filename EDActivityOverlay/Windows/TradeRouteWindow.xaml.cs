@@ -221,7 +221,7 @@ namespace EDActivityOverlay.Windows
         private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
             // Remote route search is deliberately disabled while the application
-            // moves from INARA to a provider-neutral market-data implementation.
+            // moves to a provider-neutral market-data implementation.
             // Keep the trading workspace, Journal integration, test data and
             // pinned-route workflow intact.
             StatusText.Text = "Trade route search is temporarily unavailable while a new market-data provider is being integrated.";

@@ -1,79 +1,70 @@
-﻿# Contributing to Elite Dangerous Inara Overlay
+﻿# Contributing to ED Activity Overlay
 
 Thank you for contributing.
 
 ## Repository Structure
 
-This is a unified repository with these main components:
-
 | Project | Purpose | Tech |
 |---|---|---|
-| `EDActivityOverlay/` | Main overlay application | C# / .NET 8 / WPF |
-| `InaraTools/` | INARA communication and parsing | C# / .NET 8 |
+| `EDActivityOverlay/` | Main overlay application and activity services | C# / .NET 8 / WPF |
 | `Logger/` | Shared logging | C# / .NET 8 |
-| `Testing/` | Test scripts and harness projects | PowerShell / C# |
+| `Testing/` | Automated tests, harnesses and regression scripts | C# / PowerShell |
 | `Testing/MockTargetApp/` | Mock target process for overlay tests | C# / .NET 8 |
+| `Documentation/` | Architecture and feature documentation | Markdown |
 
 ## Getting Started
 
-```bash
+```powershell
 git clone <your-fork-url>
-cd EDActivityOverlay
-dotnet build EDActivityOverlay/EDActivityOverlay.sln
+cd <repository-folder>
+dotnet build .\EDActivityOverlay\EDActivityOverlay.sln
 ```
 
-Run app:
+Run the application:
 
-```bash
-dotnet run --project EDActivityOverlay/EDActivityOverlay.csproj
+```powershell
+dotnet run --project .\EDActivityOverlay\EDActivityOverlay.csproj
 ```
 
 ## Development Workflow
 
-1. Create branch: `feature/<name>`.
-2. Make focused changes.
-3. Build solution.
-4. Run `Testing/QuickRegressionTest.ps1`.
-5. If needed, run `Testing/RegressionTest.ps1` for manual verification.
-6. Open PR with summary and test notes.
+1. Create a focused feature branch.
+2. Make scoped changes.
+3. Build the solution.
+4. Run the automated test project.
+5. Use the relevant harness/regression scripts for UI or integration changes.
+6. Open a pull request with a summary and test notes.
 
 ## Code Guidelines
 
 - Keep changes small and scoped.
-- Use clear naming and avoid dead code.
-- Prefer shared logic in `InaraTools` and `Logger` over duplication.
-- Keep UI behavior changes inside `EDActivityOverlay`.
-- Add or update docs when behavior changes.
+- Prefer provider-neutral domain/service boundaries for external data sources.
+- Keep Frontier Journal/JSON ingestion separate from activity-specific presentation logic.
+- Reuse shared application services and `Logger` instead of duplicating infrastructure.
+- Keep UI behavior in the WPF application layer.
+- Add or update documentation when architecture or behavior changes.
 
 ## Testing
 
-Quick smoke:
-
 ```powershell
-powershell -ExecutionPolicy Bypass -File Testing/QuickRegressionTest.ps1
-```
-
-Manual regression:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File Testing/RegressionTest.ps1
+dotnet test .\Testing\EDActivityOverlay.Tests\EDActivityOverlay.Tests.csproj
 ```
 
 Mock target app:
 
 ```powershell
-dotnet run --project Testing/MockTargetApp/MockTargetApp.csproj
+dotnet run --project .\Testing\MockTargetApp\MockTargetApp.csproj
 ```
 
 ## Reporting Issues
 
 Include:
 
-- Steps to reproduce
-- Expected behavior
-- Actual behavior
-- Environment (Windows version, .NET version)
-- Relevant logs from `EDActivityOverlay/bin/<Configuration>/net8.0-windows/logs/`
+- steps to reproduce;
+- expected behavior;
+- actual behavior;
+- Windows/.NET version;
+- relevant runtime logs.
 
 ## License
 

@@ -39,7 +39,7 @@ function Add-Result([string]$name, [bool]$ok, [string]$details='') {
     $results += [pscustomobject]@{ Test = $name; Status = if ($ok) { 'PASS' } else { 'FAIL' }; Details = $details }
 }
 
-Write-Host 'ED Inara Overlay - Manual Regression Test' -ForegroundColor Green
+Write-Host 'ED Activity Overlay - Manual Regression Test' -ForegroundColor Green
 Write-Host '==========================================' -ForegroundColor Green
 
 Stop-TestProcesses

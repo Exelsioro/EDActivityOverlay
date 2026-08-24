@@ -24,7 +24,7 @@ public sealed class ExplorationPoiService : IDisposable
     private ExplorationPoiService()
     {
         httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ED-Inara-Overlay", "1.0"));
+        httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("EDActivityOverlay", "1.0"));
         canonnProvider = new CanonnPoiProvider(httpClient);
     }
 

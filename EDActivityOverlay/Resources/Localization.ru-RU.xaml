@@ -62,8 +62,8 @@
     <sys:String x:Key="Loc_FROM">ОТКУДА</sys:String>
     <sys:String x:Key="Loc_TO">КУДА</sys:String>
     <sys:String x:Key="Loc_Route_search_results">Результаты поиска маршрутов</sys:String>
-    <sys:String x:Key="Loc_ROUTES_INARA">МАРШРУТЫ  /  INARA</sys:String>
-    <sys:String x:Key="Loc_EDActivityOverlay_Settings">ED Inara Overlay — Настройки</sys:String>
+    <sys:String x:Key="Loc_ROUTES">МАРШРУТЫ</sys:String>
+    <sys:String x:Key="Loc_EDActivityOverlay_Settings">ED Activity Overlay — Настройки</sys:String>
     <sys:String x:Key="Loc_Overlay_controls_appearance_and_local_game_data">Оверлей, управление, внешний вид и локальные данные игры</sys:String>
     <sys:String x:Key="Loc_IN_GAME_OVERLAY">ИГРОВОЙ ОВЕРЛЕЙ</sys:String>
     <sys:String x:Key="Loc_Appearance">Внешний вид</sys:String>
@@ -100,7 +100,7 @@
     <sys:String x:Key="Loc_Fixed_shortcut_Ctrl_7_unpins_the_current_route_Activities_default_to_Ctrl_1_Ctrl_4">Фиксированное сочетание: Ctrl+7 открепляет текущий маршрут. По умолчанию занятия выбираются Ctrl+1…Ctrl+4.</sys:String>
     <sys:String x:Key="Loc_Journal">Журнал</sys:String>
     <sys:String x:Key="Loc_PLAYER_JOURNAL">ЖУРНАЛ ИГРОКА</sys:String>
-    <sys:String x:Key="Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files_INARA_remains_the_route_provider">Состояние игры считывается только из локальных файлов Elite Dangerous. Поставщиком маршрутов остаётся INARA.</sys:String>
+    <sys:String x:Key="Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files">Локальное состояние игры считывается только из файлов Elite Dangerous.</sys:String>
     <sys:String x:Key="Loc_Enable_Journal_integration">Использовать журнал игры</sys:String>
     <sys:String x:Key="Loc_Journal_directory">Папка журнала</sys:String>
     <sys:String x:Key="Loc_Leave_empty_to_use_the_Windows_Saved_Games_folder">Оставьте пустым, чтобы использовать папку «Сохранённые игры» Windows</sys:String>
@@ -109,7 +109,7 @@
     <sys:String x:Key="Loc_CURRENT_STATUS">ТЕКУЩЕЕ СОСТОЯНИЕ</sys:String>
     <sys:String x:Key="Loc_APPLY">ПРИМЕНИТЬ</sys:String>
     <sys:String x:Key="Loc_Trade_route_search">Поиск торговых маршрутов</sys:String>
-    <sys:String x:Key="Loc_TRADE_ROUTES_INARA">ТОРГОВЫЕ МАРШРУТЫ  /  INARA</sys:String>
+    <sys:String x:Key="Loc_TRADE_ROUTES">ТОРГОВЫЕ МАРШРУТЫ</sys:String>
     <sys:String x:Key="Loc_JOURNAL_WAITING_2">ЖУРНАЛ  •  ОЖИДАНИЕ</sys:String>
     <sys:String x:Key="Loc_Game_values_are_detected_automatically">Игровые значения определятся автоматически</sys:String>
     <sys:String x:Key="Loc_SYNC">СИНХРОНИЗИРОВАТЬ</sys:String>
@@ -150,7 +150,7 @@
     <sys:String x:Key="Loc_Ready_to_search">Готово к поиску</sys:String>
     <sys:String x:Key="Loc_ED_Trade_Overlay">Торговый оверлей ED</sys:String>
     <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ТОРГОВЫЙ ОВЕРЛЕЙ ED</sys:String>
-    <sys:String x:Key="Loc_INARA_ROUTES_LOCAL_JOURNAL">МАРШРУТЫ INARA  •  ЛОКАЛЬНЫЙ ЖУРНАЛ</sys:String>
+    <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">МАРШРУТЫ  •  ЛОКАЛЬНЫЙ ЖУРНАЛ</sys:String>
     <sys:String x:Key="Loc_Welcome_commander">Добро пожаловать, командир...</sys:String>
     <sys:String x:Key="Loc_QUICK_ACCESS">БЫСТРЫЙ ДОСТУП</sys:String>
     <sys:String x:Key="Loc_Ctrl_5_visibility_Ctrl_6_interaction_Ctrl_7_unpin">Ctrl+5  видимость     Ctrl+6  управление     Ctrl+7  открепить</sys:String>
@@ -215,8 +215,6 @@
     <sys:String x:Key="Loc_Cargo_capacity_must_be_a_positive_integer">Вместимость трюма должна быть положительным целым числом.</sys:String>
     <sys:String x:Key="Loc_Enter_a_star_system_or_sync_it_from_Journal">Введите звёздную систему или синхронизируйте её с журналом.</sys:String>
     <sys:String x:Key="Loc_Searching">Поиск…</sys:String>
-    <sys:String x:Key="Loc_INARA_rate_limited_requests_Retry_later_up_to_1_hour">INARA ограничила частоту запросов. Повторите позже (до ~1 часа).</sys:String>
-    <sys:String x:Key="Loc_INARA_is_temporarily_unavailable_503_Try_again_in_12_minutes">INARA временно недоступна (503). Повторите через 1–2 минуты.</sys:String>
     <sys:String x:Key="Loc_Error_during_route_search">Ошибка при поиске маршрутов.</sys:String>
     <sys:String x:Key="Loc_Loading_test_data">Загрузка тестовых данных…</sys:String>
     <sys:String x:Key="Loc_Error_loading_test_data">Ошибка загрузки тестовых данных.</sys:String>
@@ -275,7 +273,7 @@
     <sys:String x:Key="Loc_Author_unknown">Автор: неизвестен</sys:String>
     <sys:String x:Key="Loc_Unknown_material">Неизвестный материал</sys:String>
     <sys:String x:Key="Loc_Failed_to_start_overlay_0">Не удалось запустить оверлей: {0}</sys:String>
-    <sys:String x:Key="Loc_EDActivityOverlay_Error">Ошибка ED Inara Overlay</sys:String>
+    <sys:String x:Key="Loc_EDActivityOverlay_Error">Ошибка ED Activity Overlay</sys:String>
     <sys:String x:Key="Loc_System_Format">СИСТЕМА  {0}</sys:String>
     <sys:String x:Key="Loc_Docked_Format">НА СТАНЦИИ  •  {0}</sys:String>
     <sys:String x:Key="Loc_Destination_Format">ЦЕЛЬ  •  {0}</sys:String>
@@ -290,8 +288,8 @@
     <sys:String x:Key="Loc_Jumps_Format">ПРЫЖКОВ: {0}</sys:String>
     <sys:String x:Key="Loc_Actual_Profit_Format">ФАКТИЧЕСКАЯ ПРИБЫЛЬ  {0:N0} кр.</sys:String>
     <sys:String x:Key="Loc_Planned_Profit_Format">ПЛАНОВАЯ ПРИБЫЛЬ  {0:N0} кр.</sys:String>
-    <sys:String x:Key="Loc_Routes_Limited_Format">МАРШРУТЫ  /  INARA  •  {0} ИЗ {1}</sys:String>
-    <sys:String x:Key="Loc_Routes_Count_Format">МАРШРУТЫ  /  INARA  •  {0}</sys:String>
+    <sys:String x:Key="Loc_Routes_Limited_Format">МАРШРУТЫ  •  {0} ИЗ {1}</sys:String>
+    <sys:String x:Key="Loc_Routes_Count_Format">МАРШРУТЫ  •  {0}</sys:String>
     <sys:String x:Key="Loc_Free_Cargo_Format">свободно {0}/{1} т</sys:String>
     <sys:String x:Key="Loc_Found_Routes_Format">Найдено маршрутов: {0}</sys:String>
     <sys:String x:Key="Loc_Loaded_Test_Routes_Format">Загружено тестовых маршрутов: {0}</sys:String>

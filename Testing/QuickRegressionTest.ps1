@@ -21,7 +21,7 @@ function Ensure-AppBuilt {
     }
 }
 
-Write-Host 'ED Inara Overlay - Quick Regression Test' -ForegroundColor Green
+Write-Host 'ED Activity Overlay - Quick Regression Test' -ForegroundColor Green
 Write-Host '=========================================' -ForegroundColor Green
 
 $passed = 0
