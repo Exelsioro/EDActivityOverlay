@@ -88,3 +88,4 @@ dist/.git/
 
 Release/*
 Installer/*
+/phase1-remove-inara-runtime.ps1
