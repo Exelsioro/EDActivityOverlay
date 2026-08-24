@@ -1,6 +1,8 @@
-# Build & Publish script for Elite Dangerous Inara Overlay
+﻿#requires -Version 5.1
+# Build & Publish script for ED Activity Overlay
 # Requires: dotnet SDK + Inno Setup (ISCC in PATH)
 
+[CmdletBinding()]
 param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
@@ -10,83 +12,79 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-Set-Location $ScriptDir
+$RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Project = Join-Path $RepoRoot "EDActivityOverlay\EDActivityOverlay.csproj"
+$ReleaseDir = Join-Path $RepoRoot "Release"
+$InstallerScript = Join-Path $RepoRoot "installer.iss"
 
-Write-Host "Elite Dangerous Inara Overlay - Build & Installer Script" -ForegroundColor Green
-Write-Host "==========================================================" -ForegroundColor Green
+Write-Host "ED Activity Overlay - Build & Installer" -ForegroundColor Green
+Write-Host "======================================" -ForegroundColor Green
 
-# -------- Validate Inno Setup --------
+if (-not (Test-Path -LiteralPath $Project)) {
+    throw "Project not found: $Project"
+}
+
 if (-not $SkipInstaller) {
     if (-not (Get-Command ISCC -ErrorAction SilentlyContinue)) {
         Write-Host "ERROR: ISCC (Inno Setup) not found in PATH." -ForegroundColor Red
-        Write-Host "Add Inno Setup folder to PATH and restart terminal." -ForegroundColor Yellow
+        exit 1
+    }
+
+    if (-not (Test-Path -LiteralPath $InstallerScript)) {
+        Write-Host "ERROR: installer.iss not found in repository root." -ForegroundColor Red
         exit 1
     }
 }
 
-# -------- Publish Application --------
 if (-not $SkipBuild) {
+    Write-Host ""
+    Write-Host "Publishing application..." -ForegroundColor Cyan
 
-    Write-Host "`nPublishing application..." -ForegroundColor Cyan
-
-    # Clean previous publish
-    if (Test-Path ".\Release") {
-        Remove-Item ".\Release" -Recurse -Force
+    if (Test-Path -LiteralPath $ReleaseDir) {
+        Remove-Item -LiteralPath $ReleaseDir -Recurse -Force
     }
 
     dotnet publish `
-        ".\ED_Inara_Overlay\ED_Inara_Overlay.csproj" `
+        $Project `
         -c $Configuration `
         -r $Runtime `
         --self-contained true `
-        -o ".\Release"
+        -o $ReleaseDir
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Publish failed!" -ForegroundColor Red
+        Write-Host "Publish failed." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+
+    $exe = Join-Path $ReleaseDir "EDActivityOverlay.exe"
+
+    if (-not (Test-Path -LiteralPath $exe)) {
+        Write-Host "Executable not found: $exe" -ForegroundColor Red
         exit 1
     }
 
-    if (-not (Test-Path ".\Release\ED_Inara_Overlay.exe")) {
-        Write-Host "Executable not found in Release folder." -ForegroundColor Red
-        exit 1
-    }
-
-    Write-Host "Publish completed successfully!" -ForegroundColor Green
+    Write-Host "Publish completed successfully." -ForegroundColor Green
 }
 else {
-    Write-Host "Skipping publish step..." -ForegroundColor Yellow
+    Write-Host "Skipping publish step." -ForegroundColor Yellow
 }
 
-# -------- Create Installer --------
 if (-not $SkipInstaller) {
+    Write-Host ""
+    Write-Host "Creating installer..." -ForegroundColor Cyan
 
-    Write-Host "`nCreating installer..." -ForegroundColor Cyan
-
-    if (-not (Test-Path ".\installer.iss")) {
-        Write-Host "installer.iss not found in project root." -ForegroundColor Red
-        exit 1
-    }
-
-    ISCC ".\installer.iss"
+    & ISCC $InstallerScript
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Installer creation failed!" -ForegroundColor Red
-        exit 1
+        Write-Host "Installer creation failed." -ForegroundColor Red
+        exit $LASTEXITCODE
     }
 
-    Write-Host "Installer created successfully!" -ForegroundColor Green
-
-    if (Test-Path ".\Installer") {
-        Write-Host "`nCreated installer files:" -ForegroundColor Cyan
-        Get-ChildItem ".\Installer\*.exe" | ForEach-Object {
-            $size = [math]::Round($_.Length / 1MB, 2)
-            Write-Host "  $($_.Name) ($size MB)"
-        }
-    }
+    Write-Host "Installer created successfully." -ForegroundColor Green
 }
 else {
-    Write-Host "Skipping installer step..." -ForegroundColor Yellow
+    Write-Host "Skipping installer step." -ForegroundColor Yellow
 }
 
-Write-Host "`nBuild process completed successfully." -ForegroundColor Green
+Write-Host ""
+Write-Host "Build process completed successfully." -ForegroundColor Green

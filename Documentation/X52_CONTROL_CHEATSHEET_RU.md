@@ -1,4 +1,4 @@
-# X52 Pro — шпаргалка ED_Inara_Overlay
+﻿# X52 Pro — шпаргалка EDActivityOverlay
 
 Актуально для профиля Logitech `X52ProEliteV223EX_Overlay.pr0` и пресета Elite
 `X52ProElite v2.2.3 FIXED`.
@@ -16,7 +16,7 @@
   одиночное нажатие включает/выключает интерактивный фокус, двойное скрывает
   или возвращает все оверлеи.
 
-## Управление ED Inara Overlay
+## Управление ED Activity Overlay
 
 | Орган X52 | Действие |
 |---|---|

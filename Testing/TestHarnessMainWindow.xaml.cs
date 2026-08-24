@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -8,8 +8,8 @@ using System.Windows.Automation;
 using System.Windows.Threading;
 using System.Windows.Forms;
 using System.Drawing;
-using ED_Inara_Overlay;
-using ED_Inara_Overlay.Utils;
+using EDActivityOverlay;
+using EDActivityOverlay.Utils;
 using Application = System.Windows.Application;
 using WinForms = System.Windows.Forms;
 
@@ -21,7 +21,7 @@ namespace OverlayTestHarness
         private Form? mockTargetWindow;
         private IntPtr mockTargetHandle;
         private uint mockTargetProcessId;
-        private ED_Inara_Overlay.MainWindow? overlayWindow;
+        private EDActivityOverlay.MainWindow? overlayWindow;
         private DispatcherTimer? focusAutomationTimer;
         private bool automationRunning = false;
         private bool focusToggleState = false;
@@ -141,7 +141,7 @@ namespace OverlayTestHarness
                     await Task.Delay(1000);
                     
                     // Create overlay targeting the notepad process
-                    overlayWindow = new ED_Inara_Overlay.MainWindow("notepad");
+                    overlayWindow = new EDActivityOverlay.MainWindow("notepad");
                     overlayWindow.Show();
                     
                     LogMessage($"Overlay started targeting process: notepad (PID: {mockProcess.Id})");

@@ -1,5 +1,5 @@
-{
-    "dotnet.defaultSolution": "ED_Inara_Overlay/ED_Inara_Overlay.sln",
+﻿{
+    "dotnet.defaultSolution": "EDActivityOverlay/EDActivityOverlay.sln",
     "files.watcherExclude": {
         "**/bin/**": true,
         "**/obj/**": true,

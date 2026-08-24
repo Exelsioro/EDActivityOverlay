@@ -3,7 +3,7 @@
 ## Build
 
 ```powershell
-dotnet build ED_Inara_Overlay/ED_Inara_Overlay.sln
+dotnet build EDActivityOverlay/EDActivityOverlay.sln
 ```
 
 ## Run Tests
@@ -17,18 +17,18 @@ dotnet build ED_Inara_Overlay/ED_Inara_Overlay.sln
 ## Process Checks
 
 ```powershell
-Get-Process ED_Inara_Overlay -ErrorAction SilentlyContinue |
+Get-Process EDActivityOverlay -ErrorAction SilentlyContinue |
   Select-Object ProcessName, CPU, @{n='MemoryMB';e={[math]::Round($_.WorkingSet64 / 1MB, 2)}}
 ```
 
 ## Force Cleanup
 
 ```powershell
-Get-Process ED_Inara_Overlay -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process EDActivityOverlay -ErrorAction SilentlyContinue | Stop-Process -Force
 Get-Process MockTargetApp -ErrorAction SilentlyContinue | Stop-Process -Force
 Get-Process notepad -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
 ## Logs
 
-- `ED_Inara_Overlay/bin/<Configuration>/net8.0-windows/logs/`
+- `EDActivityOverlay/bin/<Configuration>/net8.0-windows/logs/`

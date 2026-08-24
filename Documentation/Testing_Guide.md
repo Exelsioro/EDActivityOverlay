@@ -13,12 +13,12 @@ This guide covers the active automated and manual tests for the current reposito
 ## Build
 
 ```bash
-dotnet build ED_Inara_Overlay/ED_Inara_Overlay.sln
+dotnet build EDActivityOverlay/EDActivityOverlay.sln
 ```
 
 Expected output binaries:
 
-- `ED_Inara_Overlay/bin/Debug/net8.0-windows/ED_Inara_Overlay.exe`
+- `EDActivityOverlay/bin/Debug/net8.0-windows/EDActivityOverlay.exe`
 - `Testing/MockTargetApp/bin/Debug/net8.0-windows/MockTargetApp.exe`
 
 ## Scripted Checks
@@ -38,7 +38,7 @@ powershell -ExecutionPolicy Bypass -File Testing\RunTests.ps1
 The project includes focused unit tests for adaptive scaling and positioning math:
 
 ```bash
-dotnet test Testing/ED_Inara_Overlay.LayoutTests/ED_Inara_Overlay.LayoutTests.csproj -p:UseAppHost=false
+dotnet test Testing/EDActivityOverlay.LayoutTests/EDActivityOverlay.LayoutTests.csproj -p:UseAppHost=false
 ```
 
 Covered areas:

@@ -5,7 +5,7 @@ $scriptRoot = $PSScriptRoot
 $quick = Join-Path $scriptRoot 'QuickRegressionTest.ps1'
 $manual = Join-Path $scriptRoot 'RegressionTest.ps1'
 
-Write-Host 'ED Inara Overlay - Test Runner' -ForegroundColor Green
+Write-Host 'ED Activity Overlay - Test Runner' -ForegroundColor Green
 Write-Host '==============================' -ForegroundColor Green
 
 & $quick

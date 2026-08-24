@@ -1,4 +1,4 @@
-# Engineering Assistant
+﻿# Engineering Assistant
 
 ## Scope
 
@@ -30,7 +30,7 @@ It remains available even when Elite Dangerous is not running, using the last ca
 Local state is stored in:
 
 ```text
-%APPDATA%/ED_Inara_Overlay/companion.db
+%APPDATA%/EDActivityOverlay/companion.db
 ```
 
 The SQLite database uses WAL mode and stores wishlist, latest material counts, and engineer progress. No commander data is uploaded.
@@ -38,7 +38,7 @@ The SQLite database uses WAL mode and stores wishlist, latest material counts, a
 Recipe cache:
 
 ```text
-%APPDATA%/ED_Inara_Overlay/catalogs/
+%APPDATA%/EDActivityOverlay/catalogs/
 ```
 
 ## Recipe semantics

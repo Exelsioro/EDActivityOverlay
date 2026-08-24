@@ -1,4 +1,4 @@
-# Exploration and Exobiology Assistant
+﻿# Exploration and Exobiology Assistant
 
 The exploration workspace combines local Player Journal state with optional
 community system data. Personal progress is never inferred from Spansh or EDSM:
@@ -83,7 +83,7 @@ The Log & Findings tab records system visits, notable scans, DSS results,
 biological signals and completed samples, and new Codex discoveries. Entries
 can be bookmarked, filtered and copied. A body in the catalog can also be added
 as a manual commander finding. Up to 500 recent/bookmarked entries are retained
-in `%APPDATA%\ED_Inara_Overlay\exploration-log.json`.
+in `%APPDATA%\EDActivityOverlay\exploration-log.json`.
 
 The assistant reconstructs unsold Universal Cartographics and exobiology
 estimates from all available Journal files in a background task. Body values
@@ -109,7 +109,7 @@ so it must remain an explicit choice.
 ## Persistence and limitations
 
 - Closed historical Journal files are imported in the background into
-  `%APPDATA%\ED_Inara_Overlay\companion.db`. The current Journal continues
+  `%APPDATA%\EDActivityOverlay\companion.db`. The current Journal continues
   through the live monitor and becomes importable after it is closed.
 - Personal body history is keyed by commander, system and body and records
   scanning, mapping, efficiency, first-discovery/mapping evidence, biological

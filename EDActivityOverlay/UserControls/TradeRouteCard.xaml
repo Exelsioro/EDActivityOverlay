@@ -1,0 +1,139 @@
+﻿<UserControl x:Class="EDActivityOverlay.UserControls.TradeRouteCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             HorizontalAlignment="Stretch">
+
+    <!-- Main container with Elite Dangerous inspired styling -->
+    <Border x:Name="MainBorder" 
+            Background="{DynamicResource PrimaryBackgroundColorBrush}"
+            BorderBrush="{DynamicResource BorderColorBrush}"
+            BorderThickness="2"
+            CornerRadius="0"
+            HorizontalAlignment="Stretch"
+            Padding="0">
+
+        <!-- Inner highlight border -->
+        <Border x:Name="InnerBorder" BorderBrush="{DynamicResource BorderColorBrush}"
+                BorderThickness="1" 
+                CornerRadius="0" 
+                Opacity="0.7"
+                Margin="2">
+            <!-- Content area -->
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header strip -->
+                <Border x:Name="HeaderStrip" Grid.Row="0"
+                        Background="{DynamicResource HighlightBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderColorBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="8,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Route type indicator -->
+                        <TextBlock x:Name="RouteTypeLabel" 
+                                 Grid.Column="0"
+                                 Text="{DynamicResource Loc_TRADE_ROUTE}"
+                                 Foreground="{DynamicResource PrimaryTextColorBrush}" 
+                                 FontSize="10"
+                                 FontWeight="Bold"
+                                 FontFamily="Segoe UI"
+                                 VerticalAlignment="Center"/>
+
+                        <!-- Distance indicator -->
+                        <StackPanel Grid.Column="1" 
+                                  Orientation="Horizontal" 
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,8,0">
+                            <TextBlock Text="*" 
+                                     Foreground="{DynamicResource AccentColorBrush}" 
+                                     FontSize="10" 
+                                     Margin="0,0,4,0"/>
+                            <TextBlock x:Name="DistanceLabel" 
+                                           Text="{DynamicResource Loc_0_0_Ly}"
+                                     Foreground="{DynamicResource AccentColorBrush}" 
+                                     FontSize="10"
+                                     FontFamily="Segoe UI"
+                                     VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Pin Route Button -->
+                        <Button x:Name="PinRouteButton"
+                              Grid.Column="2"
+                              Content="{DynamicResource Loc_PIN}"
+                              Foreground="{DynamicResource AccentColorBrush}" 
+                              Background="Transparent"
+                              BorderBrush="{DynamicResource AccentColorBrush}"
+                              BorderThickness="1"
+                              FontSize="9"
+                              FontWeight="Bold"
+                              FontFamily="Segoe UI"
+                              Padding="6,2"
+                              VerticalAlignment="Bottom"
+                              Cursor="Hand"
+                              Click="PinRouteButton_Click" Margin="8,0,0,0">
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Main content -->
+                <StackPanel x:Name="ContentStackPanel"
+                           Grid.Row="1"
+                           Orientation="Vertical"
+                           HorizontalAlignment="Stretch"
+                           Margin="8">
+
+                    <!-- Dynamic content will be populated via code-behind -->
+
+                </StackPanel>
+
+                <!-- Footer strip -->
+                <Border x:Name="FooterStrip" Grid.Row="2"
+                        Background="{DynamicResource HighlightBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderColorBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="8,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Last update info -->
+                        <TextBlock x:Name="LastUpdateLabel" 
+                                 Grid.Column="0"
+                                 Text="{DynamicResource Loc_Last_updated}"
+                                 Foreground="#FF808080"
+                                 FontSize="9"
+                                 FontFamily="Segoe UI"
+                                 VerticalAlignment="Center"/>
+
+                        <!-- Total profit -->
+                        <TextBlock x:Name="TotalProfitLabel" 
+                                 Grid.Column="1"
+                                           Text="{DynamicResource Loc_0_CR}"
+                                 Foreground="{DynamicResource SuccessColorBrush}" 
+                                 FontSize="12"
+                                 FontWeight="Bold"
+                                 FontFamily="Segoe UI"
+                                 VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
+
+</UserControl>

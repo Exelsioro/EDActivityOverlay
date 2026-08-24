@@ -1,135 +1,120 @@
-# Elite Dangerous INARA Overlay - Project Synopsis
+﻿# ED Activity Overlay — Project Synopsis
 
-## Overview
+## Purpose
 
-The Elite Dangerous INARA Overlay is a sophisticated Windows overlay application designed to provide real-time trade route information for Elite Dangerous players.
-The application creates an unobtrusive overlay that displays trade routes sourced from the INARA community database, helping players maximize their trading profits without leaving the game.
+ED Activity Overlay is a Windows .NET 8 WPF companion overlay for Elite Dangerous.
 
-## Core Purpose
+The application is activity-oriented rather than information-oriented: it uses local game state to present the information and next actions relevant to what the commander is doing now, without requiring constant switching to external tools.
 
-The overlay serves as a bridge between Elite Dangerous gameplay and the INARA community database, providing players with:
-- **Real-time trade route data** directly overlaid on their game screen
-- **Seamless integration** that doesn't interrupt gameplay flow
-- **Advanced filtering options** to find optimal trade routes based on player preferences
-- **Interactive overlay windows** that remain synchronized with the game window
+## Core Architecture
 
-## Core User Stories
+The application is organized around four primary activity workspaces:
 
-### 1. Trade Route Discovery
-**As a trader in Elite Dangerous**, I want to search for profitable trade routes near my current location so that I can maximize my credits per hour without alt-tabbing out of the game.
+- Trade
+- Engineering
+- Exploration + Exobiology
+- Mining
 
-**Key Features:**
-- Search by current star system location
-- Filter by cargo capacity, ship size, and station preferences
-- Sort results by profit margins or distance
-- View both single-leg and round-trip routes
+Frontier Player Journal events and companion JSON files provide authoritative local commander/game state. Activity services consume that state and expose focused presentation models to WPF overlays.
 
-### 2. In-Game Overlay Display
-**As a player**, I want trade route information displayed as an overlay on my game screen so that I can reference it while flying without minimizing the game.
+External community services are optional enrichment/data providers and must remain behind explicit provider boundaries.
 
-**Key Features:**
-- Non-intrusive overlay that follows the game window
-- Auto-hide when game loses focus
-- Click-through capability when not actively using the overlay
-- Responsive positioning that adapts to game window size
+## Local Game Data
 
-### 3. Advanced Trade Filtering
-**As an experienced trader**, I want to apply advanced filters to trade routes so that I can find routes that match my specific ship configuration and trading preferences.
+The application consumes Frontier data including:
 
-**Key Features:**
-- Landing pad size requirements (Small/Medium/Large)
-- Maximum station distance from star
-- Minimum supply/demand quantities
-- PowerPlay faction preferences
-- Price data age limits
+- Player Journal events
+- `Market.json`
+- `NavRoute.json`
+- `Cargo.json`
+- `Backpack.json`
+- `ShipLocker.json`
+- other Frontier companion JSON files where required
 
-### 4. Route Information Display
-**As a player planning trade runs**, I want to see comprehensive route information including station details, commodity prices, and profit calculations so that I can make informed trading decisions.
+The Journal and companion-file readers are read-only.
 
-**Key Features:**
-- Station names, systems, and distances
-- Commodity buy/sell prices with supply/demand data
-- Profit per unit and total profit calculations
-- Last updated timestamps for price data
-- Round-trip route combinations
+## Trade
 
-### 5. Global Hotkey Access
-**As a player actively flying in Elite Dangerous**, I want to quickly toggle the trade route overlay using a keyboard shortcut so that I can access trading information without clicking or alt-tabbing.
+The Trading workspace supports local game-state integration, cargo context, market validation, route-progress tracking, route result presentation and a compact pinned-route HUD.
 
-**Key Features:**
-- Ctrl+5 global hotkey that works even when Elite Dangerous is in focus
-- Same toggle functionality as the overlay button
-- System-wide hotkey registration that works from any application
-- Automatic hotkey cleanup when application closes
-- Graceful fallback if hotkey is already in use by another application
+Remote route discovery is currently disabled while the market-data provider/query architecture is redesigned. Future remote trade discovery must remain provider-neutral and separate from Journal ingestion.
 
-## Integration with Elite Dangerous
+## Engineering
 
-The overlay integrates with Elite Dangerous through:
+Engineering features include:
 
-### Window Management
-- **Process Detection**: Automatically detects running Elite Dangerous instances
-- **Window Tracking**: Monitors game window position and state
-- **Overlay Positioning**: Maintains overlay position relative to game window
-- **Focus Management**: Shows/hides overlay based on game window focus
+- Horizons and Odyssey material inventory
+- blueprint catalog and recipes
+- persistent wishlist/plan
+- live missing-material calculation
+- material-acquisition guidance
+- engineer status/progress presentation
 
-### User Experience
-- **Non-Intrusive Design**: Overlay doesn't interfere with game controls
-- **Global Hotkey Support**: Ctrl+5 hotkey for system-wide toggle functionality
-- **Contextual Visibility**: Automatically manages overlay visibility based on game state
-- **Synchronized Movement**: Overlay follows game window movement and resizing
-- **Performance Optimized**: Runs at 60 FPS for smooth overlay updates
+Material state is assembled from local Frontier data and persisted companion state.
 
-## Integration with INARA
+## Exploration and Exobiology
 
-The overlay connects to INARA through:
+Exploration uses the Player Journal as the authoritative source for personal progress.
 
-### Data Retrieval
-- **Web Scraping**: Retrieves trade route data from INARA's web interface
-- **Parameter Mapping**: Translates user search criteria to INARA's form parameters
-- **HTML Parsing**: Processes INARA's trade route pages to extract structured data
-- **Real-time Updates**: Fetches current market data on-demand
+Features include:
 
-### Search Capabilities
-- **Trade Route Search**: Queries INARA's trade route database with user-specified parameters
-- **Market Data**: Retrieves current commodity prices and availability
-- **Station Information**: Includes station types, landing pad sizes, and distances
-- **PowerPlay Integration**: Supports PowerPlay faction filtering
+- current-system/body catalog
+- configurable community-data disclosure
+- mapping/value guidance
+- offline exobiology prediction
+- colony-spacing guidance
+- route and fuel assistance
+- POI enrichment
+- DSS probe guidance
+- findings/history tracking
+- estimated unsold exploration value
 
-### Data Processing
-- **Route Calculation**: Calculates profit margins and route distances
-- **Result Formatting**: Presents data in user-friendly format
-- **Error Handling**: Gracefully handles network issues and parsing errors
-- **Fallback Data**: Provides test data when INARA is unavailable
+Optional community enrichment is isolated behind dedicated provider services.
 
-## Technical Architecture
+## Mining
 
-### Core Components
-1. **Main Overlay Window**: Primary interface with toggle functionality
-2. **Trade Route Search Window**: Advanced search interface with filtering options
-3. **Results Overlay Window**: Displays trade route results in an overlay format
-4. **INARA Communication Layer**: Handles web requests and data parsing
-5. **Windows API Integration**: Manages overlay behavior and window interactions
-6. **Overlay Layout Settings**: Centralized sizing/positioning constants in `ED_Inara_Overlay/Utils/OverlayLayoutSettings.cs`
+The Mining workspace presents session information derived from local Journal events, including prospector composition and refined cargo state.
 
-### Adaptive Layout Model
-- Overlay scaling is based on a 1920x1080 baseline and clamped ranges per window type.
-- Overlay position is always clamped to the target monitor work area (not global desktop bounds).
-- Window-specific limits (width/height ratios, max sizes, margins, offsets) are centralized in `OverlayLayoutSettings`.
+## Overlay and Input
 
-### Key Technologies
-- **WPF (.NET 8)**: Modern Windows application framework
-- **HTML Agility Pack**: Web scraping and HTML parsing
-- **Windows API**: Low-level window management and overlay functionality
-- **Async/Await**: Non-blocking network operations
+The overlay follows the Elite Dangerous window and supports focus-aware visibility and interactive/passive modes.
 
-## Value Proposition
+Input/control features include:
 
-The Elite Dangerous INARA Overlay provides:
-- **Increased Trading Efficiency**: Reduces time spent researching trade routes
-- **Enhanced Gameplay Experience**: Keeps players immersed in the game world
-- **Data-Driven Decision Making**: Provides accurate, up-to-date market information
-- **Community Integration**: Leverages the collective knowledge of the INARA community
-- **Customizable Experience**: Adapts to individual player preferences and ship configurations
+- configurable global/activity hotkeys
+- compact activity switching
+- pinned secondary HUD presentation
+- optional Logitech X52 Pro MFD/LED/activity controls through DirectOutput
+- Elite bindings integration for supported navigation automation
 
-This overlay represents a significant quality-of-life improvement for Elite Dangerous traders, bridging the gap between in-game experience and community-driven market intelligence.
+## Persistence
+
+Application settings and companion state are stored under the EDActivityOverlay application-data folders.
+
+A compatibility migration moves data from the pre-rebrand folder name on startup.
+
+## External Data Boundaries
+
+External services are treated as replaceable providers rather than application identity or core architecture.
+
+Current/future provider integrations should use:
+
+- self-identifying HTTP User-Agent values;
+- bounded retries and caching;
+- provider-neutral domain models;
+- explicit separation between local Frontier ingestion and remote enrichment;
+- no scraping of services that prohibit automated access.
+
+## Technology
+
+- C# / .NET 8
+- WPF
+- local JSON/Journal ingestion
+- SQLite-backed companion state where applicable
+- HTTP provider integrations
+- Windows process/window integration
+- Logitech DirectOutput integration
+
+## Product Direction
+
+The product goal is a contextual in-game activity assistant: use authoritative local game state plus optional provider data to show the commander what matters now and what to do next.

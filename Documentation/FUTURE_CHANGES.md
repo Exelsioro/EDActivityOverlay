@@ -1,23 +1,35 @@
-# Future Changes
+﻿# Future Changes
 
 ## Critical Priority
-1. Decompose `InaraTools/InaraParserUtils.LegParsing.cs`.
-2. Decompose `ED_Inara_Overlay/Windows/TradeRouteWindow.xaml.cs`.
-3. Decompose `ED_Inara_Overlay/UserControls/TradeRouteCard.xaml.cs`.
-4. Decompose `InaraTools/InaraCommunicator.cs`.
+
+1. Keep Frontier Journal and companion JSON ingestion behind unified state services.
+2. Keep trade-route discovery behind a provider-neutral market-data boundary.
+3. Continue decomposition of large activity windows and orchestration classes.
+4. Preserve existing activity behavior while infrastructure is refactored.
 
 ## High Priority
-1. Decompose `ED_Inara_Overlay/Services/ThemeManager.cs`.
-2. Decompose `ED_Inara_Overlay/Utils/UIHelpers.cs`.
-3. Decompose `ED_Inara_Overlay/Utils/WindowsAPI.cs`.
+
+1. Integrate the unified `JournalMonitorService` / canonical game-state flow across activities.
+2. Complete provider-neutral trade search after a suitable market-data query strategy is available.
+3. Improve trade ranking with route geometry, ship context, round trips and additional ranking modes.
+4. Continue decomposition of `ThemeManager`, `UIHelpers`, and Windows integration helpers.
 
 ## Medium Priority
-1. Continue decomposition of `ED_Inara_Overlay/Windows/MainWindow.xaml.cs`.
-2. Continue decomposition of `ED_Inara_Overlay/Windows/MainWindow.OverlayOrchestration.cs`.
+
+1. Continue decomposition of `MainWindow` activity/orchestration code.
+2. Consolidate Frontier JSON readers into a unified monitored snapshot service.
+3. Continue Engineering and Exploration state separation from WPF presentation.
 
 ## Low Priority
-1. Split `ED_Inara_Overlay/Resources/UIStyles.xaml` into thematic resource dictionaries.
 
-## Notes
-1. Keep current behavior unchanged during decomposition.
-2. After each change block, run `dotnet build` for `InaraTools` and `ED_Inara_Overlay`.
+1. Split large style/resource dictionaries into thematic resource dictionaries.
+2. Continue documentation cleanup as old architecture notes become obsolete.
+
+## Validation
+
+After each change block:
+
+```powershell
+dotnet build .\EDActivityOverlay\EDActivityOverlay.sln
+dotnet test .\Testing\EDActivityOverlay.Tests\EDActivityOverlay.Tests.csproj
+```
