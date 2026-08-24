@@ -1,11 +1,10 @@
-using ED_Inara_Overlay.Models;
+﻿using ED_Inara_Overlay.Models;
 using ED_Inara_Overlay.Services;
 
 namespace ED_Inara_Overlay.Services.Engineering;
 
 public sealed class MaterialAcquisitionAdvisor
 {
-    private const string InaraNearestUrl = "https://inara.cz/elite/nearest/";
     private static readonly HashSet<string> RawMaterials = Set(
         "carbon", "vanadium", "germanium", "cadmium", "niobium", "arsenic", "chromium",
         "molybdenum", "technetium", "iron", "zinc", "yttrium", "phosphorus", "manganese",
@@ -54,7 +53,7 @@ public sealed class MaterialAcquisitionAdvisor
         [
             new AcquisitionOption(Loc.Get("Loc_Advice_High_energy_wake_scanning"), Loc.Get("Loc_Advice_Fit_a_wake_scanner_and_scan_FSD_wakes_near_busy_stations_or_distribution_ce"), Priority: 10),
             Site(Loc.Get("Loc_Advice_Data_collection"), Loc.Get("Loc_Advice_Scan_the_four_beacons_at_Jameson_s_crash_site_relog_and_trade_the_collected"), "HIP 12099", "1 B — Jameson Crash Site", 15),
-            new AcquisitionOption(Loc.Get("Loc_Advice_Encoded_material_trader"), Loc.Get("Loc_Advice_Trade_surplus_data_Collecting_high_grade_data_and_trading_it_is_usually_fas"), ExternalUrl: InaraNearestUrl, Priority: 20)
+            new AcquisitionOption(Loc.Get("Loc_Advice_Encoded_material_trader"), Loc.Get("Loc_Advice_Trade_surplus_data_Collecting_high_grade_data_and_trading_it_is_usually_fas"), Priority: 20)
         ],
         ["selenium"] =
         [
@@ -127,7 +126,7 @@ public sealed class MaterialAcquisitionAdvisor
         [
             new AcquisitionOption(Loc.Get("Loc_Advice_Odyssey_settlements"), Loc.Get("Loc_Advice_Find_settlements_whose_economy_and_building_type_match_the_item_Missions_ca"), Priority: 10),
             new AcquisitionOption(Loc.Get("Loc_Advice_Mission_rewards"), Loc.Get("Loc_Advice_Check_mission_rewards_for_the_required_Odyssey_resource_before_accepting"), Priority: 20),
-            new AcquisitionOption(Loc.Get("Loc_Advice_Fleet_carrier_bartender"), Loc.Get("Loc_Advice_Buy_or_trade_the_resource_from_a_bartender_if_this_item_type_is_supported"), ExternalUrl: InaraNearestUrl, Priority: 30)
+            new AcquisitionOption(Loc.Get("Loc_Advice_Fleet_carrier_bartender"), Loc.Get("Loc_Advice_Buy_or_trade_the_resource_from_a_bartender_if_this_item_type_is_supported"), Priority: 30)
         ],
         _ =>
         [new AcquisitionOption(Loc.Get("Loc_Advice_Source_not_identified"), Loc.Get("Loc_Advice_The_Journal_recognized_this_item_but_the_local_knowledge_base_has_no_acquis"))]
@@ -166,7 +165,7 @@ public sealed class MaterialAcquisitionAdvisor
         new(title, instructions, Priority: priority, SystemName: system, LocationName: location);
 
     private static AcquisitionOption Trader(string title, int priority) =>
-        new(title, Loc.Get("Loc_Advice_Trade_surplus_materials_from_the_same_category_Check_the_rate_before_tradin"), ExternalUrl: InaraNearestUrl, Priority: priority);
+        new(title, Loc.Get("Loc_Advice_Trade_surplus_materials_from_the_same_category_Check_the_rate_before_tradin"), Priority: priority);
 
     private static HashSet<string> Set(params string[] items) => new(items, StringComparer.OrdinalIgnoreCase);
 }

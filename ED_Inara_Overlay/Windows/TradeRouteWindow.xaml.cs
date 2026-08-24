@@ -1,8 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using System.Net;
-using System.Net.Http;
 using InaraTools;
 using ED_Inara_Overlay.Utils;
 using System.Windows.Interop;
@@ -220,93 +218,14 @@ namespace ED_Inara_Overlay.Windows
             }
         }
 
-        private async void SearchButton_Click(object sender, RoutedEventArgs e)
+        private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            if (isSearchInProgress)
-            {
-                return;
-            }
-
-            if (!int.TryParse(CargoCapacityTextBox.Text, out int cargoCapacity) || cargoCapacity <= 0)
-            {
-                StatusText.Text = Loc.Get("Loc_Cargo_capacity_must_be_a_positive_integer");
-                Logger.Logger.Warning($"Invalid cargo capacity input: '{CargoCapacityTextBox.Text}'");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(NearStarSystemTextBox.Text))
-            {
-                StatusText.Text = Loc.Get("Loc_Enter_a_star_system_or_sync_it_from_Journal");
-                return;
-            }
-
-            isSearchInProgress = true;
-            SetSearchControlsEnabled(false);
-            StatusText.Text = Loc.Get("Loc_Searching");
-            Logger.Logger.Info("Initiating trade route search...");
-
-            // Unpin any existing pinned route overlay before showing new results
-            if (Owner is MainWindow mainWindow)
-            {
-                mainWindow.UnpinRouteOverlay();
-                Logger.Logger.Info("Unpinned existing route overlay before search");
-            }
-
-                var searchParams = new TradeRouteSearchParams
-            {
-                NearStarSystem = NearStarSystemTextBox.Text,
-                CargoCapacity = cargoCapacity,
-                MaxRouteDistance = GetMaxRouteDistanceApiValue(),
-                MaxPriceAge = GetMaxPriceAgeApiValue(),
-                IncludeRoundTrips = IncludeRoundTripsCheckBox.IsChecked == true,
-                DisplayPowerplayBonuses = DisplayPowerplayBonusesCheckBox.IsChecked == true,
-                // Additional filters
-                MinLandingPad = GetComboBoxIndex(MinLandingPadComboBox),
-                MaxStationDistance = GetComboBoxIndex(MaxStationDistanceComboBox),
-                UseSurfaceStations = GetComboBoxIndex(UseSurfaceStationsComboBox),
-                SourceStationPower = GetComboBoxIndex(SourceStationPowerComboBox),
-                TargetStationPower = GetComboBoxIndex(TargetStationPowerComboBox),
-                MinSupply = GetComboBoxIndex(MinSupplyComboBox),
-                MinDemand = GetComboBoxIndex(MinDemandComboBox),
-                OrderBy = GetComboBoxIndex(OrderByComboBox)
-            };
-
-            try
-            {
-                var tradeRoutes = await InaraCommunicator.SearchInaraTradeRoutes(searchParams);
-                StatusText.Text = Loc.Format("Loc_Found_Routes_Format", tradeRoutes.Count);
-                Logger.Logger.Info($"Found {tradeRoutes.Count} trade routes.");
-                
-                // Show results in overlay window
-                if (tradeRoutes.Count > 0)
-                {
-                    ((MainWindow)Owner).ShowResultsOverlay(tradeRoutes);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (ex is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.ServiceUnavailable)
-                {
-                    if (httpEx.Message.Contains("Retry-After", StringComparison.OrdinalIgnoreCase))
-                    {
-                        StatusText.Text = Loc.Get("Loc_INARA_rate_limited_requests_Retry_later_up_to_1_hour");
-                    }
-                    else
-                    {
-                        StatusText.Text = Loc.Get("Loc_INARA_is_temporarily_unavailable_503_Try_again_in_12_minutes");
-                    }
-                }
-                else
-                {
-                    StatusText.Text = Loc.Get("Loc_Error_during_route_search");
-                }
-                Logger.Logger.Error($"Error searching trade routes: {ex.Message}");
-            }
-            finally
-            {
-                isSearchInProgress = false;
-                SetSearchControlsEnabled(true);
-            }
+            // Remote route search is deliberately disabled while the application
+            // moves from INARA to a provider-neutral market-data implementation.
+            // Keep the trading workspace, Journal integration, test data and
+            // pinned-route workflow intact.
+            StatusText.Text = "Trade route search is temporarily unavailable while a new market-data provider is being integrated.";
+            Logger.Logger.Info("Trade route search requested while remote provider is disabled.");
         }
         
         private void TestDataButton_Click(object sender, RoutedEventArgs e)

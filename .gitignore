@@ -1,4 +1,4 @@
-# Build results
+﻿# Build results
 bin/
 obj/
 out/
@@ -89,3 +89,4 @@ dist/.git/
 Release/*
 Installer/*
 Scripts/*
+Scripts/
