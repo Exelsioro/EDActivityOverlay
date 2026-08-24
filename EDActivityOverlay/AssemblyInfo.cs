@@ -9,4 +9,4 @@ using System.Runtime.CompilerServices;
                                                 //(used if a resource is not found in the page,
                                                 // app, or any theme specific resource dictionaries)
 )]
-[assembly: InternalsVisibleTo("EDActivityOverlay.LayoutTests")]
+[assembly: InternalsVisibleTo("EDActivityOverlay.Tests")]
