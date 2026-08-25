@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace EDActivityOverlay.Services.Dss;
 
@@ -45,8 +45,16 @@ internal sealed record DssHudTrackResult(
 /// </summary>
 internal sealed class DssHudGeometryTracker
 {
+    // Real GLOBAL / REACQUIRE detector cycles can occasionally take
+    // 200-300+ ms. The old 180 ms hold could therefore expire because of our
+    // own CV latency while the player was moving the camera.
     private static readonly TimeSpan CenterHold =
-        TimeSpan.FromMilliseconds(180);
+        TimeSpan.FromMilliseconds(650);
+
+    private static readonly TimeSpan CenterPredictionWindow =
+        TimeSpan.FromMilliseconds(380);
+
+    private const double MaximumPredictedCenterDisplacementPixels = 120d;
 
     private static readonly TimeSpan FreshObservationWindow =
         TimeSpan.FromMilliseconds(320);
@@ -77,14 +85,10 @@ internal sealed class DssHudGeometryTracker
 
     private int localMisses;
 
-    // Historical centre survives active-track loss. It is not rendered once
-    // CenterHold expires, but it is useful for deciding whether a later global
-    // candidate is a plausible continuation or a large reacquisition jump.
+    // Historical-state flag survives active-track loss. It is not rendered once
+    // CenterHold expires; it only selects REACQUIRE mode and the stricter
+    // temporal confirmation count. Screen-space distance is not a hard gate.
     private bool hasHistoricalCenter;
-    private double historicalCenterX;
-    private double historicalCenterY;
-    private DateTimeOffset historicalCenterUtc =
-        DateTimeOffset.MinValue;
 
     private double pendingCenterX;
     private double pendingCenterY;
@@ -116,10 +120,6 @@ internal sealed class DssHudGeometryTracker
         localMisses = 0;
 
         hasHistoricalCenter = false;
-        historicalCenterX = 0;
-        historicalCenterY = 0;
-        historicalCenterUtc =
-            DateTimeOffset.MinValue;
 
         ResetPendingCenter();
 
@@ -461,10 +461,6 @@ internal sealed class DssHudGeometryTracker
         localMisses = 0;
 
         hasHistoricalCenter = true;
-        historicalCenterX = x;
-        historicalCenterY = y;
-        historicalCenterUtc =
-            timestampUtc;
     }
 
     private DssHudGeometry BuildStableCenterGeometry(
@@ -496,21 +492,55 @@ internal sealed class DssHudGeometryTracker
                 .TotalMilliseconds;
 
             double confidence =
-                0.42
+                0.58
                 * Math.Clamp(
                     1d
                     - ageMs
                       / CenterHold
                           .TotalMilliseconds,
-                    0d,
+                    0.12d,
                     1d);
 
-            // Freeze only. Never extrapolate an unobserved centre.
+            // Short bounded prediction only to bridge detector stalls.
+            // This is intentionally not the old long image/camera prediction:
+            // no star-field tracking, max 380 ms of existing smoothed screen
+            // velocity, and max 120 px total displacement.
+            double predictionSeconds =
+                Math.Clamp(
+                    ageMs,
+                    0d,
+                    CenterPredictionWindow
+                        .TotalMilliseconds)
+                / 1000d;
+
+            double predictedDx =
+                velocityX * predictionSeconds;
+
+            double predictedDy =
+                velocityY * predictionSeconds;
+
+            double predictedDistance =
+                Math.Sqrt(
+                    predictedDx * predictedDx
+                    + predictedDy * predictedDy);
+
+            if (predictedDistance
+                > MaximumPredictedCenterDisplacementPixels
+                && predictedDistance > 0)
+            {
+                double scale =
+                    MaximumPredictedCenterDisplacementPixels
+                    / predictedDistance;
+
+                predictedDx *= scale;
+                predictedDy *= scale;
+            }
+
             return GeometryForCenter(
                 frame,
                 verticalFovDegrees,
-                centerX,
-                centerY,
+                centerX + predictedDx,
+                centerY + predictedDy,
                 confidence);
         }
 
@@ -940,6 +970,7 @@ internal sealed class DssHudGeometryTracker
         pendingHorizonUtc =
             DateTimeOffset.MinValue;
     }
+
 
     private static double Distance(
         double x1,

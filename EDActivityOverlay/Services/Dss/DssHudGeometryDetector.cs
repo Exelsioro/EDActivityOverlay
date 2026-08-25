@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -71,6 +71,7 @@ internal sealed class DssHudGeometryDetector
 
     private const int MarkerMinimumLuma = 120;
     private const int MarkerMaximumSpread = 120;
+    private const double MarkerCoreMinimumMeanLuma = 125d;
 
     private const int HorizonMinimumLuma = 135;
     private const int HorizonMaximumSpread = 60;
@@ -182,9 +183,19 @@ internal sealed class DssHudGeometryDetector
                     hint.PredictedCenterX,
                     hint.PredictedCenterY) > 72;
 
+            // Frontier intentionally blinks the horizon triplet. Requiring
+            // H on every GLOBAL reacquisition makes a trusted circle vanish
+            // even when the native centre marker + radial guide are still
+            // clear. Keep H as the preferred validator, but permit an
+            // exceptionally strong centre-only candidate. The tracker still
+            // requires three mutually consistent reacquire observations.
+            bool strongCenterOnly =
+                center.Confidence >= 0.94;
+
             if ((requireExpectedHorizonValidation
                  || suspiciousLocalJump)
-                && !safeObservedHorizon)
+                && !safeObservedHorizon
+                && !strongCenterOnly)
             {
                 center = null;
                 horizon = null;
@@ -1036,12 +1047,20 @@ internal sealed class DssHudGeometryDetector
             }
         }
 
+        double coreMeanLuma =
+            MeasureMarkerCoreMeanLuma(
+                frame,
+                x,
+                y,
+                scale);
+
         int minimumHits =
             Math.Max(
                 6,
                 (int)Math.Round(7 * scale));
 
-        if (crossHits < minimumHits
+        if (!IsMarkerCoreLumaAccepted(coreMeanLuma)
+            || crossHits < minimumHits
             || alongHits < minimumHits
             || peakLuma < 140)
         {
@@ -1065,6 +1084,54 @@ internal sealed class DssHudGeometryDetector
             alongHits,
             peakLuma,
             roundness);
+    }
+
+    internal static bool IsMarkerCoreLumaAccepted(
+        double meanLuma) =>
+        meanLuma >= MarkerCoreMinimumMeanLuma;
+
+    private static double MeasureMarkerCoreMeanLuma(
+        DssCapturedFrame frame,
+        double x,
+        double y,
+        double scale)
+    {
+        int radius =
+            Math.Clamp(
+                (int)Math.Round(scale),
+                1,
+                2);
+
+        int centerX =
+            (int)Math.Round(x);
+
+        int centerY =
+            (int)Math.Round(y);
+
+        int samples = 0;
+        double lumaSum = 0;
+
+        for (int offsetY = -radius;
+             offsetY <= radius;
+             offsetY++)
+        {
+            for (int offsetX = -radius;
+                 offsetX <= radius;
+                 offsetX++)
+            {
+                lumaSum +=
+                    GetRawLuma(
+                        frame,
+                        centerX + offsetX,
+                        centerY + offsetY);
+
+                samples++;
+            }
+        }
+
+        return samples > 0
+            ? lumaSum / samples
+            : 0;
     }
 
     private static MarkerAtPoint

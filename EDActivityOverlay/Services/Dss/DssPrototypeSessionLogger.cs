@@ -30,6 +30,10 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
     private readonly object sync = new();
     private readonly StreamWriter frameWriter;
     private readonly StreamWriter journalWriter;
+    private readonly StreamWriter shotWriter;
+    private readonly StreamWriter impactDetectorWriter;
+    private readonly StreamWriter impactWriter;
+    private readonly StreamWriter unresolvedLaunchWriter;
     private readonly string diagnosticFramesDirectory;
     private DateTimeOffset lastFrameFlushUtc =
         DateTimeOffset.MinValue;
@@ -85,6 +89,61 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
                 "journal-events.ndjson"),
             append: false,
             new UTF8Encoding(false));
+
+        shotWriter = new StreamWriter(
+            Path.Combine(
+                SessionDirectory,
+                "shots.csv"),
+            append: false,
+            new UTF8Encoding(false));
+
+        shotWriter.WriteLine(
+            "input_utc,launch_sequence,frame_utc,frame_age_ms,frame_sequence," +
+            "fire_action,binding_slot,binding_device,binding_key,geometry_valid," +
+            "readiness_state,angular_diameter_deg,center_x,center_y,horizon_radius_px," +
+            "reticle_x,reticle_y,aim_norm_x,aim_norm_y,aim_norm_r,aim_angle_deg," +
+            "nearest_point,nearest_point_x,nearest_point_y,nearest_error_norm," +
+            "nearest_error_px,efficiency_target,pattern_source," +
+            "hud_miss_visible,hud_miss_active_ratio");
+        shotWriter.Flush();
+
+        impactDetectorWriter = new StreamWriter(
+            Path.Combine(
+                SessionDirectory,
+                "impact-detector.csv"),
+            append: false,
+            new UTF8Encoding(false));
+
+        impactDetectorWriter.WriteLine(
+            "frame_utc,frame_sequence,armed,change_ratio,active_pixels,event");
+        impactDetectorWriter.Flush();
+
+        impactWriter = new StreamWriter(
+            Path.Combine(
+                SessionDirectory,
+                "impacts.csv"),
+            append: false,
+            new UTF8Encoding(false));
+
+        impactWriter.WriteLine(
+            "impact_utc,impact_sequence,frame_sequence,counter_change_ratio," +
+            "matched_launch_sequence,launch_utc,flight_ms,correlation_method," +
+            "candidate_count,launch_geometry_valid,aim_norm_x,aim_norm_y," +
+            "aim_norm_r,aim_angle_deg,angular_diameter_deg,nearest_point," +
+            "nearest_error_px");
+        impactWriter.Flush();
+
+        unresolvedLaunchWriter = new StreamWriter(
+            Path.Combine(
+                SessionDirectory,
+                "unresolved-launches.csv"),
+            append: false,
+            new UTF8Encoding(false));
+
+        unresolvedLaunchWriter.WriteLine(
+            "expired_utc,launch_sequence,launch_utc,age_ms,reason," +
+            "geometry_valid,aim_norm_r");
+        unresolvedLaunchWriter.Flush();
 
         frameWriter.WriteLine(
             "utc,sequence,width,height,gui_focus,system_address,body_id,body_name,fov_deg," +
@@ -238,6 +297,306 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
         }
     }
 
+    public void LogFireBindings(
+        DssFireBindingSet bindings)
+    {
+        lock (sync)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            File.WriteAllText(
+                Path.Combine(
+                    SessionDirectory,
+                    "fire-bindings.json"),
+                JsonSerializer.Serialize(
+                    bindings,
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    }),
+                new UTF8Encoding(false));
+        }
+    }
+
+    public void LogProbeLaunch(
+        DssProbeLaunchRecord launch)
+    {
+        lock (sync)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            shotWriter.WriteLine(
+                string.Join(
+                    ",",
+                    Csv(
+                        launch.InputUtc
+                            .ToString("O")),
+                    launch.LaunchSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    Csv(
+                        launch.FrameUtc
+                            == DateTimeOffset.MinValue
+                            ? string.Empty
+                            : launch.FrameUtc
+                                .ToString("O")),
+                    launch.FrameAgeMilliseconds
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.FrameSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    Csv(launch.FireAction),
+                    Csv(launch.BindingSlot),
+                    Csv(launch.BindingDevice),
+                    Csv(launch.BindingKey),
+                    launch.GeometryValid
+                        ? "1"
+                        : "0",
+                    Csv(launch.ReadinessState),
+                    launch.AngularDiameterDegrees
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.BodyCenterX
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.BodyCenterY
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.HorizonRadiusPixels
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.ReticleX
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.ReticleY
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.AimNormalizedX
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.AimNormalizedY
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.AimNormalizedRadius
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.AimAngleDegrees
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.NearestPatternPoint
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    launch.NearestPatternX
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.NearestPatternY
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.NearestErrorNormalized
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    launch.NearestErrorPixels
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    launch.EfficiencyTarget
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    Csv(launch.PatternSource),
+                    launch.HudMissVisible
+                        ? "1"
+                        : "0",
+                    launch.HudMissActiveRatio
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture)));
+
+            shotWriter.Flush();
+        }
+    }
+
+    public void LogImpactCounterObservation(
+        long frameSequence,
+        DateTimeOffset frameUtc,
+        DssImpactCounterObservation observation)
+    {
+        lock (sync)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            impactDetectorWriter.WriteLine(
+                string.Join(
+                    ",",
+                    Csv(
+                        frameUtc
+                            .ToString("O")),
+                    frameSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    observation.Armed
+                        ? "1"
+                        : "0",
+                    observation.ChangeRatio
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    observation.ActivePixelCount
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    observation.Changed
+                        ? "IMPACT_COUNTER_CHANGED"
+                        : string.Empty));
+
+            if (observation.Changed)
+            {
+                impactDetectorWriter.Flush();
+            }
+        }
+    }
+
+    public void LogProbeImpact(
+        DssProbeImpactCorrelation impact)
+    {
+        lock (sync)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            impactWriter.WriteLine(
+                string.Join(
+                    ",",
+                    Csv(
+                        impact.ImpactUtc
+                            .ToString("O")),
+                    impact.ImpactSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    impact.ImpactFrameSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    impact.CounterChangeRatio
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    impact.MatchedLaunchSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    Csv(
+                        impact.LaunchUtc
+                            == DateTimeOffset.MinValue
+                            ? string.Empty
+                            : impact.LaunchUtc
+                                .ToString("O")),
+                    impact.FlightMilliseconds
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    Csv(
+                        impact.CorrelationMethod),
+                    impact.CandidateCount
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    impact.LaunchGeometryValid
+                        ? "1"
+                        : "0",
+                    impact.AimNormalizedX
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    impact.AimNormalizedY
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    impact.AimNormalizedRadius
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    impact.AimAngleDegrees
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    impact.AngularDiameterDegrees
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    impact.NearestPatternPoint
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    impact.NearestErrorPixels
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture)));
+
+            impactWriter.Flush();
+        }
+    }
+
+    public void LogUnresolvedLaunch(
+        DssProbeUnresolvedLaunch unresolved)
+    {
+        lock (sync)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            unresolvedLaunchWriter.WriteLine(
+                string.Join(
+                    ",",
+                    Csv(
+                        unresolved.ExpiredUtc
+                            .ToString("O")),
+                    unresolved.LaunchSequence
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    Csv(
+                        unresolved.LaunchUtc
+                            .ToString("O")),
+                    unresolved.AgeMilliseconds
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    Csv(
+                        unresolved.Reason),
+                    unresolved.GeometryValid
+                        ? "1"
+                        : "0",
+                    unresolved.AimNormalizedRadius
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture)));
+
+            unresolvedLaunchWriter.Flush();
+        }
+    }
+
     public void LogJournalEvent(
         JournalEventReceivedEventArgs e)
     {
@@ -347,8 +706,16 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
             disposed = true;
             frameWriter.Flush();
             journalWriter.Flush();
+            shotWriter.Flush();
+            impactDetectorWriter.Flush();
+            impactWriter.Flush();
+            unresolvedLaunchWriter.Flush();
             frameWriter.Dispose();
             journalWriter.Dispose();
+            shotWriter.Dispose();
+            impactDetectorWriter.Dispose();
+            impactWriter.Dispose();
+            unresolvedLaunchWriter.Dispose();
         }
     }
 }

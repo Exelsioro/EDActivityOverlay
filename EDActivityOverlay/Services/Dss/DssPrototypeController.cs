@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -33,9 +34,15 @@ internal sealed class DssPrototypeController : IDisposable
     private readonly DssHudGeometryDetector detector = new();
     private readonly DssHudGeometryTracker tracker = new();
     private readonly DssAssistantReadinessEvaluator readinessEvaluator = new();
+    private readonly DssImpactCounterChangeDetector impactCounterDetector =
+        new();
+    private readonly DssProbeFlightCorrelator flightCorrelator =
+        new();
 
     private DssPrototypeOverlayWindow? overlay;
     private DssPrototypeSessionLogger? sessionLogger;
+    private DssFireInputMonitor? fireInputMonitor;
+    private DssProbeLaunchFrameSnapshot? latestLaunchFrame;
     private EliteGraphicsSettingsSnapshot graphics =
         EliteGraphicsSettingsSnapshot.Default;
     private DssModuleSnapshot dssModule =
@@ -47,6 +54,7 @@ internal sealed class DssPrototypeController : IDisposable
     private CancellationTokenSource? captureCancellation;
     private Task? captureTask;
     private long frameSequence;
+    private int launchSequence;
     private bool sessionActive;
     private bool captureActive;
     private int requestedOverlayVisibility = -1;
@@ -144,6 +152,10 @@ internal sealed class DssPrototypeController : IDisposable
                 JournalMonitorService.Instance.JournalDirectory);
 
         frameSequence = 0;
+        launchSequence = 0;
+        latestLaunchFrame = null;
+        impactCounterDetector.Reset();
+        flightCorrelator.Reset();
         sessionActive = true;
         captureActive = true;
         requestedOverlayVisibility = -1;
@@ -174,6 +186,8 @@ internal sealed class DssPrototypeController : IDisposable
         sessionLogger =
             new DssPrototypeSessionLogger(
                 sessionContext);
+
+        StartFireInputMonitor();
 
         overlay = new DssPrototypeOverlayWindow(
             targetWindow);
@@ -272,6 +286,13 @@ internal sealed class DssPrototypeController : IDisposable
     private void ResumeDssCapture()
     {
         captureActive = true;
+        impactCounterDetector.Reset();
+
+        if (fireInputMonitor is not null)
+        {
+            fireInputMonitor.Enabled = true;
+        }
+
         StartCaptureLoop();
 
         Logger.Logger.Info(
@@ -281,6 +302,13 @@ internal sealed class DssPrototypeController : IDisposable
     private void LeaveDssCapture()
     {
         captureActive = false;
+        impactCounterDetector.Reset();
+
+        if (fireInputMonitor is not null)
+        {
+            fireInputMonitor.Enabled = false;
+        }
+
         StopCaptureLoop();
         RequestOverlayVisibility(false);
 
@@ -459,6 +487,52 @@ internal sealed class DssPrototypeController : IDisposable
 
                     if (context is not null)
                     {
+                        DssAimMissObservation missObservation =
+                            DssAimMissIndicatorDetector.Detect(
+                                frame);
+
+                        DssImpactCounterObservation impactObservation =
+                            impactCounterDetector.Process(
+                                frame);
+
+                        logger?.LogImpactCounterObservation(
+                            sequence,
+                            frame.TimestampUtc,
+                            impactObservation);
+
+                        if (impactObservation.Changed
+                            && flightCorrelator.HasPendingLaunches)
+                        {
+                            DssProbeImpactCorrelation impact =
+                                flightCorrelator.RegisterImpact(
+                                    frame.TimestampUtc,
+                                    sequence,
+                                    impactObservation.ChangeRatio);
+
+                            logger?.LogProbeImpact(
+                                impact);
+
+                            Logger.Logger.Info(
+                                $"DSS IMPACT #{impact.ImpactSequence}: " +
+                                $"launch={impact.MatchedLaunchSequence}; " +
+                                $"flight={impact.FlightMilliseconds:0} ms; " +
+                                $"method={impact.CorrelationMethod}; " +
+                                $"candidates={impact.CandidateCount}; " +
+                                $"delta={impact.CounterChangeRatio:0.####}.");
+                        }
+
+                        foreach (DssProbeUnresolvedLaunch unresolved
+                                 in flightCorrelator.Expire(
+                                     frame.TimestampUtc))
+                        {
+                            logger?.LogUnresolvedLaunch(
+                                unresolved);
+
+                            Logger.Logger.Info(
+                                $"DSS LAUNCH #{unresolved.LaunchSequence} " +
+                                $"unresolved after {unresolved.AgeMilliseconds / 1000d:0.0}s.");
+                        }
+
                         DssAssistantReadinessSnapshot readiness =
                             readinessEvaluator.Evaluate(
                                 state,
@@ -475,6 +549,16 @@ internal sealed class DssPrototypeController : IDisposable
                             readiness,
                             captureWatch.Elapsed.TotalMilliseconds,
                             detectWatch.Elapsed.TotalMilliseconds);
+
+                        Volatile.Write(
+                            ref latestLaunchFrame,
+                            new DssProbeLaunchFrameSnapshot(
+                                sequence,
+                                frame.TimestampUtc,
+                                state,
+                                readiness,
+                                tracking.Geometry,
+                                missObservation));
 
                         QueueOverlayUpdate(
                             frame,
@@ -511,6 +595,115 @@ internal sealed class DssPrototypeController : IDisposable
             Logger.Logger.Warning(
                 $"DSS prototype capture loop failed: {ex.Message}");
         }
+    }
+
+    private void StartFireInputMonitor()
+    {
+        fireInputMonitor?.Dispose();
+        fireInputMonitor = null;
+
+        try
+        {
+            DssFireBindingSet bindings =
+                DssFireBindingResolver.Resolve();
+
+            sessionLogger?.LogFireBindings(
+                bindings);
+
+            if (bindings.Bindings.Count == 0)
+            {
+                Logger.Logger.Warning(
+                    "DSS launch logger: no PrimaryFire/SecondaryFire input bindings were found.");
+                return;
+            }
+
+            fireInputMonitor =
+                new DssFireInputMonitor(
+                    bindings,
+                    targetWindowProvider);
+
+            fireInputMonitor.FirePressed +=
+                OnFireInputPressed;
+
+            fireInputMonitor.Enabled =
+                true;
+
+            fireInputMonitor.Start();
+
+            Logger.Logger.Info(
+                $"DSS launch logger armed: preset='{bindings.PresetName}', " +
+                $"file='{Path.GetFileName(bindings.FilePath)}', " +
+                $"bindings={fireInputMonitor.DiagnosticSummary}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Logger.Warning(
+                $"DSS launch logger could not resolve Elite fire bindings: {ex.Message}");
+        }
+    }
+
+    private void OnFireInputPressed(
+        object? sender,
+        DssFireInputEvent e)
+    {
+        if (disposed
+            || !sessionActive
+            || !captureActive
+            || latestState.GuiFocus != 10)
+        {
+            return;
+        }
+
+        int sequence =
+            Interlocked.Increment(
+                ref launchSequence);
+
+        DssProbeLaunchFrameSnapshot? frame =
+            Volatile.Read(
+                ref latestLaunchFrame);
+
+        DssProbeLaunchRecord launch =
+            DssProbeLaunchCorrelator.Correlate(
+                sequence,
+                e,
+                frame);
+
+        sessionLogger?.LogProbeLaunch(
+            launch);
+
+        bool queuedForImpact =
+            flightCorrelator.RegisterLaunch(
+                launch);
+
+        Logger.Logger.Info(
+            $"DSS FIRE INPUT #{sequence}: " +
+            $"{launch.FireAction}/{launch.BindingSlot} " +
+            $"{launch.BindingDevice}:{launch.BindingKey}; " +
+            $"geometry={launch.GeometryValid}; " +
+            $"r/Rh={launch.AimNormalizedRadius:0.###}; " +
+            $"nearest=P{launch.NearestPatternPoint}; " +
+            $"error={launch.NearestErrorPixels:0.#} px; " +
+            $"hudMiss={launch.HudMissVisible}; " +
+            $"pendingHit={queuedForImpact}; " +
+            $"frameAge={launch.FrameAgeMilliseconds:0.#} ms.");
+    }
+
+    private void StopFireInputMonitor()
+    {
+        DssFireInputMonitor? monitor =
+            fireInputMonitor;
+
+        fireInputMonitor = null;
+
+        if (monitor is null)
+        {
+            return;
+        }
+
+        monitor.FirePressed -=
+            OnFireInputPressed;
+
+        monitor.Dispose();
     }
 
     private bool ShouldShowForTarget(
@@ -629,6 +822,7 @@ internal sealed class DssPrototypeController : IDisposable
         }
 
         StopCaptureLoop();
+        StopFireInputMonitor();
         exitGraceTimer.Stop();
 
         captureActive = false;
@@ -647,6 +841,9 @@ internal sealed class DssPrototypeController : IDisposable
         sessionLogger?.Dispose();
         sessionLogger = null;
         sessionContext = null;
+        latestLaunchFrame = null;
+        impactCounterDetector.Reset();
+        flightCorrelator.Reset();
         tracker.Reset();
         readinessEvaluator.Reset();
 

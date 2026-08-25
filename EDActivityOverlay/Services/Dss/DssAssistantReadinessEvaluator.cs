@@ -34,6 +34,11 @@ internal sealed record DssAssistantReadinessSnapshot(
 
     public bool IsReady =>
         State == DssAssistantReadinessState.Ready;
+
+    public bool IsFarReadyEdge =>
+        IsReady
+        && AngularDiameterDegrees > 0
+        && AngularDiameterDegrees < 24d;
 }
 
 /// <summary>
@@ -44,9 +49,14 @@ internal sealed record DssAssistantReadinessSnapshot(
 /// the "too far" side of the curve, v12 uses an intentionally explicit
 /// experimental band:
 ///
-///     24° <= angular diameter <= 32°
+///     22° <= angular diameter <= 32°
 ///
-/// with a 1° hysteresis margin while already READY.
+/// The latest live run around 23° was one of the strongest complete CV runs,
+/// while ~21° was already near the game's maximum probe-launch distance and
+/// showed weaker horizon reliability. The 22..24° region is therefore a
+/// usable FAR EDGE, not a failure state.
+///
+/// Hysteresis prevents READY from flickering near the boundaries.
 ///
 /// The important architectural point is that readiness is expressed in angular
 /// size, not an absolute Mm distance. A physical recommended distance is then
@@ -58,11 +68,11 @@ internal sealed record DssAssistantReadinessSnapshot(
 /// </summary>
 internal sealed class DssAssistantReadinessEvaluator
 {
-    internal const double MinimumReadyAngularDiameterDegrees = 24d;
+    internal const double MinimumReadyAngularDiameterDegrees = 22d;
     internal const double TargetAngularDiameterDegrees = 28d;
     internal const double MaximumReadyAngularDiameterDegrees = 32d;
 
-    private const double ReadyStayMinimumDiameterDegrees = 23d;
+    private const double ReadyStayMinimumDiameterDegrees = 21.5d;
     private const double ReadyStayMaximumDiameterDegrees = 33d;
 
     private static readonly TimeSpan MeasurementHold =
@@ -99,6 +109,8 @@ internal sealed class DssAssistantReadinessEvaluator
         cachedHistoricalRadiusMeters = 0;
         lastRadiusLookupUtc =
             DateTimeOffset.MinValue;
+
+        DssAssistantStateService.Instance.Clear();
     }
 
     public DssAssistantReadinessSnapshot Evaluate(
@@ -120,10 +132,14 @@ internal sealed class DssAssistantReadinessEvaluator
         {
             readyLatched = false;
 
-            return BuildWithoutMeasurement(
-                DssAssistantReadinessState.SelectBodyTarget,
-                bodyTargetSelected,
-                bodyRadiusMeters);
+            return Publish(
+                BuildWithoutMeasurement(
+                    DssAssistantReadinessState.SelectBodyTarget,
+                    bodyTargetSelected,
+                    bodyRadiusMeters),
+                context,
+                frame,
+                geometry);
         }
 
         UpdateAngularMeasurement(
@@ -141,11 +157,28 @@ internal sealed class DssAssistantReadinessEvaluator
                      - lastAngularMeasurementUtc)
                     .TotalMilliseconds);
 
+        // A direct Frontier horizon observation is required to establish /
+        // update the angular-size estimate. After that, validity belongs to
+        // the DSS geometry tracker: if it still exposes a trusted horizon and
+        // a tracked centre, Frontier merely blinking the white horizon triplet
+        // must not demote READY back to CALIBRATING.
+        //
+        // The old 2.5 s timeout duplicated tracker validity and caused exactly
+        // that behaviour: the cyan circle remained reconstructed from trusted
+        // Rh, while the projected aim points disappeared because readiness
+        // expired.
+        bool trackedTrustedGeometry =
+            geometry.BodyCenterFound
+            && geometry.HorizonMarkerFound
+            && geometry.HorizonRadiusPixels > 25;
+
         bool measurementFresh =
             smoothedAngularRadiusDegrees > 0
             && measurementAgeMilliseconds >= 0
-            && measurementAgeMilliseconds
-               <= MeasurementHold.TotalMilliseconds;
+            && (
+                measurementAgeMilliseconds
+                    <= MeasurementHold.TotalMilliseconds
+                || trackedTrustedGeometry);
 
         (double nearMeters,
          double targetMeters,
@@ -157,17 +190,21 @@ internal sealed class DssAssistantReadinessEvaluator
         {
             readyLatched = false;
 
-            return new DssAssistantReadinessSnapshot(
-                DssAssistantReadinessState.Calibrating,
-                true,
-                bodyRadiusMeters,
-                0,
-                0,
-                measurementAgeMilliseconds,
-                0,
-                nearMeters,
-                targetMeters,
-                farMeters);
+            return Publish(
+                new DssAssistantReadinessSnapshot(
+                    DssAssistantReadinessState.Calibrating,
+                    true,
+                    bodyRadiusMeters,
+                    0,
+                    0,
+                    measurementAgeMilliseconds,
+                    0,
+                    nearMeters,
+                    targetMeters,
+                    farMeters),
+                context,
+                frame,
+                geometry);
         }
 
         double angularRadiusDegrees =
@@ -211,17 +248,36 @@ internal sealed class DssAssistantReadinessEvaluator
                     : DssAssistantReadinessState.TooFar;
         }
 
-        return new DssAssistantReadinessSnapshot(
-            readinessState,
-            true,
-            bodyRadiusMeters,
-            angularRadiusDegrees,
-            angularDiameterDegrees,
-            measurementAgeMilliseconds,
-            estimatedCenterDistanceMeters,
-            nearMeters,
-            targetMeters,
-            farMeters);
+        return Publish(
+            new DssAssistantReadinessSnapshot(
+                readinessState,
+                true,
+                bodyRadiusMeters,
+                angularRadiusDegrees,
+                angularDiameterDegrees,
+                measurementAgeMilliseconds,
+                estimatedCenterDistanceMeters,
+                nearMeters,
+                targetMeters,
+                farMeters),
+            context,
+            frame,
+            geometry);
+    }
+
+    private static DssAssistantReadinessSnapshot Publish(
+        DssAssistantReadinessSnapshot snapshot,
+        DssPrototypeSessionContext context,
+        DssCapturedFrame frame,
+        DssHudGeometry geometry)
+    {
+        DssAssistantStateService.Instance.Publish(
+            context,
+            snapshot,
+            geometry,
+            frame.TimestampUtc);
+
+        return snapshot;
     }
 
     private void UpdateAngularMeasurement(

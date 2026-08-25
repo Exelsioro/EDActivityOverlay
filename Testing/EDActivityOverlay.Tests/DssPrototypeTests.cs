@@ -47,15 +47,15 @@ public sealed class DssPrototypeTests
             400,
             300);
 
-        DrawLine(
+        DrawHorizonTriplet(
             pixels,
             width,
             height,
             stride,
-            454,
-            342,
-            466,
-            318);
+            centerX: 420,
+            centerY: 310,
+            radialX: -120,
+            radialY: -60);
 
         var frame = new DssCapturedFrame(
             DateTimeOffset.UtcNow,
@@ -124,22 +124,43 @@ public sealed class DssPrototypeTests
             stride,
             firstPixels);
 
-        DssHudTrackResult observed =
+        DssHudTrackResult acquiring =
             tracker.Process(first, detector, 56.817001);
 
-        byte[] secondPixels = new byte[stride * height];
-        var second = new DssCapturedFrame(
+        var confirmation = new DssCapturedFrame(
             first.TimestampUtc.AddMilliseconds(66),
             0,
             0,
             width,
             height,
             stride,
-            secondPixels);
+            firstPixels);
+
+        DssHudTrackResult observed =
+            tracker.Process(
+                confirmation,
+                detector,
+                56.817001);
+
+        byte[] gapPixels = new byte[stride * height];
+        var gap = new DssCapturedFrame(
+            first.TimestampUtc.AddMilliseconds(450),
+            0,
+            0,
+            width,
+            height,
+            stride,
+            gapPixels);
 
         DssHudTrackResult predicted =
-            tracker.Process(second, detector, 56.817001);
+            tracker.Process(
+                gap,
+                detector,
+                56.817001);
 
+        Assert.Equal(
+            DssCenterTrackState.Acquiring,
+            acquiring.CenterState);
         Assert.Equal(
             DssCenterTrackState.Tracking,
             observed.CenterState);
@@ -346,6 +367,63 @@ public sealed class DssPrototypeTests
                 y0 += sy;
             }
         }
+    }
+
+    private static void DrawHorizonTriplet(
+        byte[] pixels,
+        int width,
+        int height,
+        int stride,
+        int centerX,
+        int centerY,
+        int radialX,
+        int radialY)
+    {
+        double length =
+            Math.Sqrt(
+                radialX * radialX
+                + radialY * radialY);
+
+        double nx =
+            -radialY / length;
+
+        double ny =
+            radialX / length;
+
+        void Segment(
+            double from,
+            double to)
+        {
+            int x0 =
+                (int)Math.Round(
+                    centerX + nx * from);
+
+            int y0 =
+                (int)Math.Round(
+                    centerY + ny * from);
+
+            int x1 =
+                (int)Math.Round(
+                    centerX + nx * to);
+
+            int y1 =
+                (int)Math.Round(
+                    centerY + ny * to);
+
+            DrawLine(
+                pixels,
+                width,
+                height,
+                stride,
+                x0,
+                y0,
+                x1,
+                y1);
+        }
+
+        Segment(-15, -10);
+        Segment(-4, 4);
+        Segment(10, 15);
     }
 
     private static void SetWhite(

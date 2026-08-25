@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Runtime.InteropServices;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Dss;
@@ -16,6 +18,11 @@ public partial class DssPrototypeOverlayWindow : Window
     private const uint WdaExcludeFromCapture = 0x00000011;
 
     private readonly IntPtr targetWindow;
+
+    private readonly List<FrameworkElement> aimPointElements =
+        new();
+
+    private const double AimPointDiameter = 22d;
 
     internal DssPrototypeOverlayWindow(
         IntPtr targetWindow)
@@ -172,6 +179,13 @@ public partial class DssPrototypeOverlayWindow : Window
                 Visibility.Collapsed;
         }
 
+        DrawProjectedAimPlan(
+            state,
+            readiness,
+            geometry,
+            scaleX,
+            scaleY);
+
         string centerText =
             geometry.BodyCenterFound
                 ? $"{geometry.BodyCenterX:0},{geometry.BodyCenterY:0} " +
@@ -202,6 +216,140 @@ public partial class DssPrototypeOverlayWindow : Window
             $"READY  {readiness.State}  " +
             $"{DisplayAngularDiameter(readiness)}  " +
             $"{DisplayEstimatedDistance(readiness)}";
+    }
+
+    private void DrawProjectedAimPlan(
+        GameStateSnapshot state,
+        DssAssistantReadinessSnapshot readiness,
+        DssHudGeometry geometry,
+        double scaleX,
+        double scaleY)
+    {
+        ClearProjectedAimPlan();
+
+        DssProjectedAimPlan plan =
+            DssProbeAimSolver.Solve(
+                state,
+                readiness,
+                geometry);
+
+        if (!plan.IsAvailable)
+        {
+            return;
+        }
+
+        foreach (DssProjectedAimPoint point
+                 in plan.Points)
+        {
+            double x =
+                point.ScreenX * scaleX;
+
+            double y =
+                point.ScreenY * scaleY;
+
+            bool primary =
+                point.Sequence == 1;
+
+            Brush stroke =
+                primary
+                    ? Brushes.Yellow
+                    : point.Zone switch
+                    {
+                        DssAimZone.FarSide =>
+                            Brushes.OrangeRed,
+                        DssAimZone.Limb =>
+                            Brushes.DeepSkyBlue,
+                        _ =>
+                            Brushes.White
+                    };
+
+            var marker =
+                new Ellipse
+                {
+                    Width =
+                        AimPointDiameter,
+                    Height =
+                        AimPointDiameter,
+                    Stroke =
+                        stroke,
+                    StrokeThickness =
+                        primary ? 3 : 1.5,
+                    Fill =
+                        Brushes.Transparent,
+                    Opacity =
+                        primary ? 0.95 : 0.58,
+                    IsHitTestVisible =
+                        false
+                };
+
+            Canvas.SetLeft(
+                marker,
+                x - AimPointDiameter / 2d);
+
+            Canvas.SetTop(
+                marker,
+                y - AimPointDiameter / 2d);
+
+            OverlayCanvas.Children.Add(
+                marker);
+
+            aimPointElements.Add(
+                marker);
+
+            var label =
+                new TextBlock
+                {
+                    Text =
+                        point.Sequence.ToString(),
+                    FontFamily =
+                        new FontFamily("Consolas"),
+                    FontSize =
+                        primary ? 13 : 10,
+                    FontWeight =
+                        primary
+                            ? FontWeights.Bold
+                            : FontWeights.Normal,
+                    Foreground =
+                        stroke,
+                    Opacity =
+                        primary ? 1.0 : 0.68,
+                    IsHitTestVisible =
+                        false
+                };
+
+            label.Measure(
+                new Size(
+                    double.PositiveInfinity,
+                    double.PositiveInfinity));
+
+            Canvas.SetLeft(
+                label,
+                x
+                - label.DesiredSize.Width / 2d);
+
+            Canvas.SetTop(
+                label,
+                y
+                - label.DesiredSize.Height / 2d);
+
+            OverlayCanvas.Children.Add(
+                label);
+
+            aimPointElements.Add(
+                label);
+        }
+    }
+
+    private void ClearProjectedAimPlan()
+    {
+        foreach (FrameworkElement element
+                 in aimPointElements)
+        {
+            OverlayCanvas.Children.Remove(
+                element);
+        }
+
+        aimPointElements.Clear();
     }
 
     private void UpdateReadinessPanel(

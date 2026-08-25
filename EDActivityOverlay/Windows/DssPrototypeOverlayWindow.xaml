@@ -47,6 +47,7 @@
 
 
         <Border x:Name="ReadinessPanel"
+                Visibility="Collapsed"
                 Canvas.Top="18"
                 Width="460"
                 Padding="12,8"
@@ -68,7 +69,7 @@
                            FontSize="11"
                            Foreground="#FFD8E8F2"
                            TextAlignment="Center"
-                           Text="Experimental ready band: 24–32°"/>
+                           Text="Experimental ready band: 22–32°"/>
             </StackPanel>
         </Border>
 

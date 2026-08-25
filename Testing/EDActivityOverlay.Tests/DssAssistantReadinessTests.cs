@@ -69,8 +69,8 @@ public sealed class DssAssistantReadinessTests
 
         Assert.InRange(
             far / 1_000_000d,
-            53.0,
-            53.4);
+            57.8,
+            58.2);
     }
 
     [Fact]
@@ -178,6 +178,40 @@ public sealed class DssAssistantReadinessTests
         Assert.Equal(
             DssAssistantReadinessState.TooClose,
             result.State);
+    }
+
+    [Fact]
+    public void TwentyThreeDegreeBodyIsReadyAtFarEdge()
+    {
+        var evaluator =
+            new DssAssistantReadinessEvaluator();
+
+        GameStateSnapshot state =
+            CreateTargetState();
+
+        DssPrototypeSessionContext context =
+            CreateContext(
+                bodyId: 10,
+                radiusMeters: 11_064_317);
+
+        DssCapturedFrame frame =
+            CreateFrame();
+
+        DssAssistantReadinessSnapshot result =
+            evaluator.Evaluate(
+                state,
+                context,
+                frame,
+                GeometryForAngularRadius(
+                    frame,
+                    11.5));
+
+        Assert.Equal(
+            DssAssistantReadinessState.Ready,
+            result.State);
+
+        Assert.True(
+            result.IsFarReadyEdge);
     }
 
     [Fact]

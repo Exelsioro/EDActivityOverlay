@@ -44,7 +44,7 @@ public sealed class DssReadinessRadiusFallbackTests
                 "\"SystemAddress\":3382253294290," +
                 "\"BodyID\":5," +
                 "\"BodyName\":\"Eledolyaks 1\"," +
-                "\"Radius\":1234567.89}\\n");
+                "\"Radius\":1234567.89}\n");
 
             File.SetLastWriteTimeUtc(
                 scanPath,
@@ -68,7 +68,7 @@ public sealed class DssReadinessRadiusFallbackTests
                     path,
                     "{\"timestamp\":\"2026-01-0" + i +
                     "T00:00:00Z\",\"event\":\"Music\"," +
-                    "\"MusicTrack\":\"Supercruise\"}\\n");
+                    "\"MusicTrack\":\"Supercruise\"}\n");
 
                 File.SetLastWriteTimeUtc(
                     path,
