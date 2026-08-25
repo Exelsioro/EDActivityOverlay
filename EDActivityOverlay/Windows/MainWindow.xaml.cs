@@ -15,6 +15,7 @@ using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Notifications;
 using EDActivityOverlay.Services.Hardware;
+using EDActivityOverlay.Services.Dss;
 
 namespace EDActivityOverlay
 {
@@ -37,6 +38,7 @@ namespace EDActivityOverlay
         private EngineeringWindow? engineeringOverlayWindow;
         private NotificationOverlayWindow? notificationOverlayWindow;
         private ShipStatusOverlayWindow? shipStatusOverlayWindow;
+        private DssPrototypeController? dssPrototypeController;
         private readonly X52OverlayPointerController x52OverlayPointerController;
         private bool isToggleActive = false;
         private bool isResultsActive = false;
@@ -126,6 +128,14 @@ namespace EDActivityOverlay
             X52IntegrationService.Instance.ControlRequested += OnX52ControlRequested;
             X52IntegrationService.Instance.SetActivity(currentActivity);
             UpdateJournalStatusUi(JournalMonitorService.Instance.Current);
+            dssPrototypeController = new DssPrototypeController(
+                () => targetWindow,
+                Dispatcher);
+            Closed += (_, _) =>
+            {
+                dssPrototypeController?.Dispose();
+                dssPrototypeController = null;
+            };
             
             Logger.Logger.Info("MainWindow initialization complete - starting hidden");
         }
