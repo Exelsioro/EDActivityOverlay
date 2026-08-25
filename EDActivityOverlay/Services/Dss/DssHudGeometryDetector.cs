@@ -73,6 +73,12 @@ internal sealed class DssHudGeometryDetector
     private const int MarkerMaximumSpread = 120;
     private const double MarkerCoreMinimumMeanLuma = 125d;
 
+    // A real Frontier body-centre marker is a filled neutral-white disk.
+    // Probe tails and bright limbs can satisfy the old 1-D cross tests, but
+    // they do not fill a small 2-D disk in all four quadrants.
+    private const int MarkerCoreShapeMinimumLuma = 110;
+    private const int MarkerCoreShapeMaximumSpread = 80;
+
     private const int HorizonMinimumLuma = 135;
     private const int HorizonMaximumSpread = 60;
 
@@ -1054,12 +1060,23 @@ internal sealed class DssHudGeometryDetector
                 y,
                 scale);
 
+        (int coreNeutralHits, int coreMinimumQuadrantHits) =
+            MeasureMarkerCoreShape(
+                frame,
+                x,
+                y,
+                scale);
+
         int minimumHits =
             Math.Max(
                 6,
                 (int)Math.Round(7 * scale));
 
         if (!IsMarkerCoreLumaAccepted(coreMeanLuma)
+            || !IsMarkerCoreShapeAccepted(
+                coreNeutralHits,
+                coreMinimumQuadrantHits,
+                scale)
             || crossHits < minimumHits
             || alongHits < minimumHits
             || peakLuma < 140)
@@ -1089,6 +1106,119 @@ internal sealed class DssHudGeometryDetector
     internal static bool IsMarkerCoreLumaAccepted(
         double meanLuma) =>
         meanLuma >= MarkerCoreMinimumMeanLuma;
+
+    internal static bool IsMarkerCoreShapeAccepted(
+        int neutralHits,
+        int minimumQuadrantHits,
+        double scale)
+    {
+        double areaScale =
+            Math.Clamp(
+                scale * scale,
+                0.35,
+                2.25);
+
+        int requiredHits =
+            Math.Max(
+                20,
+                (int)Math.Round(60d * areaScale));
+
+        int requiredQuadrantHits =
+            Math.Max(
+                2,
+                (int)Math.Round(5d * areaScale));
+
+        return neutralHits >= requiredHits
+               && minimumQuadrantHits
+                  >= requiredQuadrantHits;
+    }
+
+    private static (int NeutralHits, int MinimumQuadrantHits)
+        MeasureMarkerCoreShape(
+            DssCapturedFrame frame,
+            double x,
+            double y,
+            double scale)
+    {
+        int radius =
+            Math.Clamp(
+                (int)Math.Round(8d * scale),
+                5,
+                12);
+
+        int centerX =
+            (int)Math.Round(x);
+
+        int centerY =
+            (int)Math.Round(y);
+
+        int neutralHits = 0;
+        int quadrant0 = 0;
+        int quadrant1 = 0;
+        int quadrant2 = 0;
+        int quadrant3 = 0;
+
+        for (int offsetY = -radius;
+             offsetY <= radius;
+             offsetY++)
+        {
+            for (int offsetX = -radius;
+                 offsetX <= radius;
+                 offsetX++)
+            {
+                if (offsetX * offsetX
+                    + offsetY * offsetY
+                    > radius * radius)
+                {
+                    continue;
+                }
+
+                int luma =
+                    GetNeutralLuma(
+                        frame,
+                        centerX + offsetX,
+                        centerY + offsetY,
+                        MarkerCoreShapeMinimumLuma,
+                        MarkerCoreShapeMaximumSpread);
+
+                if (luma <= 0)
+                {
+                    continue;
+                }
+
+                neutralHits++;
+
+                if (offsetX < 0)
+                {
+                    if (offsetY < 0)
+                    {
+                        quadrant0++;
+                    }
+                    else
+                    {
+                        quadrant1++;
+                    }
+                }
+                else if (offsetY < 0)
+                {
+                    quadrant2++;
+                }
+                else
+                {
+                    quadrant3++;
+                }
+            }
+        }
+
+        int minimumQuadrantHits =
+            Math.Min(
+                Math.Min(quadrant0, quadrant1),
+                Math.Min(quadrant2, quadrant3));
+
+        return (
+            neutralHits,
+            minimumQuadrantHits);
+    }
 
     private static double MeasureMarkerCoreMeanLuma(
         DssCapturedFrame frame,
