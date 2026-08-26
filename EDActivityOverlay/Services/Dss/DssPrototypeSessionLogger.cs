@@ -152,7 +152,7 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
             "estimated_center_distance_m,ready_near_m,ready_target_m,ready_far_m," +
             "velocity_x,velocity_y,center_found,center_x,center_y,center_confidence,horizon_found," +
             "horizon_observed,horizon_age_ms,horizon_x,horizon_y,horizon_confidence,horizon_radius_px," +
-            "horizon_aim_error_px,aim_offset_deg");
+            "horizon_aim_error_px,aim_offset_deg,hud_miss_visible,hud_miss_active_ratio");
         frameWriter.Flush();
 
         Logger.Logger.Info(
@@ -169,6 +169,7 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
         DssCapturedFrame frame,
         DssHudTrackResult tracking,
         DssAssistantReadinessSnapshot readiness,
+        DssAimMissObservation missObservation,
         double captureMilliseconds,
         double detectionMilliseconds)
     {
@@ -269,6 +270,12 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
                     "0.###",
                     CultureInfo.InvariantCulture),
                 geometry.AimOffsetDegrees.ToString(
+                    "0.######",
+                    CultureInfo.InvariantCulture),
+                missObservation.Visible
+                    ? "1"
+                    : "0",
+                missObservation.ActiveRatio.ToString(
                     "0.######",
                     CultureInfo.InvariantCulture)));
 

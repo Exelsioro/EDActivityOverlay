@@ -547,6 +547,7 @@ internal sealed class DssPrototypeController : IDisposable
                             frame,
                             tracking,
                             readiness,
+                            missObservation,
                             captureWatch.Elapsed.TotalMilliseconds,
                             detectWatch.Elapsed.TotalMilliseconds);
 

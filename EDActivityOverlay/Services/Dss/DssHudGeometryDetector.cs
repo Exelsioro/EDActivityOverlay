@@ -816,6 +816,61 @@ internal sealed class DssHudGeometryDetector
                 continue;
             }
 
+            // v21 endpoint anti-tail gate.
+            // A real Frontier body-centre marker terminates the radial guide.
+            // A probe tail can mimic the centre/core, but the same guide-like
+            // structure then continues well beyond the false candidate.
+            double continuationGap =
+                Math.Clamp(
+                    16d * scale,
+                    10d,
+                    24d);
+
+            double continuationLength =
+                Math.Clamp(
+                    80d * scale,
+                    48d,
+                    120d);
+
+            double continuationStart =
+                t + continuationGap;
+
+            double continuationEnd =
+                Math.Min(
+                    maximumTravel,
+                    continuationStart
+                    + continuationLength);
+
+            double continuationSpan =
+                Math.Max(
+                    0,
+                    continuationEnd
+                    - continuationStart);
+
+            if (continuationSpan > 0)
+            {
+                PathSupport continuation =
+                    MeasureGuideSegmentSupport(
+                        frame,
+                        reticleX,
+                        reticleY,
+                        dx,
+                        dy,
+                        nx,
+                        ny,
+                        continuationStart,
+                        continuationEnd);
+
+                if (!IsMarkerEndpointAccepted(
+                        continuation.Support,
+                        continuation.AverageContrast,
+                        continuationSpan,
+                        scale))
+                {
+                    continue;
+                }
+            }
+
             (double refinedX, double refinedY) =
                 RefineMarkerCentroid(
                     frame,
@@ -846,6 +901,34 @@ internal sealed class DssHudGeometryDetector
         }
 
         return best;
+    }
+
+    internal static bool IsMarkerEndpointAccepted(
+        double continuationSupport,
+        double continuationAverageContrast,
+        double continuationSpanPixels,
+        double scale)
+    {
+        double requiredSpan =
+            Math.Clamp(
+                40d * scale,
+                28d,
+                60d);
+
+        // Near a screen edge there may simply not be enough pixels after C to
+        // prove that a continuation exists. Do not turn that into a false
+        // rejection; the existing core/path/tracker gates still apply.
+        if (continuationSpanPixels < requiredSpan)
+        {
+            return true;
+        }
+
+        // Recorded v20 calibration set:
+        //   confirmed real C: support <= 0.318, contrast <= 6.84
+        //   probe-tail false C: support 0.591..0.955, contrast 39..74
+        // Keep a generous gap between those families.
+        return continuationSupport < 0.45
+               || continuationAverageContrast < 10d;
     }
 
     private static double CandidateScore(
