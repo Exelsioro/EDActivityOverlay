@@ -112,6 +112,51 @@ public sealed class DssAimMissIndicatorDetectorTests
         Assert.Equal(expected, actual);
     }
 
+    [Fact]
+    public void ShallowScatteredComponentsAreNotMiss()
+    {
+        const int width = 1920;
+        const int height = 1080;
+        const int stride = width * 4;
+
+        byte[] pixels =
+            new byte[stride * height];
+
+        // Reproduces the v22 false family: several disconnected bright HUD /
+        // scene fragments span enough horizontal space to look text-like to
+        // the v22 topology test, but none has real glyph height.
+        foreach (int x in new[] { 925, 939, 953, 967, 981 })
+        {
+            DrawRect(
+                pixels,
+                stride,
+                x,
+                592,
+                10,
+                4);
+        }
+
+        DssCapturedFrame frame =
+            new(
+                DateTimeOffset.UtcNow,
+                0,
+                0,
+                width,
+                height,
+                stride,
+                pixels);
+
+        DssAimMissObservation result =
+            DssAimMissIndicatorDetector.Detect(
+                frame);
+
+        Assert.False(result.Visible);
+        Assert.True(
+            result.ActiveRatio
+            >= DssAimMissIndicatorDetector
+                .VisibleRatioThreshold);
+    }
+
     private static DssCapturedFrame CreateFrame(
         bool withMissGlyph)
     {

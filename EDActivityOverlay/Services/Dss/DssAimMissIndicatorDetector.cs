@@ -221,6 +221,24 @@ internal static class DssAimMissIndicatorDetector
                 (int)Math.Round(
                     8d * areaScale));
 
+        // v23: the recorded false MISS family was made of several tiny
+        // neutral structures that happened to span the word ROI. Real glyphs
+        // are full-height text components. At 1080p the shortest confirmed
+        // Russian MISS glyph component was 7 px high, while the false family
+        // was 3/6/4/3/3 px. Use 6 px as a conservative language-neutral floor
+        // so English MISS remains comfortably inside the accepted range.
+        double clampedScale =
+            Math.Clamp(
+                scale,
+                0.50,
+                2.00);
+
+        int minimumComponentHeight =
+            Math.Max(
+                3,
+                (int)Math.Round(
+                    6d * clampedScale));
+
         bool[] visited =
             new bool[width * height];
 
@@ -317,8 +335,13 @@ internal static class DssAimMissIndicatorDetector
                     }
                 }
 
+                int componentHeight =
+                    maxY - minY + 1;
+
                 if (componentPixels
-                    < minimumComponentPixels)
+                        < minimumComponentPixels
+                    || componentHeight
+                        < minimumComponentHeight)
                 {
                     continue;
                 }

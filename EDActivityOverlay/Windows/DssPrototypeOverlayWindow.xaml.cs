@@ -238,6 +238,11 @@ public partial class DssPrototypeOverlayWindow : Window
             return;
         }
 
+        bool targetingV1 =
+            plan.Source.StartsWith(
+                "TARGETING_V1",
+                StringComparison.Ordinal);
+
         foreach (DssProjectedAimPoint point
                  in plan.Points)
         {
@@ -300,11 +305,15 @@ public partial class DssPrototypeOverlayWindow : Window
                 new TextBlock
                 {
                     Text =
-                        point.Sequence.ToString(),
+                        targetingV1 && primary
+                            ? "NEXT AIM"
+                            : point.Sequence.ToString(),
                     FontFamily =
                         new FontFamily("Consolas"),
                     FontSize =
-                        primary ? 13 : 10,
+                        targetingV1 && primary
+                            ? 12
+                            : primary ? 13 : 10,
                     FontWeight =
                         primary
                             ? FontWeights.Bold
@@ -327,10 +336,22 @@ public partial class DssPrototypeOverlayWindow : Window
                 x
                 - label.DesiredSize.Width / 2d);
 
-            Canvas.SetTop(
-                label,
-                y
-                - label.DesiredSize.Height / 2d);
+            if (targetingV1 && primary)
+            {
+                Canvas.SetTop(
+                    label,
+                    y
+                    - AimPointDiameter / 2d
+                    - label.DesiredSize.Height
+                    - 4d);
+            }
+            else
+            {
+                Canvas.SetTop(
+                    label,
+                    y
+                    - label.DesiredSize.Height / 2d);
+            }
 
             OverlayCanvas.Children.Add(
                 label);

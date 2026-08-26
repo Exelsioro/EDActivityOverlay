@@ -30,22 +30,34 @@ internal sealed record DssProjectedAimPlan(
 }
 
 /// <summary>
-/// First live DSS aim-point projection layer.
+/// DSS Targeting v1.
 ///
-/// This is intentionally not a probe-ballistics model yet. Elite's probes
-/// curve, so the final aim -> impact mapping must be calibrated from real
-/// shots.
+/// Uses the empirically measured native-MISS boundary from the clean v23
+/// radial sweeps and projects one conservative actionable aim point:
 ///
-/// For now the solver projects the project's existing normalized DSS pattern
-/// into live screen coordinates:
+///     Ksafe(theta) = Kboundary(theta) - safetyMargin
+///     Pscreen = C + direction * Ksafe(theta) * Rh
 ///
-///     Pscreen = C + Pnormalized * Rh
-///
-/// This gives us stable, reproducible test aim positions and isolates the
-/// future empirical trajectory correction behind one service.
+/// This is still not the coverage planner. Its only purpose is to validate the
+/// end-to-end live geometry -> screen target -> real DSS trajectory chain.
 /// </summary>
 internal static class DssProbeAimSolver
 {
+    // Targeting v1 is deliberately limited to the angular-diameter range
+    // covered by the clean v23 radial sweeps. Do not extrapolate this first
+    // empirical model outside the measured envelope.
+    internal const double TargetingV1MinimumAngularDiameterDegrees = 21d;
+    internal const double TargetingV1MaximumAngularDiameterDegrees = 28d;
+    internal const double TargetingV1SafetyMarginNormalized = 0.05d;
+
+    // Least-squares fit to the clean pre-shot v23 MISS-boundary sweeps:
+    //   21.39 deg -> 1.7402 Rh
+    //   22.48 deg -> 1.7414 Rh
+    //   23.21 deg -> 1.7326 Rh
+    //   24.22 deg -> 1.7225 Rh
+    // Kboundary(theta) ~= intercept + slope * theta.
+    private const double TargetingV1BoundaryIntercept = 1.88392783d;
+    private const double TargetingV1BoundarySlope = -0.00656091d;
     public static DssProjectedAimPlan Solve(
         GameStateSnapshot state,
         DssAssistantReadinessSnapshot readiness,
@@ -54,7 +66,9 @@ internal static class DssProbeAimSolver
         if (!readiness.IsReady
             || !geometry.BodyCenterFound
             || !geometry.HorizonMarkerFound
-            || geometry.HorizonRadiusPixels <= 25)
+            || geometry.HorizonRadiusPixels <= 25
+            || !IsWithinTargetingV1Calibration(
+                readiness.AngularDiameterDegrees))
         {
             return DssProjectedAimPlan.Empty;
         }
@@ -67,30 +81,96 @@ internal static class DssProbeAimSolver
             DssProbePatternCatalog.Get(
                 target);
 
-        DssProjectedAimPoint[] points =
+        // v1 deliberately emits ONE actionable point. Coverage planning comes
+        // later; for now we only need to prove the live geometry -> aim-point
+        // chain against Elite's native MISS indicator and real probe shots.
+        // Reuse the first non-centre catalog direction so the orientation is
+        // deterministic and already compatible with the future planner.
+        DssAimPoint? directionPoint =
             pattern.Points
                 .OrderBy(
                     point => point.Sequence)
-                .Select(
+                .FirstOrDefault(
                     point =>
-                        new DssProjectedAimPoint(
-                            point.Sequence,
-                            point.X,
-                            point.Y,
-                            geometry.BodyCenterX
-                                + point.X
-                                  * geometry.HorizonRadiusPixels,
-                            geometry.BodyCenterY
-                                + point.Y
-                                  * geometry.HorizonRadiusPixels,
-                            point.Zone))
-                .ToArray();
+                        Math.Sqrt(
+                            point.X * point.X
+                            + point.Y * point.Y) > 0.05d);
+
+        double directionX = 0d;
+        double directionY = -1d;
+
+        if (directionPoint is not null)
+        {
+            double length =
+                Math.Sqrt(
+                    directionPoint.X * directionPoint.X
+                    + directionPoint.Y * directionPoint.Y);
+
+            if (length > 0.001d)
+            {
+                directionX =
+                    directionPoint.X / length;
+                directionY =
+                    directionPoint.Y / length;
+            }
+        }
+
+        double safeRadius =
+            EstimateSafeNormalizedRadius(
+                readiness.AngularDiameterDegrees);
+
+        double normalizedX =
+            directionX * safeRadius;
+
+        double normalizedY =
+            directionY * safeRadius;
+
+        DssProjectedAimPoint point =
+            new(
+                1,
+                normalizedX,
+                normalizedY,
+                geometry.BodyCenterX
+                    + normalizedX
+                      * geometry.HorizonRadiusPixels,
+                geometry.BodyCenterY
+                    + normalizedY
+                      * geometry.HorizonRadiusPixels,
+                DssAimZone.FarSide);
 
         return new DssProjectedAimPlan(
             pattern.EfficiencyTarget,
-            source,
-            points);
+            $"TARGETING_V1/{source}",
+            new[] { point });
     }
+
+    internal static bool IsWithinTargetingV1Calibration(
+        double angularDiameterDegrees) =>
+        double.IsFinite(angularDiameterDegrees)
+        && angularDiameterDegrees
+            >= TargetingV1MinimumAngularDiameterDegrees
+        && angularDiameterDegrees
+            <= TargetingV1MaximumAngularDiameterDegrees;
+
+    internal static double EstimateBoundaryNormalizedRadius(
+        double angularDiameterDegrees)
+    {
+        double clamped =
+            Math.Clamp(
+                angularDiameterDegrees,
+                TargetingV1MinimumAngularDiameterDegrees,
+                TargetingV1MaximumAngularDiameterDegrees);
+
+        return TargetingV1BoundaryIntercept
+               + TargetingV1BoundarySlope
+                 * clamped;
+    }
+
+    internal static double EstimateSafeNormalizedRadius(
+        double angularDiameterDegrees) =>
+        EstimateBoundaryNormalizedRadius(
+            angularDiameterDegrees)
+        - TargetingV1SafetyMarginNormalized;
 
     private static (int Target, string Source)
         ResolveEfficiencyTarget(
