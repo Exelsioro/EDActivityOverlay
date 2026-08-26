@@ -70,6 +70,10 @@ internal sealed class DssHudGeometryTracker
     private const int InitialCenterConfirmations = 2;
     private const int ReacquireCenterConfirmations = 3;
     private const int HorizonConfirmationsRequired = 3;
+    private const int StrictHorizonReacquireConfirmations = 4;
+
+    private static readonly TimeSpan StrictHorizonReacquireAge =
+        TimeSpan.FromMilliseconds(1200);
 
     private const double ImmediateCenterStepPixels = 125d;
     private const double PendingCenterTolerancePixels = 110d;
@@ -140,6 +144,10 @@ internal sealed class DssHudGeometryTracker
         DateTimeOffset timestampUtc =
             frame.TimestampUtc;
 
+        bool strictHorizonReacquisition =
+            RequiresStrictHorizonReacquisition(
+                timestampUtc);
+
         DssHudGeometry raw;
         bool globalSearch = false;
         bool localSearch = false;
@@ -157,7 +165,8 @@ internal sealed class DssHudGeometryTracker
                         92,
                         hasTrustedHorizon
                             ? horizonRadius
-                            : null));
+                            : null,
+                        strictHorizonReacquisition));
 
             localSearch = true;
             searchMode = "LOCAL";
@@ -174,7 +183,8 @@ internal sealed class DssHudGeometryTracker
                             verticalFovDegrees,
                             hasTrustedHorizon
                                 ? horizonRadius
-                                : null);
+                                : null,
+                            strictHorizonReacquisition);
 
                     globalSearch = true;
                     searchMode = "LOCAL+GLOBAL";
@@ -189,7 +199,8 @@ internal sealed class DssHudGeometryTracker
                     verticalFovDegrees,
                     hasTrustedHorizon
                         ? horizonRadius
-                        : null);
+                        : null,
+                    strictHorizonReacquisition);
 
             globalSearch = true;
 
@@ -665,6 +676,20 @@ internal sealed class DssHudGeometryTracker
             DateTimeOffset.MinValue;
     }
 
+    private bool RequiresStrictHorizonReacquisition(
+        DateTimeOffset timestampUtc)
+    {
+        if (!hasTrustedHorizon
+            || lastHorizonObservedUtc
+               == DateTimeOffset.MinValue)
+        {
+            return false;
+        }
+
+        return timestampUtc
+               - lastHorizonObservedUtc
+               >= StrictHorizonReacquireAge;
+    }
     private DssHorizonTrackState UpdateHorizon(
         DssHudGeometry raw,
         DssHudGeometry stableGeometry,
@@ -695,6 +720,37 @@ internal sealed class DssHudGeometryTracker
                 if (relativeDifference
                     <= 0.055)
                 {
+                    if (RequiresStrictHorizonReacquisition(
+                            timestampUtc))
+                    {
+                        RegisterPendingHorizon(
+                            raw.HorizonRadiusPixels,
+                            timestampUtc);
+
+                        if (pendingHorizonCount
+                            < StrictHorizonReacquireConfirmations)
+                        {
+                            return
+                                DssHorizonTrackState.Predicting;
+                        }
+
+                        horizonRadius =
+                            pendingHorizonRadius;
+
+                        horizonConfidence =
+                            Math.Max(
+                                0.66,
+                                raw.HorizonMarkerConfidence);
+
+                        lastHorizonObservedUtc =
+                            timestampUtc;
+
+                        ResetPendingHorizon();
+
+                        return
+                            DssHorizonTrackState.Tracking;
+                    }
+
                     const double alpha =
                         0.18;
 
@@ -753,6 +809,16 @@ internal sealed class DssHudGeometryTracker
 
             return
                 DssHorizonTrackState.Acquiring;
+        }
+
+        if (RequiresStrictHorizonReacquisition(
+                timestampUtc)
+            && pendingHorizonCount > 0)
+        {
+            // Long-gap reacquisition requires consecutive isolated H samples.
+            // A missed frame breaks the hypothesis instead of letting sparse
+            // planet-limb detections accumulate across the 700 ms window.
+            ResetPendingHorizon();
         }
 
         if (hasTrustedHorizon

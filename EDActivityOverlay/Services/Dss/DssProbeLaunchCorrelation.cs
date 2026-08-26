@@ -10,7 +10,10 @@ internal sealed record DssProbeLaunchFrameSnapshot(
     GameStateSnapshot State,
     DssAssistantReadinessSnapshot Readiness,
     DssHudGeometry Geometry,
-    DssAimMissObservation? MissObservation = null);
+    DssAimMissObservation? MissObservation = null,
+    DssCoverageObservation? CoverageObservation = null,
+    int ConfirmedImpactCount = int.MaxValue,
+    long UsedCoverageCandidates = 0);
 
 internal sealed record DssProbeLaunchRecord(
     int LaunchSequence,
@@ -44,6 +47,109 @@ internal sealed record DssProbeLaunchRecord(
     bool HudMissVisible = false,
     double HudMissActiveRatio = 0);
 
+internal sealed record DssSequentialTargetTelemetry(
+    int Step,
+    bool Available,
+    double NormalizedX,
+    double NormalizedY,
+    double NormalizedRadius,
+    double ErrorPixels,
+    int CandidateId = 0,
+    string TargetSource = "",
+    double CoverageFraction = 0,
+    double UncoveredScore = 0)
+{
+    public static DssSequentialTargetTelemetry Empty(
+        int step) =>
+        new(
+            step,
+            false,
+            0,
+            0,
+            0,
+            -1);
+}
+
+internal static class DssSequentialTargetTelemetryBuilder
+{
+    public static DssSequentialTargetTelemetry Build(
+        int sequentialStep,
+        bool scanComplete,
+        DssProbeLaunchFrameSnapshot? frame,
+        DssProbeLaunchRecord launch)
+    {
+        if (scanComplete
+            || frame is null)
+        {
+            return DssSequentialTargetTelemetry.Empty(
+                sequentialStep);
+        }
+
+        double angularDiameterDegrees =
+            frame.Readiness.AngularDiameterDegrees;
+
+        if (!DssProbeAimSolver.TryResolvePredictiveTarget(
+                frame.State,
+                sequentialStep,
+                angularDiameterDegrees,
+                frame.ConfirmedImpactCount,
+                frame.CoverageObservation,
+                frame.UsedCoverageCandidates,
+                out DssPredictiveAimTarget resolvedTarget,
+                out _))
+        {
+            return DssSequentialTargetTelemetry.Empty(
+                sequentialStep);
+        }
+
+        double targetX =
+            resolvedTarget.NormalizedX;
+        double targetY =
+            resolvedTarget.NormalizedY;
+        int candidateId =
+            resolvedTarget.CandidateId;
+        double uncoveredScore =
+            resolvedTarget.CoverageScore;
+        string targetSource =
+            resolvedTarget.Role;
+        double targetRadius =
+            Math.Sqrt(
+                targetX * targetX
+                + targetY * targetY);
+
+        double errorPixels = -1d;
+
+        if (launch.GeometryValid
+            && launch.HorizonRadiusPixels > 0)
+        {
+            double dx =
+                launch.AimNormalizedX - targetX;
+            double dy =
+                launch.AimNormalizedY - targetY;
+
+            errorPixels =
+                Math.Sqrt(
+                    dx * dx + dy * dy)
+                * launch.HorizonRadiusPixels;
+        }
+
+        DssCoverageObservation coverage =
+            frame.CoverageObservation
+            ?? DssCoverageObservation.Empty;
+
+        return new DssSequentialTargetTelemetry(
+            sequentialStep,
+            true,
+            targetX,
+            targetY,
+            targetRadius,
+            errorPixels,
+            candidateId,
+            targetSource,
+            coverage.CoveredFraction,
+            uncoveredScore);
+    }
+}
 internal static class DssProbeLaunchCorrelator
 {
     public static DssProbeLaunchRecord Correlate(

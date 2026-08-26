@@ -39,7 +39,10 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
         DateTimeOffset.MinValue;
     private DateTimeOffset lastDiagnosticFrameUtc =
         DateTimeOffset.MinValue;
+    private const int MaxDiagnosticFramesPerSession = 96;
+
     private int diagnosticSaveInProgress;
+    private int diagnosticFramesQueued;
     private bool disposed;
 
     public DssPrototypeSessionLogger(
@@ -51,6 +54,8 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
             "EDActivityOverlay",
             "Research",
             "DSS");
+
+        DssResearchRetention.Prune(root);
 
         SessionId = DateTimeOffset.UtcNow
             .ToString(
@@ -104,6 +109,8 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
             "reticle_x,reticle_y,aim_norm_x,aim_norm_y,aim_norm_r,aim_angle_deg," +
             "nearest_point,nearest_point_x,nearest_point_y,nearest_error_norm," +
             "nearest_error_px,efficiency_target,pattern_source," +
+            "targeting_step,target_available,target_norm_x,target_norm_y,target_norm_r,target_error_px," +
+            "target_candidate_id,target_source,coverage_fraction,target_uncovered_score," +
             "hud_miss_visible,hud_miss_active_ratio");
         shotWriter.Flush();
 
@@ -152,7 +159,9 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
             "estimated_center_distance_m,ready_near_m,ready_target_m,ready_far_m," +
             "velocity_x,velocity_y,center_found,center_x,center_y,center_confidence,horizon_found," +
             "horizon_observed,horizon_age_ms,horizon_x,horizon_y,horizon_confidence,horizon_radius_px," +
-            "horizon_aim_error_px,aim_offset_deg,hud_miss_visible,hud_miss_active_ratio");
+            "horizon_aim_error_px,aim_offset_deg,hud_miss_visible,hud_miss_active_ratio," +
+            "coverage_available,coverage_settling,coverage_fraction,coverage_confidence," +
+            "coverage_candidate_id,coverage_target_x,coverage_target_y,coverage_uncovered_score");
         frameWriter.Flush();
 
         Logger.Logger.Info(
@@ -170,6 +179,7 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
         DssHudTrackResult tracking,
         DssAssistantReadinessSnapshot readiness,
         DssAimMissObservation missObservation,
+        DssCoverageObservation coverageObservation,
         double captureMilliseconds,
         double detectionMilliseconds)
     {
@@ -277,6 +287,25 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
                     : "0",
                 missObservation.ActiveRatio.ToString(
                     "0.######",
+                    CultureInfo.InvariantCulture),
+                coverageObservation.Available ? "1" : "0",
+                coverageObservation.Settling ? "1" : "0",
+                coverageObservation.CoveredFraction.ToString(
+                    "0.######",
+                    CultureInfo.InvariantCulture),
+                coverageObservation.Confidence.ToString(
+                    "0.######",
+                    CultureInfo.InvariantCulture),
+                coverageObservation.SuggestedCandidateId.ToString(
+                    CultureInfo.InvariantCulture),
+                coverageObservation.SuggestedNormalizedX.ToString(
+                    "0.######",
+                    CultureInfo.InvariantCulture),
+                coverageObservation.SuggestedNormalizedY.ToString(
+                    "0.######",
+                    CultureInfo.InvariantCulture),
+                coverageObservation.SuggestedUncoveredScore.ToString(
+                    "0.######",
                     CultureInfo.InvariantCulture)));
 
             if (frame.TimestampUtc - lastFrameFlushUtc
@@ -288,16 +317,19 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
 
             bool periodic =
                 frame.TimestampUtc - lastDiagnosticFrameUtc
-                >= TimeSpan.FromSeconds(2);
+                >= TimeSpan.FromSeconds(4);
             bool usefulObservation =
                 geometry.HorizonMarkerObserved
                 && frame.TimestampUtc - lastDiagnosticFrameUtc
-                    >= TimeSpan.FromMilliseconds(650);
+                    >= TimeSpan.FromMilliseconds(1500);
 
-            if (sequence == 1
-                || periodic
-                || usefulObservation)
+            if ((sequence == 1
+                 || periodic
+                 || usefulObservation)
+                && diagnosticFramesQueued
+                   < MaxDiagnosticFramesPerSession)
             {
+                diagnosticFramesQueued++;
                 QueueDiagnosticFrame(sequence, frame);
                 lastDiagnosticFrameUtc = frame.TimestampUtc;
             }
@@ -329,7 +361,8 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
     }
 
     public void LogProbeLaunch(
-        DssProbeLaunchRecord launch)
+        DssProbeLaunchRecord launch,
+        DssSequentialTargetTelemetry targeting)
     {
         lock (sync)
         {
@@ -431,6 +464,40 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
                         .ToString(
                             CultureInfo.InvariantCulture),
                     Csv(launch.PatternSource),
+                    targeting.Step
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    targeting.Available
+                        ? "1"
+                        : "0",
+                    targeting.NormalizedX
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    targeting.NormalizedY
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    targeting.NormalizedRadius
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    targeting.ErrorPixels
+                        .ToString(
+                            "0.###",
+                            CultureInfo.InvariantCulture),
+                    targeting.CandidateId
+                        .ToString(
+                            CultureInfo.InvariantCulture),
+                    Csv(targeting.TargetSource),
+                    targeting.CoverageFraction
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
+                    targeting.UncoveredScore
+                        .ToString(
+                            "0.######",
+                            CultureInfo.InvariantCulture),
                     launch.HudMissVisible
                         ? "1"
                         : "0",

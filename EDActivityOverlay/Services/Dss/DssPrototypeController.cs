@@ -38,6 +38,8 @@ internal sealed class DssPrototypeController : IDisposable
         new();
     private readonly DssProbeFlightCorrelator flightCorrelator =
         new();
+    private readonly DssCoverageObserver coverageObserver =
+        new();
 
     private DssPrototypeOverlayWindow? overlay;
     private DssPrototypeSessionLogger? sessionLogger;
@@ -55,6 +57,22 @@ internal sealed class DssPrototypeController : IDisposable
     private Task? captureTask;
     private long frameSequence;
     private int launchSequence;
+
+    // Step 1 is visible before the first shot. A non-MISS fire advances the
+    // sequence; SAAScanComplete suppresses further targets.
+    private int targetingSequentialStep = 1;
+    private int targetingScanComplete;
+    private int targetingConfirmedImpacts;
+    private long targetingUsedCoverageCandidates;
+
+    // Persist sequential progress across a finalized DSS overlay session when
+    // the player re-enters the same body. The first v25 validation was split
+    // by GuiFocus loss after step #5; resetting to #1 would discard real scan
+    // progress even though Elite keeps already-landed probes.
+    private long targetingProgressSystemAddress;
+    private int targetingProgressBodyId = -1;
+    private string targetingProgressBodyName = string.Empty;
+
     private bool sessionActive;
     private bool captureActive;
     private int requestedOverlayVisibility = -1;
@@ -183,6 +201,9 @@ internal sealed class DssPrototypeController : IDisposable
             captureWidth,
             captureHeight);
 
+        ResumeOrResetSequentialTargeting(
+            sessionContext);
+
         sessionLogger =
             new DssPrototypeSessionLogger(
                 sessionContext);
@@ -204,6 +225,81 @@ internal sealed class DssPrototypeController : IDisposable
             $"radius={sessionContext.BodyRadiusMeters:0}, " +
             $"FOV={graphics.VerticalFovDegrees:0.###}, " +
             $"DSS_PatchRadius={dssModule.PatchRadius:0.###}.");
+    }
+
+    private void ResumeOrResetSequentialTargeting(
+        DssPrototypeSessionContext context)
+    {
+        bool sameBody =
+            IsSameTargetingBody(
+                targetingProgressSystemAddress,
+                targetingProgressBodyId,
+                targetingProgressBodyName,
+                context);
+
+        if (!sameBody)
+        {
+            targetingProgressSystemAddress =
+                context.SystemAddress;
+            targetingProgressBodyId =
+                context.BodyId;
+            targetingProgressBodyName =
+                context.BodyName;
+
+            Interlocked.Exchange(
+                ref targetingSequentialStep,
+                1);
+            Interlocked.Exchange(
+                ref targetingScanComplete,
+                0);
+            Interlocked.Exchange(
+                ref targetingConfirmedImpacts,
+                0);
+            Interlocked.Exchange(
+                ref targetingUsedCoverageCandidates,
+                0);
+            coverageObserver.Reset();
+
+            Logger.Logger.Info(
+                $"DSS TARGETING new body: system={context.SystemAddress}; " +
+                $"body={context.BodyId} '{context.BodyName}'; step=1.");
+            return;
+        }
+
+        Logger.Logger.Info(
+            $"DSS TARGETING resumed same body at step " +
+            $"{Volatile.Read(ref targetingSequentialStep)}; " +
+            $"complete={Volatile.Read(ref targetingScanComplete) != 0}.");
+    }
+
+    internal static bool IsSameTargetingBody(
+        long previousSystemAddress,
+        int previousBodyId,
+        string previousBodyName,
+        DssPrototypeSessionContext context)
+    {
+        if (previousSystemAddress == 0
+            || context.SystemAddress == 0
+            || previousSystemAddress
+               != context.SystemAddress)
+        {
+            return false;
+        }
+
+        if (previousBodyId >= 0
+            && context.BodyId >= 0)
+        {
+            return previousBodyId
+                   == context.BodyId;
+        }
+
+        return !string.IsNullOrWhiteSpace(
+                   previousBodyName)
+               && !string.IsNullOrWhiteSpace(
+                   context.BodyName)
+               && previousBodyName.Equals(
+                   context.BodyName,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private DssPrototypeSessionContext BuildSessionContext(
@@ -512,6 +608,20 @@ internal sealed class DssPrototypeController : IDisposable
                             logger?.LogProbeImpact(
                                 impact);
 
+                            if (impact.MatchedLaunchSequence > 0)
+                            {
+                                int confirmed =
+                                    Interlocked.Increment(
+                                        ref targetingConfirmedImpacts);
+
+                                coverageObserver.NotifyImpact(
+                                    frame.TimestampUtc);
+
+                                Logger.Logger.Info(
+                                    $"DSS TARGETING impact confirmed: {confirmed}; " +
+                                    $"launch={impact.MatchedLaunchSequence}.");
+                            }
+
                             Logger.Logger.Info(
                                 $"DSS IMPACT #{impact.ImpactSequence}: " +
                                 $"launch={impact.MatchedLaunchSequence}; " +
@@ -540,6 +650,21 @@ internal sealed class DssPrototypeController : IDisposable
                                 frame,
                                 tracking.Geometry);
 
+                        int confirmedImpacts =
+                            Volatile.Read(
+                                ref targetingConfirmedImpacts);
+
+                        long usedCoverageCandidates =
+                            Volatile.Read(
+                                ref targetingUsedCoverageCandidates);
+
+                        DssCoverageObservation coverageObservation =
+                            coverageObserver.Process(
+                                frame,
+                                tracking.Geometry,
+                                confirmedImpacts > 0,
+                                usedCoverageCandidates);
+
                         logger?.LogFrame(
                             sequence,
                             state,
@@ -548,6 +673,7 @@ internal sealed class DssPrototypeController : IDisposable
                             tracking,
                             readiness,
                             missObservation,
+                            coverageObservation,
                             captureWatch.Elapsed.TotalMilliseconds,
                             detectWatch.Elapsed.TotalMilliseconds);
 
@@ -559,7 +685,10 @@ internal sealed class DssPrototypeController : IDisposable
                                 state,
                                 readiness,
                                 tracking.Geometry,
-                                missObservation));
+                                missObservation,
+                                coverageObservation,
+                                confirmedImpacts,
+                                usedCoverageCandidates));
 
                         QueueOverlayUpdate(
                             frame,
@@ -567,7 +696,8 @@ internal sealed class DssPrototypeController : IDisposable
                             readiness,
                             state,
                             context,
-                            sequence);
+                            sequence,
+                            coverageObservation);
                     }
                 }
 
@@ -663,18 +793,61 @@ internal sealed class DssPrototypeController : IDisposable
             Volatile.Read(
                 ref latestLaunchFrame);
 
+        int targetingStepAtFire =
+            Volatile.Read(
+                ref targetingSequentialStep);
+
+        bool targetingCompleteAtFire =
+            Volatile.Read(
+                ref targetingScanComplete) != 0;
+
         DssProbeLaunchRecord launch =
             DssProbeLaunchCorrelator.Correlate(
                 sequence,
                 e,
                 frame);
 
+        DssSequentialTargetTelemetry targetingTelemetry =
+            DssSequentialTargetTelemetryBuilder.Build(
+                targetingStepAtFire,
+                targetingCompleteAtFire,
+                frame,
+                launch);
+
         sessionLogger?.LogProbeLaunch(
-            launch);
+            launch,
+            targetingTelemetry);
 
         bool queuedForImpact =
             flightCorrelator.RegisterLaunch(
                 launch);
+
+        // Keep the current step on a native MISS so the user can retry it.
+        // GeometryValid is intentionally not required: step #3 is the body
+        // centre, where C may briefly become Predicting at convergence.
+        if (!launch.HudMissVisible
+            && targetingTelemetry.Available
+            && Volatile.Read(ref targetingScanComplete) == 0)
+        {
+            if (targetingTelemetry.CandidateId > 0)
+            {
+                MarkCoverageCandidateUsed(
+                    targetingTelemetry.CandidateId);
+            }
+
+            int currentStep = Volatile.Read(ref targetingSequentialStep);
+
+            if (currentStep >= 1
+                && currentStep <= (DssPredictiveBatchPlanner.MaximumBatchCount + DssPredictiveBatchPlanner.MaximumCorrectionShots))
+            {
+                int nextStep = Interlocked.Increment(ref targetingSequentialStep);
+
+                Logger.Logger.Info(
+                    $"DSS TARGETING sequence advanced: {currentStep} -> {nextStep}; " +
+                    $"launch={sequence}; geometry={launch.GeometryValid}; " +
+                    $"r/Rh={launch.AimNormalizedRadius:0.###}.");
+            }
+        }
 
         Logger.Logger.Info(
             $"DSS FIRE INPUT #{sequence}: " +
@@ -689,6 +862,37 @@ internal sealed class DssPrototypeController : IDisposable
             $"frameAge={launch.FrameAgeMilliseconds:0.#} ms.");
     }
 
+    private void MarkCoverageCandidateUsed(
+        int candidateId)
+    {
+        if (candidateId <= 0
+            || candidateId >= 63)
+        {
+            return;
+        }
+
+        long bit =
+            1L << candidateId;
+
+        while (true)
+        {
+            long current =
+                Volatile.Read(
+                    ref targetingUsedCoverageCandidates);
+
+            long updated =
+                current | bit;
+
+            if (updated == current
+                || Interlocked.CompareExchange(
+                    ref targetingUsedCoverageCandidates,
+                    updated,
+                    current) == current)
+            {
+                return;
+            }
+        }
+    }
     private void StopFireInputMonitor()
     {
         DssFireInputMonitor? monitor =
@@ -765,7 +969,8 @@ internal sealed class DssPrototypeController : IDisposable
         DssAssistantReadinessSnapshot readiness,
         GameStateSnapshot state,
         DssPrototypeSessionContext context,
-        long sequence)
+        long sequence,
+        DssCoverageObservation coverageObservation)
     {
         DssPrototypeOverlayWindow? targetOverlay =
             overlay;
@@ -791,7 +996,12 @@ internal sealed class DssPrototypeController : IDisposable
                     readiness,
                     state,
                     context,
-                    sequence);
+                    sequence,
+                    Volatile.Read(ref targetingSequentialStep),
+                    Volatile.Read(ref targetingScanComplete) != 0,
+                    Volatile.Read(ref targetingConfirmedImpacts),
+                    Volatile.Read(ref targetingUsedCoverageCandidates),
+                    coverageObservation);
             }));
     }
 
@@ -806,6 +1016,18 @@ internal sealed class DssPrototypeController : IDisposable
             dssModule =
                 DssJournalContextReader.ParseDssModule(
                     e.Data);
+        }
+
+        if (sessionActive
+            && e.EventName.Equals(
+                "SAAScanComplete",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            Interlocked.Exchange(ref targetingScanComplete, 1);
+
+            Logger.Logger.Info(
+                $"DSS TARGETING complete at step {Volatile.Read(ref targetingSequentialStep)}: " +
+                "SAAScanComplete received.");
         }
 
         if (sessionActive)
@@ -843,6 +1065,9 @@ internal sealed class DssPrototypeController : IDisposable
         sessionLogger = null;
         sessionContext = null;
         latestLaunchFrame = null;
+        // Keep targetingSequentialStep / targetingScanComplete in memory.
+        // Elite keeps probe coverage when DSS is closed and reopened, so the
+        // assistant must resume the same body instead of restarting at #1.
         impactCounterDetector.Reset();
         flightCorrelator.Reset();
         tracker.Reset();

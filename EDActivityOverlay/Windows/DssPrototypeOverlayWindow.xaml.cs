@@ -22,7 +22,14 @@ public partial class DssPrototypeOverlayWindow : Window
     private readonly List<FrameworkElement> aimPointElements =
         new();
 
-    private const double AimPointDiameter = 22d;
+    private readonly DssDisplayGeometrySmoother displayGeometrySmoother =
+        new();
+
+    private readonly DssAimVisualTargetLatch visualTargetLatch =
+        new();
+
+    private const double AimPointDiameter = 24d;
+    private const double AimPointHaloDiameter = 32d;
 
     internal DssPrototypeOverlayWindow(
         IntPtr targetWindow)
@@ -75,9 +82,17 @@ public partial class DssPrototypeOverlayWindow : Window
         DssAssistantReadinessSnapshot readiness,
         GameStateSnapshot state,
         DssPrototypeSessionContext context,
-        long sequence)
+        long sequence,
+        int targetingStep,
+        bool targetingScanComplete,
+        int targetingConfirmedImpacts,
+        long usedCoverageCandidates,
+        DssCoverageObservation coverageObservation)
     {
-        DssHudGeometry geometry = tracking.Geometry;
+        DssHudGeometry geometry =
+            displayGeometrySmoother.Update(
+                frame.TimestampUtc,
+                tracking.Geometry);
 
         SyncToTarget();
         UpdateReadinessPanel(readiness);
@@ -183,6 +198,11 @@ public partial class DssPrototypeOverlayWindow : Window
             state,
             readiness,
             geometry,
+            targetingStep,
+            targetingScanComplete,
+            targetingConfirmedImpacts,
+            usedCoverageCandidates,
+            coverageObservation,
             scaleX,
             scaleY);
 
@@ -222,6 +242,11 @@ public partial class DssPrototypeOverlayWindow : Window
         GameStateSnapshot state,
         DssAssistantReadinessSnapshot readiness,
         DssHudGeometry geometry,
+        int targetingStep,
+        bool targetingScanComplete,
+        int targetingConfirmedImpacts,
+        long usedCoverageCandidates,
+        DssCoverageObservation coverageObservation,
         double scaleX,
         double scaleY)
     {
@@ -231,16 +256,28 @@ public partial class DssPrototypeOverlayWindow : Window
             DssProbeAimSolver.Solve(
                 state,
                 readiness,
-                geometry);
+                geometry,
+                targetingStep,
+                targetingScanComplete,
+                targetingConfirmedImpacts,
+                coverageObservation,
+                usedCoverageCandidates);
+
+        plan =
+            visualTargetLatch.Resolve(
+                DateTimeOffset.UtcNow,
+                targetingStep,
+                targetingScanComplete,
+                plan);
 
         if (!plan.IsAvailable)
         {
             return;
         }
 
-        bool targetingV1 =
+        bool targetingMode =
             plan.Source.StartsWith(
-                "TARGETING_V1",
+                "TARGETING_",
                 StringComparison.Ordinal);
 
         foreach (DssProjectedAimPoint point
@@ -252,21 +289,43 @@ public partial class DssPrototypeOverlayWindow : Window
             double y =
                 point.ScreenY * scaleY;
 
-            bool primary =
-                point.Sequence == 1;
+            // Current DSS targeting exposes one actionable point at a time.
+            // Sequence != 1 must not make the live target secondary.
+            bool primary = true;
 
             Brush stroke =
-                primary
-                    ? Brushes.Yellow
-                    : point.Zone switch
-                    {
-                        DssAimZone.FarSide =>
-                            Brushes.OrangeRed,
-                        DssAimZone.Limb =>
-                            Brushes.DeepSkyBlue,
-                        _ =>
-                            Brushes.White
-                    };
+                Brushes.DeepPink;
+
+            var halo =
+                new Ellipse
+                {
+                    Width =
+                        AimPointHaloDiameter,
+                    Height =
+                        AimPointHaloDiameter,
+                    Stroke =
+                        Brushes.Black,
+                    StrokeThickness = 5,
+                    Fill =
+                        Brushes.Transparent,
+                    Opacity = 0.86,
+                    IsHitTestVisible =
+                        false
+                };
+
+            Canvas.SetLeft(
+                halo,
+                x - AimPointHaloDiameter / 2d);
+
+            Canvas.SetTop(
+                halo,
+                y - AimPointHaloDiameter / 2d);
+
+            OverlayCanvas.Children.Add(
+                halo);
+
+            aimPointElements.Add(
+                halo);
 
             var marker =
                 new Ellipse
@@ -277,12 +336,10 @@ public partial class DssPrototypeOverlayWindow : Window
                         AimPointDiameter,
                     Stroke =
                         stroke,
-                    StrokeThickness =
-                        primary ? 3 : 1.5,
+                    StrokeThickness = 4,
                     Fill =
                         Brushes.Transparent,
-                    Opacity =
-                        primary ? 0.95 : 0.58,
+                    Opacity = 1.0,
                     IsHitTestVisible =
                         false
                 };
@@ -305,13 +362,13 @@ public partial class DssPrototypeOverlayWindow : Window
                 new TextBlock
                 {
                     Text =
-                        targetingV1 && primary
-                            ? "NEXT AIM"
+                        targetingMode && primary
+                            ? $"NEXT AIM #{point.Sequence}"
                             : point.Sequence.ToString(),
                     FontFamily =
                         new FontFamily("Consolas"),
                     FontSize =
-                        targetingV1 && primary
+                        targetingMode && primary
                             ? 12
                             : primary ? 13 : 10,
                     FontWeight =
@@ -320,8 +377,9 @@ public partial class DssPrototypeOverlayWindow : Window
                             : FontWeights.Normal,
                     Foreground =
                         stroke,
-                    Opacity =
-                        primary ? 1.0 : 0.68,
+                    Background =
+                        Brushes.Black,
+                    Opacity = 0.96,
                     IsHitTestVisible =
                         false
                 };
@@ -336,7 +394,7 @@ public partial class DssPrototypeOverlayWindow : Window
                 x
                 - label.DesiredSize.Width / 2d);
 
-            if (targetingV1 && primary)
+            if (targetingMode && primary)
             {
                 Canvas.SetTop(
                     label,
@@ -456,6 +514,24 @@ public partial class DssPrototypeOverlayWindow : Window
     private static string BuildMeasuredReadinessDetail(
         DssAssistantReadinessSnapshot readiness)
     {
+        if (readiness.State
+                == DssAssistantReadinessState.TooFar
+            && !readiness.HasAngularMeasurement)
+        {
+            if (readiness.BodyRadiusMeters <= 0)
+            {
+                return
+                    "body centre acquired вЂў horizon not measurable yet вЂў move closer вЂў " +
+                    "physical distance unavailable";
+            }
+
+            return
+                "body centre acquired вЂў horizon not measurable yet вЂў move closer вЂў " +
+                $"ready {FormatDistance(readiness.RecommendedNearCenterDistanceMeters)}вЂ“" +
+                $"{FormatDistance(readiness.RecommendedFarCenterDistanceMeters)} " +
+                $"(target {FormatDistance(readiness.RecommendedTargetCenterDistanceMeters)})";
+        }
+
         if (readiness.BodyRadiusMeters <= 0)
         {
             return

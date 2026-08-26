@@ -12,7 +12,9 @@ internal sealed record DssProjectedAimPoint(
     double NormalizedY,
     double ScreenX,
     double ScreenY,
-    DssAimZone Zone);
+    DssAimZone Zone,
+    int CandidateId = 0,
+    double CoverageScore = 0);
 
 internal sealed record DssProjectedAimPlan(
     int EfficiencyTarget,
@@ -61,9 +63,42 @@ internal static class DssProbeAimSolver
     public static DssProjectedAimPlan Solve(
         GameStateSnapshot state,
         DssAssistantReadinessSnapshot readiness,
-        DssHudGeometry geometry)
+        DssHudGeometry geometry) =>
+        Solve(
+            state,
+            readiness,
+            geometry,
+            sequentialStep: 1,
+            scanComplete: false);
+
+    public static DssProjectedAimPlan Solve(
+        GameStateSnapshot state,
+        DssAssistantReadinessSnapshot readiness,
+        DssHudGeometry geometry,
+        int sequentialStep,
+        bool scanComplete) =>
+        Solve(
+            state,
+            readiness,
+            geometry,
+            sequentialStep,
+            scanComplete,
+            confirmedImpactCount: int.MaxValue,
+            coverageObservation: null,
+            usedCoverageCandidates: 0);
+
+    public static DssProjectedAimPlan Solve(
+        GameStateSnapshot state,
+        DssAssistantReadinessSnapshot readiness,
+        DssHudGeometry geometry,
+        int sequentialStep,
+        bool scanComplete,
+        int confirmedImpactCount,
+        DssCoverageObservation? coverageObservation,
+        long usedCoverageCandidates)
     {
-        if (!readiness.IsReady
+        if (scanComplete
+            || !readiness.IsReady
             || !geometry.BodyCenterFound
             || !geometry.HorizonMarkerFound
             || geometry.HorizonRadiusPixels <= 25
@@ -73,77 +108,83 @@ internal static class DssProbeAimSolver
             return DssProjectedAimPlan.Empty;
         }
 
-        (int target, string source) =
-            ResolveEfficiencyTarget(
-                state);
-
-        DssProbePattern pattern =
-            DssProbePatternCatalog.Get(
-                target);
-
-        // v1 deliberately emits ONE actionable point. Coverage planning comes
-        // later; for now we only need to prove the live geometry -> aim-point
-        // chain against Elite's native MISS indicator and real probe shots.
-        // Reuse the first non-centre catalog direction so the orientation is
-        // deterministic and already compatible with the future planner.
-        DssAimPoint? directionPoint =
-            pattern.Points
-                .OrderBy(
-                    point => point.Sequence)
-                .FirstOrDefault(
-                    point =>
-                        Math.Sqrt(
-                            point.X * point.X
-                            + point.Y * point.Y) > 0.05d);
-
-        double directionX = 0d;
-        double directionY = -1d;
-
-        if (directionPoint is not null)
+        if (!TryResolvePredictiveTarget(
+                state,
+                sequentialStep,
+                readiness.AngularDiameterDegrees,
+                confirmedImpactCount,
+                coverageObservation,
+                usedCoverageCandidates,
+                out DssPredictiveAimTarget target,
+                out string source))
         {
-            double length =
-                Math.Sqrt(
-                    directionPoint.X * directionPoint.X
-                    + directionPoint.Y * directionPoint.Y);
-
-            if (length > 0.001d)
-            {
-                directionX =
-                    directionPoint.X / length;
-                directionY =
-                    directionPoint.Y / length;
-            }
+            return DssProjectedAimPlan.Empty;
         }
-
-        double safeRadius =
-            EstimateSafeNormalizedRadius(
-                readiness.AngularDiameterDegrees);
-
-        double normalizedX =
-            directionX * safeRadius;
-
-        double normalizedY =
-            directionY * safeRadius;
 
         DssProjectedAimPoint point =
             new(
-                1,
-                normalizedX,
-                normalizedY,
+                sequentialStep,
+                target.NormalizedX,
+                target.NormalizedY,
                 geometry.BodyCenterX
-                    + normalizedX
+                    + target.NormalizedX
                       * geometry.HorizonRadiusPixels,
                 geometry.BodyCenterY
-                    + normalizedY
+                    + target.NormalizedY
                       * geometry.HorizonRadiusPixels,
-                DssAimZone.FarSide);
+                target.Zone,
+                target.CandidateId,
+                target.CoverageScore);
 
         return new DssProjectedAimPlan(
-            pattern.EfficiencyTarget,
-            $"TARGETING_V1/{source}",
+            target.PredictedBatchCount,
+            $"TARGETING_V2_{target.Role}/{source}/N{target.PredictedBatchCount}",
             new[] { point });
     }
 
+    internal static bool TryResolvePredictiveTarget(
+        GameStateSnapshot state,
+        int sequentialStep,
+        double angularDiameterDegrees,
+        int confirmedImpactCount,
+        DssCoverageObservation? coverageObservation,
+        long usedCoverageCandidates,
+        out DssPredictiveAimTarget target,
+        out string source)
+    {
+        (int requestedTarget, string resolvedSource) =
+            ResolveEfficiencyTarget(
+                state);
+
+        source = resolvedSource;
+
+        target =
+            DssPredictiveBatchPlanner.Resolve(
+                sequentialStep,
+                requestedTarget,
+                source,
+                angularDiameterDegrees,
+                confirmedImpactCount,
+                coverageObservation,
+                usedCoverageCandidates);
+
+        return target.Available;
+    }
+
+    internal static bool IsCoverageCandidateUsed(
+        long mask,
+        int candidateId)
+    {
+        if (candidateId <= 0
+            || candidateId >= 63)
+        {
+            return false;
+        }
+
+        return (mask
+                & (1L << candidateId))
+               != 0;
+    }
     internal static bool IsWithinTargetingV1Calibration(
         double angularDiameterDegrees) =>
         double.IsFinite(angularDiameterDegrees)
@@ -172,6 +213,7 @@ internal static class DssProbeAimSolver
             angularDiameterDegrees)
         - TargetingV1SafetyMarginNormalized;
 
+
     private static (int Target, string Source)
         ResolveEfficiencyTarget(
             GameStateSnapshot state)
@@ -190,8 +232,8 @@ internal static class DssProbeAimSolver
                 return (
                     Math.Clamp(
                         body.EfficiencyTarget,
-                        DssProbePatternCatalog.MinimumTarget,
-                        DssProbePatternCatalog.MaximumTarget),
+                        DssPredictiveBatchPlanner.MinimumBatchCount,
+                        DssPredictiveBatchPlanner.MaximumBatchCount),
                     "BODY");
             }
         }
@@ -203,8 +245,8 @@ internal static class DssProbeAimSolver
         return (
             Math.Clamp(
                 configured,
-                DssProbePatternCatalog.MinimumTarget,
-                DssProbePatternCatalog.MaximumTarget),
+                DssPredictiveBatchPlanner.MinimumBatchCount,
+                DssPredictiveBatchPlanner.MaximumBatchCount),
             "SETTINGS");
     }
 }

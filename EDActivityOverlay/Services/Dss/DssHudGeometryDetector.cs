@@ -44,7 +44,8 @@ internal sealed record DssDetectionHint(
     double PredictedCenterX,
     double PredictedCenterY,
     double CenterSearchRadiusPixels,
-    double? ExpectedHorizonRadiusPixels);
+    double? ExpectedHorizonRadiusPixels,
+    bool RequireStrictHorizonIsolation = false);
 
 /// <summary>
 /// DSS geometry detector v8.
@@ -87,14 +88,16 @@ internal sealed class DssHudGeometryDetector
     public DssHudGeometry DetectGlobal(
         DssCapturedFrame frame,
         double verticalFovDegrees,
-        double? expectedHorizonRadiusPixels = null) =>
+        double? expectedHorizonRadiusPixels = null,
+        bool requireStrictHorizonIsolation = false) =>
         DetectCore(
             frame,
             verticalFovDegrees,
             null,
             expectedHorizonRadiusPixels,
             requireExpectedHorizonValidation:
-                expectedHorizonRadiusPixels is > 25);
+                expectedHorizonRadiusPixels is > 25,
+            requireStrictHorizonIsolation);
 
     public DssHudGeometry DetectLocal(
         DssCapturedFrame frame,
@@ -105,7 +108,8 @@ internal sealed class DssHudGeometryDetector
             verticalFovDegrees,
             hint,
             hint.ExpectedHorizonRadiusPixels,
-            requireExpectedHorizonValidation: false);
+            requireExpectedHorizonValidation: false,
+            hint.RequireStrictHorizonIsolation);
 
     public DssHudGeometry Detect(
         DssCapturedFrame frame,
@@ -128,7 +132,8 @@ internal sealed class DssHudGeometryDetector
         double verticalFovDegrees,
         DssDetectionHint? hint,
         double? expectedHorizonRadiusPixels,
-        bool requireExpectedHorizonValidation)
+        bool requireExpectedHorizonValidation,
+        bool requireStrictHorizonIsolation)
     {
         int reticleX = frame.Width / 2;
         int reticleY = frame.Height / 2;
@@ -157,7 +162,8 @@ internal sealed class DssHudGeometryDetector
                     center.Y,
                     reticleX,
                     reticleY,
-                    expectedHorizonRadiusPixels);
+                    expectedHorizonRadiusPixels,
+                    requireStrictHorizonIsolation);
         }
 
         bool hasTrustedRadius =
@@ -228,7 +234,8 @@ internal sealed class DssHudGeometryDetector
                     reticleX,
                     reticleY,
                     expectedHorizonRadiusPixels!.Value,
-                    hint);
+                    hint,
+                    requireStrictHorizonIsolation);
 
             if (recovery is not null)
             {
@@ -1522,7 +1529,8 @@ internal sealed class DssHudGeometryDetector
             int reticleX,
             int reticleY,
             double expectedHorizonRadius,
-            DssDetectionHint? hint)
+            DssDetectionHint? hint,
+            bool requireStrictHorizonIsolation)
     {
         if (expectedHorizonRadius <= 25)
         {
@@ -1631,6 +1639,19 @@ internal sealed class DssHudGeometryDetector
                         ny);
 
                 if (!shape.Valid)
+                {
+                    continue;
+                }
+
+                if (requireStrictHorizonIsolation
+                    && !IsStrictHorizonIsolationAccepted(
+                        frame,
+                        horizonX,
+                        horizonY,
+                        dx,
+                        dy,
+                        nx,
+                        ny))
                 {
                     continue;
                 }
@@ -1880,7 +1901,8 @@ internal sealed class DssHudGeometryDetector
         double centerY,
         int reticleX,
         int reticleY,
-        double? expectedRadius)
+        double? expectedRadius,
+        bool requireStrictHorizonIsolation)
     {
         double vx =
             reticleX - centerX;
@@ -2001,6 +2023,19 @@ internal sealed class DssHudGeometryDetector
                     ny);
 
             if (!shape.Valid)
+            {
+                continue;
+            }
+
+            if (requireStrictHorizonIsolation
+                && !IsStrictHorizonIsolationAccepted(
+                    frame,
+                    x,
+                    y,
+                    dx,
+                    dy,
+                    nx,
+                    ny))
             {
                 continue;
             }
@@ -2303,6 +2338,117 @@ internal sealed class DssHudGeometryDetector
             tripletPeak);
     }
 
+    private static bool IsStrictHorizonIsolationAccepted(
+        DssCapturedFrame frame,
+        double x,
+        double y,
+        double dx,
+        double dy,
+        double nx,
+        double ny)
+    {
+        int leftLongest =
+            MeasureLongestNeutralTangentContinuation(
+                frame,
+                x,
+                y,
+                dx,
+                dy,
+                nx,
+                ny,
+                -1);
+
+        int rightLongest =
+            MeasureLongestNeutralTangentContinuation(
+                frame,
+                x,
+                y,
+                dx,
+                dy,
+                nx,
+                ny,
+                1);
+
+        return IsExtendedHorizonContinuationAccepted(
+            leftLongest,
+            rightLongest);
+    }
+
+    internal static bool IsExtendedHorizonContinuationAccepted(
+        int leftLongestRun,
+        int rightLongestRun) =>
+        Math.Max(
+            leftLongestRun,
+            rightLongestRun) < 6;
+
+    private static int MeasureLongestNeutralTangentContinuation(
+        DssCapturedFrame frame,
+        double x,
+        double y,
+        double dx,
+        double dy,
+        double nx,
+        double ny,
+        int sign)
+    {
+        const int startOffset = 28;
+        const int endOffset = 68;
+        const int radialThickness = 7;
+
+        int longest = 0;
+        int current = 0;
+
+        for (int tangentOffset = startOffset;
+             tangentOffset <= endOffset;
+             tangentOffset++)
+        {
+            bool hit = false;
+
+            for (int radialOffset = -radialThickness;
+                 radialOffset <= radialThickness;
+                 radialOffset++)
+            {
+                int px =
+                    (int)Math.Round(
+                        x
+                        + nx * tangentOffset * sign
+                        + dx * radialOffset);
+
+                int py =
+                    (int)Math.Round(
+                        y
+                        + ny * tangentOffset * sign
+                        + dy * radialOffset);
+
+                if (GetNeutralLuma(
+                        frame,
+                        px,
+                        py,
+                        HorizonMinimumLuma,
+                        HorizonMaximumSpread)
+                    >= HorizonMinimumLuma)
+                {
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (hit)
+            {
+                current++;
+                longest =
+                    Math.Max(
+                        longest,
+                        current);
+            }
+            else
+            {
+                current = 0;
+            }
+        }
+
+        return longest;
+    }
     private static bool IsSafeInitialHorizonPoint(
         DssCapturedFrame frame,
         double x,

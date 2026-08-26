@@ -83,8 +83,25 @@ internal sealed class DssAssistantReadinessEvaluator
 
     private const double AngularEmaAlpha = 0.22;
 
+    // v26: at very long range Frontier can expose a clean body-centre marker
+    // long before the horizon triplet is large enough to measure. The v25
+    // logs show normal READY acquisitions obtaining H within ~0.7-1.9 s after
+    // the first strong C, while far-only sessions remain C-only for >3 s.
+    internal static readonly TimeSpan CenterOnlyTooFarInferenceDelay =
+        TimeSpan.FromSeconds(3);
+
+    private const double CenterOnlyTooFarMinimumConfidence = 0.75;
+
+    // v28: C-only TooFar is trustworthy only while the body centre remains
+    // reasonably close to the reticle. Recorded v27 families were separated:
+    // genuine far-only C ~= 7.73..12.23 deg; false off-axis inference started
+    // at ~=15.48 deg. 14 deg keeps a conservative gap between them.
+    internal const double CenterOnlyTooFarMaximumAimOffsetDegrees = 14d;
+
     private double smoothedAngularRadiusDegrees;
     private DateTimeOffset lastAngularMeasurementUtc =
+        DateTimeOffset.MinValue;
+    private DateTimeOffset centerOnlyWithoutHorizonSinceUtc =
         DateTimeOffset.MinValue;
     private bool readyLatched;
 
@@ -101,6 +118,8 @@ internal sealed class DssAssistantReadinessEvaluator
     {
         smoothedAngularRadiusDegrees = 0;
         lastAngularMeasurementUtc =
+            DateTimeOffset.MinValue;
+        centerOnlyWithoutHorizonSinceUtc =
             DateTimeOffset.MinValue;
         readyLatched = false;
 
@@ -131,6 +150,8 @@ internal sealed class DssAssistantReadinessEvaluator
         if (!bodyTargetSelected)
         {
             readyLatched = false;
+            centerOnlyWithoutHorizonSinceUtc =
+                DateTimeOffset.MinValue;
 
             return Publish(
                 BuildWithoutMeasurement(
@@ -146,6 +167,10 @@ internal sealed class DssAssistantReadinessEvaluator
             frame,
             geometry,
             context.VerticalFovDegrees);
+
+        UpdateCenterOnlyFarInference(
+            frame,
+            geometry);
 
         double measurementAgeMilliseconds =
             lastAngularMeasurementUtc
@@ -190,9 +215,27 @@ internal sealed class DssAssistantReadinessEvaluator
         {
             readyLatched = false;
 
+            // Physical radius is deliberately NOT required here. At long range
+            // we are inferring only a directional action (move closer) from a
+            // strong C with no measurable H. v28 additionally requires the body
+            // centre to remain close enough to the reticle that missing H is
+            // meaningful evidence of distance rather than off-axis geometry.
+            bool inferredTooFar =
+                geometry.BodyCenterFound
+                && !geometry.HorizonMarkerFound
+                && geometry.AimOffsetDegrees
+                   <= CenterOnlyTooFarMaximumAimOffsetDegrees
+                && centerOnlyWithoutHorizonSinceUtc
+                    != DateTimeOffset.MinValue
+                && frame.TimestampUtc
+                   - centerOnlyWithoutHorizonSinceUtc
+                   >= CenterOnlyTooFarInferenceDelay;
+
             return Publish(
                 new DssAssistantReadinessSnapshot(
-                    DssAssistantReadinessState.Calibrating,
+                    inferredTooFar
+                        ? DssAssistantReadinessState.TooFar
+                        : DssAssistantReadinessState.Calibrating,
                     true,
                     bodyRadiusMeters,
                     0,
@@ -206,6 +249,10 @@ internal sealed class DssAssistantReadinessEvaluator
                 frame,
                 geometry);
         }
+
+        // A real angular measurement supersedes the C-only inference.
+        centerOnlyWithoutHorizonSinceUtc =
+            DateTimeOffset.MinValue;
 
         double angularRadiusDegrees =
             smoothedAngularRadiusDegrees;
@@ -278,6 +325,48 @@ internal sealed class DssAssistantReadinessEvaluator
             frame.TimestampUtc);
 
         return snapshot;
+    }
+
+    private void UpdateCenterOnlyFarInference(
+        DssCapturedFrame frame,
+        DssHudGeometry geometry)
+    {
+        // Once H exists, either a real measurement is available now or the
+        // tracker is carrying a radius established by an earlier observation.
+        // In either case the normal angular readiness path owns the state.
+        if (geometry.HorizonMarkerFound)
+        {
+            centerOnlyWithoutHorizonSinceUtc =
+                DateTimeOffset.MinValue;
+            return;
+        }
+
+        if (!geometry.BodyCenterFound)
+        {
+            return;
+        }
+
+        // At a large reticle/body offset, missing H is ambiguous: the v27
+        // follow-up showed this can persist after crossing the READY band.
+        // Clear the clock so recentering has to establish a fresh 3 s interval.
+        if (geometry.AimOffsetDegrees
+            > CenterOnlyTooFarMaximumAimOffsetDegrees)
+        {
+            centerOnlyWithoutHorizonSinceUtc =
+                DateTimeOffset.MinValue;
+            return;
+        }
+
+        // Start only from a strong observed/acquired centre. Once started,
+        // brief Predicting confidence decay does not restart the 3 s clock.
+        if (centerOnlyWithoutHorizonSinceUtc
+                == DateTimeOffset.MinValue
+            && geometry.BodyCenterConfidence
+                >= CenterOnlyTooFarMinimumConfidence)
+        {
+            centerOnlyWithoutHorizonSinceUtc =
+                frame.TimestampUtc;
+        }
     }
 
     private void UpdateAngularMeasurement(
