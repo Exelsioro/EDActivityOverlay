@@ -866,6 +866,10 @@ internal sealed class DssPrototypeController : IDisposable
         long accepted = 0;
         long rejected = 0;
         double totalTrackMilliseconds = 0d;
+        double totalFrameAgeMilliseconds = 0d;
+        double maximumFrameAgeMilliseconds = 0d;
+        long frameAgeSamples = 0;
+
         DateTimeOffset nextDiagnosticsUtc =
             DateTimeOffset.UtcNow
             + TimeSpan.FromSeconds(3);
@@ -903,11 +907,28 @@ internal sealed class DssPrototypeController : IDisposable
                     || frame is null)
                 {
                     await Task.Delay(
-                        8,
+                        4,
                         token).ConfigureAwait(false);
 
                     continue;
                 }
+
+                double frameAgeMilliseconds =
+                    Math.Max(
+                        0d,
+                        (DateTimeOffset.UtcNow
+                         - frame.TimestampUtc)
+                        .TotalMilliseconds);
+
+                totalFrameAgeMilliseconds +=
+                    frameAgeMilliseconds;
+
+                maximumFrameAgeMilliseconds =
+                    Math.Max(
+                        maximumFrameAgeMilliseconds,
+                        frameAgeMilliseconds);
+
+                frameAgeSamples++;
 
                 Stopwatch watch =
                     Stopwatch.StartNew();
@@ -949,20 +970,33 @@ internal sealed class DssPrototypeController : IDisposable
                               / samples
                             : 0d;
 
+                    double averageFrameAgeMilliseconds =
+                        frameAgeSamples > 0
+                            ? totalFrameAgeMilliseconds
+                              / frameAgeSamples
+                            : 0d;
+
                     Logger.Logger.Info(
                         $"DSS FAST VISUAL: ok={accepted}; reject={rejected}; " +
-                        $"avg={averageMilliseconds:0.00} ms.");
+                        $"avg={averageMilliseconds:0.00} ms; " +
+                        $"frameAgeAvg={averageFrameAgeMilliseconds:0.0} ms; " +
+                        $"frameAgeMax={maximumFrameAgeMilliseconds:0.0} ms; " +
+                        $"copyAge={wgc.LastPublishedFrameAgeMilliseconds:0.0} ms.");
 
                     accepted = 0;
                     rejected = 0;
                     totalTrackMilliseconds = 0;
+                    totalFrameAgeMilliseconds = 0;
+                    maximumFrameAgeMilliseconds = 0;
+                    frameAgeSamples = 0;
+
                     nextDiagnosticsUtc =
                         now
                         + TimeSpan.FromSeconds(3);
                 }
 
                 await Task.Delay(
-                    12,
+                    4,
                     token).ConfigureAwait(false);
             }
         }

@@ -45,11 +45,18 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
     private readonly GraphicsCaptureSession session;
 
     private DssCapturedFrame? latestFrame;
+    private const int MaximumCopiesInFlight = 2;
+
     private long producedVersion;
     private long consumedVersion;
-    private int copyBusy;
+    private int copiesInFlight;
     private int disposed;
+
+    private TimeSpan latestPublishedSystemRelativeTime =
+        TimeSpan.MinValue;
+
     private double lastCopyMilliseconds;
+    private double lastPublishedFrameAgeMilliseconds;
 
     private DssWindowGraphicsCapture(
         IntPtr targetWindow)
@@ -81,7 +88,7 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
             Direct3D11CaptureFramePool.CreateFreeThreaded(
                 device,
                 DirectXPixelFormat.B8G8R8A8UIntNormalized,
-                2,
+                3,
                 item.Size);
 
         session =
@@ -105,6 +112,18 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
             {
                 return
                     lastCopyMilliseconds;
+            }
+        }
+    }
+
+    internal double LastPublishedFrameAgeMilliseconds
+    {
+        get
+        {
+            lock (gate)
+            {
+                return
+                    lastPublishedFrameAgeMilliseconds;
             }
         }
     }
@@ -216,6 +235,7 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
         object args)
     {
         Direct3D11CaptureFrame? frame = null;
+        bool slotOwnedByCallback = false;
 
         try
         {
@@ -230,38 +250,59 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
                 return;
             }
 
-            // Never queue conversions behind a slow conversion. For tracking,
-            // dropping an intermediate frame is much better than rendering an
-            // old frame later.
-            if (Interlocked.CompareExchange(
-                    ref copyBusy,
-                    1,
-                    0) != 0)
+            // The measured 1080p GPU->CPU copy is about 18-23 ms, while a
+            // 60 Hz compositor frame is only 16.7 ms. One in-flight slot
+            // therefore caps FAST at roughly 25-30 Hz. Two bounded slots allow
+            // the next compositor frame to start copying immediately without
+            // creating an unbounded latency queue.
+            int inFlight =
+                Interlocked.Increment(
+                    ref copiesInFlight);
+
+            if (inFlight
+                > MaximumCopiesInFlight)
             {
+                Interlocked.Decrement(
+                    ref copiesInFlight);
+
                 frame.Dispose();
                 return;
             }
 
+            slotOwnedByCallback = true;
+
+            TimeSpan systemRelativeTime =
+                frame.SystemRelativeTime;
+
             DateTimeOffset timestampUtc =
-                DateTimeOffset.UtcNow;
+                MapSystemRelativeTimeToUtc(
+                    systemRelativeTime);
 
             _ = CopyFrameAsync(
                 frame,
-                timestampUtc);
+                timestampUtc,
+                systemRelativeTime);
+
+            // CopyFrameAsync now owns the frame and the in-flight slot.
+            frame = null;
+            slotOwnedByCallback = false;
         }
         catch
         {
             frame?.Dispose();
 
-            Interlocked.Exchange(
-                ref copyBusy,
-                0);
+            if (slotOwnedByCallback)
+            {
+                Interlocked.Decrement(
+                    ref copiesInFlight);
+            }
         }
     }
 
     private async Task CopyFrameAsync(
         Direct3D11CaptureFrame frame,
-        DateTimeOffset timestampUtc)
+        DateTimeOffset timestampUtc,
+        TimeSpan systemRelativeTime)
     {
         Stopwatch watch =
             Stopwatch.StartNew();
@@ -305,14 +346,33 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
 
                     lock (gate)
                     {
-                        latestFrame =
-                            captured;
+                        // Concurrent copies can finish out of order. Preserve
+                        // latest-frame-wins by publishing only the newest
+                        // compositor timestamp.
+                        if (Volatile.Read(
+                                ref disposed) == 0
+                            && systemRelativeTime
+                               > latestPublishedSystemRelativeTime)
+                        {
+                            latestFrame =
+                                captured;
 
-                        producedVersion++;
+                            latestPublishedSystemRelativeTime =
+                                systemRelativeTime;
 
-                        lastCopyMilliseconds =
-                            watch.Elapsed
-                                .TotalMilliseconds;
+                            producedVersion++;
+
+                            lastCopyMilliseconds =
+                                watch.Elapsed
+                                    .TotalMilliseconds;
+
+                            lastPublishedFrameAgeMilliseconds =
+                                Math.Max(
+                                    0d,
+                                    (DateTimeOffset.UtcNow
+                                     - timestampUtc)
+                                    .TotalMilliseconds);
+                        }
                     }
                 }
                 finally
@@ -328,10 +388,49 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
         }
         finally
         {
-            Interlocked.Exchange(
-                ref copyBusy,
-                0);
+            Interlocked.Decrement(
+                ref copiesInFlight);
         }
+    }
+
+    internal static DateTimeOffset MapSystemRelativeTimeToUtc(
+        TimeSpan systemRelativeTime,
+        DateTimeOffset? nowUtcOverride = null,
+        long? nowQpcOverride = null)
+    {
+        DateTimeOffset nowUtc =
+            nowUtcOverride
+            ?? DateTimeOffset.UtcNow;
+
+        long nowQpc =
+            nowQpcOverride
+            ?? Stopwatch.GetTimestamp();
+
+        double nowQpcSeconds =
+            nowQpc
+            / (double)Stopwatch.Frequency;
+
+        double ageSeconds =
+            nowQpcSeconds
+            - systemRelativeTime.TotalSeconds;
+
+        // SystemRelativeTime is documented as QPC time. Keep a defensive
+        // fallback so an unexpected platform/runtime clock mismatch cannot
+        // manufacture a wildly old frame.
+        if (!double.IsFinite(
+                ageSeconds)
+            || ageSeconds < -0.050d
+            || ageSeconds > 10d)
+        {
+            return nowUtc;
+        }
+
+        return
+            nowUtc
+            - TimeSpan.FromSeconds(
+                Math.Max(
+                    0d,
+                    ageSeconds));
     }
 
     private DssCapturedFrame CopySoftwareBitmap(
@@ -492,6 +591,11 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
             latestFrame = null;
             producedVersion = 0;
             consumedVersion = 0;
+
+            latestPublishedSystemRelativeTime =
+                TimeSpan.MinValue;
+
+            lastPublishedFrameAgeMilliseconds = 0d;
         }
     }
 
