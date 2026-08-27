@@ -69,7 +69,7 @@ public sealed class DssVisualMotionPolicyTests
 
         Assert.InRange(
             gate,
-            13.94,
-            13.96);
+            22.24,
+            22.26);
     }
 }

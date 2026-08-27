@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -37,6 +37,12 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
 
     private readonly object gate =
         new();
+
+    // Single-bit async notification for the presentation-only FAST consumer.
+    // It is deliberately not a frame queue: WGC still publishes only the
+    // newest completed CPU frame and consumers fetch latest-frame-wins.
+    private readonly SemaphoreSlim publishedFrameSignal =
+        new(0, 1);
 
     private readonly IntPtr targetWindow;
     private readonly IDirect3DDevice device;
@@ -230,6 +236,57 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
         }
     }
 
+    /// <summary>
+    /// Waits until WGC has published a frame newer than <paramref name="observedVersion"/>.
+    /// The semaphore is only a wake-up edge; frames themselves are never queued.
+    /// This removes the 8/12 ms polling sleeps from the FAST presentation path
+    /// without turning it into a busy loop.
+    /// </summary>
+    internal async Task WaitForPublishedFrameAsync(
+        long observedVersion,
+        CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            if (Volatile.Read(
+                    ref disposed) != 0)
+            {
+                return;
+            }
+
+            lock (gate)
+            {
+                if (producedVersion
+                    != observedVersion)
+                {
+                    return;
+                }
+            }
+
+            await publishedFrameSignal
+                .WaitAsync(token)
+                .ConfigureAwait(false);
+        }
+    }
+
+    private void SignalPublishedFrame()
+    {
+        try
+        {
+            // Coalesce any number of publications into one wake-up. The FAST
+            // reader asks for the newest version after waking, so a count > 1
+            // would only recreate a latency queue in notification form.
+            if (publishedFrameSignal.CurrentCount == 0)
+            {
+                publishedFrameSignal.Release();
+            }
+        }
+        catch (SemaphoreFullException)
+        {
+            // Another concurrent copy completion won the race to signal.
+        }
+    }
+
     private void OnFrameArrived(
         Direct3D11CaptureFramePool sender,
         object args)
@@ -344,6 +401,8 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
 
                     watch.Stop();
 
+                    bool published = false;
+
                     lock (gate)
                     {
                         // Concurrent copies can finish out of order. Preserve
@@ -372,7 +431,14 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
                                     (DateTimeOffset.UtcNow
                                      - timestampUtc)
                                     .TotalMilliseconds);
+
+                            published = true;
                         }
+                    }
+
+                    if (published)
+                    {
+                        SignalPublishedFrame();
                     }
                 }
                 finally
@@ -549,6 +615,10 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
         {
             return;
         }
+
+        // Wake any presentation waiter so it can observe disposed/cancellation
+        // instead of remaining parked on the semaphore.
+        SignalPublishedFrame();
 
         try
         {

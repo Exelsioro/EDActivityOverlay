@@ -16,6 +16,7 @@ internal sealed class DirectOutputClient : IDisposable
 {
     private const uint PageId = 0x4544494F;
     private const uint SetAsActive = 1;
+    private const int PageNotActive = unchecked((int)0xFF040001);
     private static readonly Guid X52ProDeviceType = new("29DAD506-F93B-4F20-85FA-1E02C04FAC17");
     private readonly object sync = new();
     private readonly HashSet<IntPtr> devices = [];
@@ -25,6 +26,7 @@ internal sealed class DirectOutputClient : IDisposable
     private readonly PageCallback pageCallback;
     private IntPtr library;
     private IntPtr activeDevice;
+    private IntPtr activePageDevice;
     private bool initialized;
 
     private Initialize? initialize;
@@ -108,13 +110,18 @@ internal sealed class DirectOutputClient : IDisposable
     public bool WriteLines(IReadOnlyList<string> lines)
     {
         IntPtr device;
-        lock (sync) device = activeDevice;
+        lock (sync) device = activePageDevice;
         if (!initialized || device == IntPtr.Zero || setString is null) return false;
         bool succeeded = true;
         for (uint index = 0; index < 3; index++)
         {
             string value = index < lines.Count ? X52DisplayFormatter.NormalizeLine(lines[(int)index]) : string.Empty;
             int result = setString(device, PageId, index, (uint)value.Length, value);
+            if (result == PageNotActive)
+            {
+                MarkPageInactive(device);
+                return false;
+            }
             if (result < 0)
             {
                 succeeded = false;
@@ -127,12 +134,17 @@ internal sealed class DirectOutputClient : IDisposable
     public bool WriteLedComponents(IReadOnlyDictionary<int, bool> values)
     {
         IntPtr device;
-        lock (sync) device = activeDevice;
+        lock (sync) device = activePageDevice;
         if (!initialized || device == IntPtr.Zero || setLed is null) return false;
         bool succeeded = true;
         foreach ((int index, bool enabled) in values)
         {
             int result = setLed(device, PageId, (uint)index, enabled ? 1u : 0u);
+            if (result == PageNotActive)
+            {
+                MarkPageInactive(device);
+                return false;
+            }
             if (result < 0)
             {
                 succeeded = false;
@@ -153,6 +165,7 @@ internal sealed class DirectOutputClient : IDisposable
                 {
                     devices.Remove(device);
                     if (activeDevice == device) activeDevice = devices.FirstOrDefault();
+                    if (activePageDevice == device) activePageDevice = IntPtr.Zero;
                 }
                 DeviceAvailabilityChanged?.Invoke(HasDevice);
             }
@@ -183,6 +196,7 @@ internal sealed class DirectOutputClient : IDisposable
         ThrowIfFailed(registerPageCallback!(device, pageCallback, IntPtr.Zero), "register page callback");
         ThrowIfFailed(registerSoftButtonCallback!(device, softButtonCallback, IntPtr.Zero), "register MFD controls");
         ThrowIfFailed(addPage!(device, PageId, SetAsActive), "add X52 page");
+        lock (sync) activePageDevice = device;
         DeviceAvailabilityChanged?.Invoke(true);
         PageActivated?.Invoke();
     }
@@ -194,9 +208,31 @@ internal sealed class DirectOutputClient : IDisposable
 
     private void OnPageChanged(IntPtr device, uint page, bool activated, IntPtr context)
     {
-        if (!activated || page != PageId) return;
-        lock (sync) activeDevice = device;
-        PageActivated?.Invoke();
+        if (page != PageId) return;
+        lock (sync)
+        {
+            if (activated)
+            {
+                activeDevice = device;
+                activePageDevice = device;
+            }
+            else if (activePageDevice == device)
+            {
+                activePageDevice = IntPtr.Zero;
+            }
+        }
+        if (activated) PageActivated?.Invoke();
+    }
+
+    private void MarkPageInactive(IntPtr device)
+    {
+        lock (sync)
+        {
+            if (activePageDevice == device)
+            {
+                activePageDevice = IntPtr.Zero;
+            }
+        }
     }
 
     private T Load<T>(string name) where T : Delegate =>
@@ -219,6 +255,7 @@ internal sealed class DirectOutputClient : IDisposable
                 }
                 devices.Clear();
                 activeDevice = IntPtr.Zero;
+                activePageDevice = IntPtr.Zero;
             }
             try { deinitialize?.Invoke(); } catch { }
             initialized = false;

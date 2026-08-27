@@ -181,50 +181,26 @@ internal sealed class DssFastCenterImageTracker
             return false;
         }
 
-        double coarseUniqueness =
-            coarseSecond is null
-                ? 10d
-                : coarseSecond.Value.Error
-                  - coarseBest.Value.Error;
-
-        // Reject obviously poor/ambiguous coarse locks before spending the
-        // full sample set on fine refinement.
-        if (coarseBest.Value.Error > 30d
-            || coarseUniqueness < 0.25d)
-        {
-            return false;
-        }
-
         MatchCandidate? fineBest = null;
         MatchCandidate? fineSecond = null;
 
-        int fineBaseX =
-            coarseBest.Value.CenterX;
+        // Refine both the coarse winner and the motion prediction. A sharp
+        // texture can have almost no similarity one pixel away from the true
+        // translation, so a four-pixel coarse lattice alone may rank an
+        // unrelated cell above the neighbourhood containing the exact match.
+        EvaluateFineNeighborhood(
+            frame,
+            coarseBest.Value.CenterX,
+            coarseBest.Value.CenterY,
+            ref fineBest,
+            ref fineSecond);
 
-        int fineBaseY =
-            coarseBest.Value.CenterY;
-
-        for (int oy = -FineSearchRadius;
-             oy <= FineSearchRadius;
-             oy++)
-        {
-            for (int ox = -FineSearchRadius;
-                 ox <= FineSearchRadius;
-                 ox++)
-            {
-                MatchCandidate? candidate =
-                    EvaluateCandidate(
-                        frame,
-                        fineBaseX + ox,
-                        fineBaseY + oy,
-                        sampleStride: 1);
-
-                RegisterCandidate(
-                    candidate,
-                    ref fineBest,
-                    ref fineSecond);
-            }
-        }
+        EvaluateFineNeighborhood(
+            frame,
+            predictedX,
+            predictedY,
+            ref fineBest,
+            ref fineSecond);
 
         if (fineBest is null
             || fineBest.Value.Error > 27d)
@@ -250,6 +226,36 @@ internal sealed class DssFastCenterImageTracker
                 fineBest.Value.Error);
 
         return true;
+    }
+
+    private void EvaluateFineNeighborhood(
+        DssCapturedFrame frame,
+        int centerX,
+        int centerY,
+        ref MatchCandidate? best,
+        ref MatchCandidate? second)
+    {
+        for (int oy = -FineSearchRadius;
+             oy <= FineSearchRadius;
+             oy++)
+        {
+            for (int ox = -FineSearchRadius;
+                 ox <= FineSearchRadius;
+                 ox++)
+            {
+                MatchCandidate? candidate =
+                    EvaluateCandidate(
+                        frame,
+                        centerX + ox,
+                        centerY + oy,
+                        sampleStride: 1);
+
+                RegisterCandidate(
+                    candidate,
+                    ref best,
+                    ref second);
+            }
+        }
     }
 
     private MatchCandidate? EvaluateCandidate(

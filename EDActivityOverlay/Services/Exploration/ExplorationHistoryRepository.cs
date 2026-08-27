@@ -128,7 +128,9 @@ internal sealed class ExplorationHistoryRepository
             using SqliteConnection connection = Open();
             foreach ((string Key, string Name) genus in genuses)
             {
-                string genusKey = string.IsNullOrWhiteSpace(genus.Key) ? genus.Name : genus.Key;
+                string genusKey = string.IsNullOrWhiteSpace(genus.Key)
+                    ? genus.Name ?? string.Empty
+                    : genus.Key;
                 if (string.IsNullOrWhiteSpace(genusKey)) continue;
                 using SqliteCommand command = connection.CreateCommand();
                 command.CommandText = """

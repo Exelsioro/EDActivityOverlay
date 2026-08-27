@@ -12,7 +12,7 @@ internal sealed record DssProbeLaunchFrameSnapshot(
     DssHudGeometry Geometry,
     DssAimMissObservation? MissObservation = null,
     DssCoverageObservation? CoverageObservation = null,
-    int ConfirmedImpactCount = int.MaxValue,
+    int ConfirmedImpactCount = 0,
     long UsedCoverageCandidates = 0);
 
 internal sealed record DssProbeLaunchRecord(

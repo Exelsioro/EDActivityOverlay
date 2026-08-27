@@ -83,7 +83,7 @@ internal static class DssProbeAimSolver
             geometry,
             sequentialStep,
             scanComplete,
-            confirmedImpactCount: int.MaxValue,
+            confirmedImpactCount: 0,
             coverageObservation: null,
             usedCoverageCandidates: 0);
 
@@ -152,6 +152,20 @@ internal static class DssProbeAimSolver
         out DssPredictiveAimTarget target,
         out string source)
     {
+        if (!IsWithinTargetingV1Calibration(
+                angularDiameterDegrees))
+        {
+            target =
+                DssPredictiveAimTarget.Empty(
+                    0,
+                    0);
+
+            source =
+                string.Empty;
+
+            return false;
+        }
+
         (int requestedTarget, string resolvedSource) =
             ResolveEfficiencyTarget(
                 state);

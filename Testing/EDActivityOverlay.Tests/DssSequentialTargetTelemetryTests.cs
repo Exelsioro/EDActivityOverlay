@@ -39,7 +39,7 @@ public sealed class DssSequentialTargetTelemetryTests
     public void CenterStep_RemainsIdentifiableWhenLaunchGeometryIsInvalid()
     {
         DssProbeLaunchFrameSnapshot frame =
-            CreateFrameSnapshot(0d);
+            CreateFrameSnapshot(24d);
 
         DssProbeLaunchRecord launch =
             CreateLaunch(

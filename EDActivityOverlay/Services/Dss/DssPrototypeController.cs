@@ -906,8 +906,8 @@ internal sealed class DssPrototypeController : IDisposable
                         out DssCapturedFrame? frame)
                     || frame is null)
                 {
-                    await Task.Delay(
-                        4,
+                    await wgc.WaitForPublishedFrameAsync(
+                        wgcVersion,
                         token).ConfigureAwait(false);
 
                     continue;
@@ -995,8 +995,8 @@ internal sealed class DssPrototypeController : IDisposable
                         + TimeSpan.FromSeconds(3);
                 }
 
-                await Task.Delay(
-                    4,
+                await wgc.WaitForPublishedFrameAsync(
+                    wgcVersion,
                     token).ConfigureAwait(false);
             }
         }
