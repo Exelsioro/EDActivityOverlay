@@ -92,7 +92,19 @@ internal static class DssSphericalPlacementPlanner
                 usedCoverageCandidates);
         }
 
-        int targetN = ResolveTargetCount(requestedTarget, targetSource);
+        int officialTargetN =
+            ResolveTargetCount(
+                requestedTarget,
+                targetSource);
+
+        DssEngineeringTargetResolution targetResolution =
+            DssEngineeringTargetResolver.Resolve(
+                officialTargetN,
+                targetSource,
+                dssModule);
+
+        int targetN =
+            targetResolution.TargetCount;
 
         if (sequentialStep < 1)
         {
@@ -289,24 +301,68 @@ internal static class DssSphericalPlacementPlanner
         DssCoverageObservation? coverageObservation,
         long usedCoverageCandidates)
     {
-        DssCoverageObservation coverage = coverageObservation ?? DssCoverageObservation.Empty;
+        // CoverageObserver sees only the projected near hemisphere. It cannot
+        // measure missing area on the rear hemisphere and therefore must never
+        // arbitrate every correction shot.
+        //
+        // v47 live validation demonstrated the failure mode very clearly:
+        // after the N13 base batch, corrections 14..18 all became r=0.68
+        // near-side holes, while the scan completed only after the commander
+        // manually sent the last three launches behind the horizon.
+        //
+        // Correction ownership is therefore explicit:
+        //   1,3,5,7 -> rear hemisphere (geometry-driven, stable for the step)
+        //   2,4,6,8 -> near hemisphere (coverage CV when trustworthy)
+        //
+        // This also removes the old "far point flashes, then snaps near"
+        // behaviour. That happened because CoverageObserver temporarily returns
+        // Empty while settling after an impact; the old planner showed the far
+        // fallback during that gap and replaced it with a near CV target later.
+        bool rearHemisphereSlot =
+            (correctionIndex & 1) == 1;
 
-        // Use coverage feedback if available and uncovered candidate is significant
+        if (rearHemisphereSlot)
+        {
+            int rearOrdinal =
+                (correctionIndex + 1) / 2;
+
+            return ResolveRearHemisphereCorrection(
+                rearOrdinal,
+                sequentialStep,
+                targetN,
+                angularDiameterDegrees);
+        }
+
+        DssCoverageObservation coverage =
+            coverageObservation
+            ?? DssCoverageObservation.Empty;
+
         if (coverage.Available
+            && !coverage.Settling
+            && coverage.Confidence >= 0.45d
             && coverage.SuggestedCandidateId > 0
             && coverage.SuggestedUncoveredScore >= 0.24d
-            && !DssProbeAimSolver.IsCoverageCandidateUsed(usedCoverageCandidates, coverage.SuggestedCandidateId))
+            && !DssProbeAimSolver.IsCoverageCandidateUsed(
+                usedCoverageCandidates,
+                coverage.SuggestedCandidateId))
         {
-            SphericalPoint p = DssSphericalProjection.ProjectScreenAimToSpherical(
-                coverage.SuggestedNormalizedX,
-                coverage.SuggestedNormalizedY,
-                angularDiameterDegrees);
+            SphericalPoint p =
+                DssSphericalProjection.ProjectScreenAimToSpherical(
+                    coverage.SuggestedNormalizedX,
+                    coverage.SuggestedNormalizedY,
+                    angularDiameterDegrees);
 
-            (double nx, double ny, double k) = DssSphericalProjection.ProjectSphericalToScreenAim(
-                p,
-                angularDiameterDegrees);
+            (double nx, double ny, double k) =
+                DssSphericalProjection.ProjectSphericalToScreenAim(
+                    p,
+                    angularDiameterDegrees);
 
-            DssAimZone zone = k > 1.0d ? DssAimZone.FarSide : (k >= 0.80d ? DssAimZone.Limb : DssAimZone.Disc);
+            DssAimZone zone =
+                k > 1.0d
+                    ? DssAimZone.FarSide
+                    : (k >= 0.80d
+                        ? DssAimZone.Limb
+                        : DssAimZone.Disc);
 
             return new DssSphericalAimTarget(
                 true,
@@ -316,31 +372,271 @@ internal static class DssSphericalPlacementPlanner
                 ny,
                 k,
                 zone,
-                "CORRECTION_COVERAGE",
+                "CORRECTION_COVERAGE_NEAR",
                 targetN,
                 coverage.SuggestedCandidateId,
                 coverage.SuggestedUncoveredScore);
         }
 
-        // Far-side correction fallback: alternate quadrants at safe boundary
-        double safeRadius = DssSphericalProjection.EstimateSafeNormalizedRadius(angularDiameterDegrees);
-        double correctionAngle = ((correctionIndex - 1) * 90d - 45d) * Math.PI / 180d;
+        // During CV settle/unavailability keep this correction on the front
+        // hemisphere instead of temporarily showing a rear target that will be
+        // revoked one frame later. The deterministic fallback chooses a large
+        // geometric hole in the visible hemisphere.
+        int nearOrdinal =
+            correctionIndex / 2;
 
-        SphericalPoint fallbackPoint = new(2.50d, correctionAngle);
-        (double fnx, double fny, double fk) = DssSphericalProjection.ProjectSphericalToScreenAim(
-            fallbackPoint,
+        return ResolveNearHemisphereFallback(
+            nearOrdinal,
+            sequentialStep,
+            targetN,
             angularDiameterDegrees);
+    }
+
+    private static DssSphericalAimTarget ResolveRearHemisphereCorrection(
+        int rearOrdinal,
+        int sequentialStep,
+        int targetN,
+        double angularDiameterDegrees)
+    {
+        IReadOnlyList<SphericalPoint> basePoints =
+            GenerateOptimalSphericalPoints(
+                targetN);
+
+        var occupied =
+            new List<SphericalPoint>(
+                basePoints);
+
+        SphericalPoint selected =
+            new(
+                2.50d,
+                -Math.PI / 4d);
+
+        for (int ordinal = 1;
+             ordinal <= rearOrdinal;
+             ordinal++)
+        {
+            selected =
+                SelectLargestSphericalGap(
+                    occupied,
+                    BuildRearCorrectionCandidates());
+
+            occupied.Add(
+                selected);
+        }
+
+        (double nx, double ny, double k) =
+            DssSphericalProjection.ProjectSphericalToScreenAim(
+                selected,
+                angularDiameterDegrees);
 
         return new DssSphericalAimTarget(
             true,
             sequentialStep,
-            fallbackPoint,
-            fnx,
-            fny,
-            fk,
+            selected,
+            nx,
+            ny,
+            k,
             DssAimZone.FarSide,
-            "CORRECTION_FAR_FALLBACK",
+            "CORRECTION_FAR_BALANCE",
             targetN);
+    }
+
+    private static DssSphericalAimTarget ResolveNearHemisphereFallback(
+        int nearOrdinal,
+        int sequentialStep,
+        int targetN,
+        double angularDiameterDegrees)
+    {
+        IReadOnlyList<SphericalPoint> basePoints =
+            GenerateOptimalSphericalPoints(
+                targetN);
+
+        var occupied =
+            new List<SphericalPoint>(
+                basePoints);
+
+        SphericalPoint selected =
+            new(
+                Math.PI / 3d,
+                0d);
+
+        for (int ordinal = 1;
+             ordinal <= nearOrdinal;
+             ordinal++)
+        {
+            selected =
+                SelectLargestSphericalGap(
+                    occupied,
+                    BuildNearCorrectionCandidates());
+
+            occupied.Add(
+                selected);
+        }
+
+        (double nx, double ny, double k) =
+            DssSphericalProjection.ProjectSphericalToScreenAim(
+                selected,
+                angularDiameterDegrees);
+
+        DssAimZone zone =
+            k >= 0.80d
+                ? DssAimZone.Limb
+                : DssAimZone.Disc;
+
+        return new DssSphericalAimTarget(
+            true,
+            sequentialStep,
+            selected,
+            nx,
+            ny,
+            k,
+            zone,
+            "CORRECTION_NEAR_FALLBACK",
+            targetN);
+    }
+
+    private static IReadOnlyList<SphericalPoint>
+        BuildRearCorrectionCandidates()
+    {
+        var result =
+            new List<SphericalPoint>();
+
+        // Three rear latitudes. The deepest ring still projects inside the
+        // rear-antipode circle defined by the supplied DSS firing-pattern
+        // guide, so no correction needs the ambiguous outer antipode->MISS
+        // annulus.
+        foreach (double theta
+                 in new[]
+                 {
+                     2.18d, // ~125 deg
+                     2.50d, // ~143 deg
+                     2.82d  // ~162 deg
+                 })
+        {
+            double phase =
+                theta < 2.3d
+                    ? 0d
+                    : theta < 2.7d
+                        ? Math.PI / 8d
+                        : Math.PI / 4d;
+
+            for (int i = 0;
+                 i < 8;
+                 i++)
+            {
+                result.Add(
+                    new SphericalPoint(
+                        theta,
+                        phase
+                        + i * Math.PI / 4d));
+            }
+        }
+
+        // Exact antipode is a useful candidate when the base plan leaves the
+        // rear pole uncovered.
+        result.Add(
+            new SphericalPoint(
+                Math.PI,
+                0d));
+
+        return result;
+    }
+
+    private static IReadOnlyList<SphericalPoint>
+        BuildNearCorrectionCandidates()
+    {
+        var result =
+            new List<SphericalPoint>();
+
+        foreach (double theta
+                 in new[]
+                 {
+                     0.45d,
+                     0.85d,
+                     1.25d
+                 })
+        {
+            double phase =
+                theta < 0.7d
+                    ? Math.PI / 8d
+                    : 0d;
+
+            for (int i = 0;
+                 i < 8;
+                 i++)
+            {
+                result.Add(
+                    new SphericalPoint(
+                        theta,
+                        phase
+                        + i * Math.PI / 4d));
+            }
+        }
+
+        result.Add(
+            new SphericalPoint(
+                0d,
+                0d));
+
+        return result;
+    }
+
+    private static SphericalPoint SelectLargestSphericalGap(
+        IReadOnlyList<SphericalPoint> occupied,
+        IReadOnlyList<SphericalPoint> candidates)
+    {
+        if (candidates.Count == 0)
+        {
+            return new SphericalPoint(
+                Math.PI,
+                0d);
+        }
+
+        SphericalPoint best =
+            candidates[0];
+
+        double bestMinimumDistance =
+            double.NegativeInfinity;
+
+        foreach (SphericalPoint candidate
+                 in candidates)
+        {
+            double minimumDistance =
+                Math.PI;
+
+            foreach (SphericalPoint existing
+                     in occupied)
+            {
+                double dot =
+                    candidate.X * existing.X
+                    + candidate.Y * existing.Y
+                    + candidate.Z * existing.Z;
+
+                double distance =
+                    Math.Acos(
+                        Math.Clamp(
+                            dot,
+                            -1d,
+                            1d));
+
+                minimumDistance =
+                    Math.Min(
+                        minimumDistance,
+                        distance);
+            }
+
+            if (minimumDistance
+                > bestMinimumDistance)
+            {
+                bestMinimumDistance =
+                    minimumDistance;
+
+                best =
+                    candidate;
+            }
+        }
+
+        return best;
     }
 
     private static DssSphericalAimTarget ResolveEmpiricalFallback(

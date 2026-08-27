@@ -103,7 +103,7 @@ internal static class DssProbeAimSolver
             || !geometry.BodyCenterFound
             || !geometry.HorizonMarkerFound
             || geometry.HorizonRadiusPixels <= 25
-            || !IsWithinTargetingV1Calibration(
+            || !IsSphericalTargetingOperational(
                 readiness.AngularDiameterDegrees))
         {
             return DssProjectedAimPlan.Empty;
@@ -143,6 +143,73 @@ internal static class DssProbeAimSolver
             new[] { point });
     }
 
+    /// <summary>
+    /// Production overload: scanner engineering is supplied from the immutable
+    /// DSS session context, avoiding Journal disk I/O on the HUD hot path.
+    /// </summary>
+    public static DssProjectedAimPlan Solve(
+        GameStateSnapshot state,
+        DssAssistantReadinessSnapshot readiness,
+        DssHudGeometry geometry,
+        int sequentialStep,
+        bool scanComplete,
+        DssModuleSnapshot dssModule,
+        int confirmedImpactCount,
+        DssCoverageObservation? coverageObservation,
+        long usedCoverageCandidates)
+    {
+        if (scanComplete
+            || !readiness.IsReady
+            || !geometry.BodyCenterFound
+            || !geometry.HorizonMarkerFound
+            || geometry.HorizonRadiusPixels <= 25
+            || !IsSphericalTargetingOperational(
+                readiness.AngularDiameterDegrees))
+        {
+            return DssProjectedAimPlan.Empty;
+        }
+
+        (int requestedTarget, string source) =
+            ResolveEfficiencyTarget(
+                state);
+
+        DssSphericalAimTarget target =
+            DssSphericalPlacementPlanner.Resolve(
+                sequentialStep,
+                requestedTarget,
+                source,
+                readiness.AngularDiameterDegrees,
+                dssModule,
+                readiness.BodyRadiusMeters,
+                confirmedImpactCount,
+                coverageObservation,
+                usedCoverageCandidates);
+
+        if (!target.Available)
+        {
+            return DssProjectedAimPlan.Empty;
+        }
+
+        DssProjectedAimPoint point =
+            new(
+                sequentialStep,
+                target.NormalizedX,
+                target.NormalizedY,
+                geometry.BodyCenterX
+                    + target.NormalizedX
+                      * geometry.HorizonRadiusPixels,
+                geometry.BodyCenterY
+                    + target.NormalizedY
+                      * geometry.HorizonRadiusPixels,
+                target.Zone,
+                target.CandidateId,
+                target.CoverageScore);
+
+        return new DssProjectedAimPlan(
+            target.TotalPlanCount,
+            $"TARGETING_V3_{target.Role}/{source}/N{target.TotalPlanCount}",
+            new[] { point });
+    }
     internal static bool TryResolveSphericalTarget(
         GameStateSnapshot state,
         DssAssistantReadinessSnapshot readiness,
@@ -153,7 +220,7 @@ internal static class DssProbeAimSolver
         out DssSphericalAimTarget target,
         out string source)
     {
-        if (!IsWithinTargetingV1Calibration(
+        if (!IsSphericalTargetingOperational(
                 readiness.AngularDiameterDegrees))
         {
             target =
@@ -246,6 +313,20 @@ internal static class DssProbeAimSolver
                 & (1L << candidateId))
                != 0;
     }
+    /// <summary>
+    /// The spherical planner no longer aims near the native MISS boundary:
+    /// its farthest base-plan endpoint is the rear-antipode circle halfway
+    /// between horizon and MISS. Therefore the old 21..28 degree v1 radial
+    /// sweep envelope must not hide targets that the readiness evaluator has
+    /// already classified as READY.
+    ///
+    /// The legacy IsWithinTargetingV1Calibration gate remains below for the
+    /// old predictive/empirical fallback only.
+    /// </summary>
+    internal static bool IsSphericalTargetingOperational(
+        double angularDiameterDegrees) =>
+        double.IsFinite(angularDiameterDegrees)
+        && angularDiameterDegrees > 0d;
     internal static bool IsWithinTargetingV1Calibration(
         double angularDiameterDegrees) =>
         double.IsFinite(angularDiameterDegrees)

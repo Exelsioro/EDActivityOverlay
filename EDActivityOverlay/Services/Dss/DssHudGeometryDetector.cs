@@ -138,13 +138,57 @@ internal sealed class DssHudGeometryDetector
         int reticleX = frame.Width / 2;
         int reticleY = frame.Height / 2;
 
-        // v9 deliberately removes the v8 "near reticle bright marker"
-        // fallback. In the uploaded v8 session that fallback repeatedly
-        // locked onto static central HUD text/graphics while the real body
-        // centre was absent. The only accepted centre path is now:
-        //
-        // fixed reticle -> continuous Frontier radial guide -> marker.
-        BodyCenterCandidate? center =
+        // GLOBAL reacquisition remains guide-ray-only. The old unrestricted
+        // near-reticle fallback produced false locks on static central HUD
+        // elements. During trusted LOCAL tracking, however, a center predicted
+        // inside the guide-ray dead zone may use the existing round-marker
+        // detector before falling back to the normal guide-ray path.
+        BodyCenterCandidate? center = null;
+
+        if (hint is not null)
+        {
+            double scale =
+                frame.Height / 1080d;
+
+            double nearReticleRadius =
+                Math.Max(
+                    58d,
+                    80d * scale);
+
+            double predictedDistance =
+                Distance(
+                    hint.PredictedCenterX,
+                    hint.PredictedCenterY,
+                    reticleX,
+                    reticleY);
+
+            if (predictedDistance
+                <= nearReticleRadius)
+            {
+                BodyCenterCandidate? nearReticle =
+                    FindNearReticleMarker(
+                        frame,
+                        reticleX,
+                        reticleY);
+
+                if (nearReticle is not null
+                    && nearReticle.Confidence >= 0.78d
+                    && Distance(
+                        nearReticle.X,
+                        nearReticle.Y,
+                        hint.PredictedCenterX,
+                        hint.PredictedCenterY)
+                       <= Math.Max(
+                           hint.CenterSearchRadiusPixels,
+                           nearReticleRadius))
+                {
+                    center =
+                        nearReticle;
+                }
+            }
+        }
+
+        center ??=
             FindBodyCenterFromGuideRay(
                 frame,
                 reticleX,

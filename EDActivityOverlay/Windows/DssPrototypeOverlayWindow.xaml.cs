@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -218,6 +218,7 @@ public partial class DssPrototypeOverlayWindow : Window
             state,
             readiness,
             geometry,
+            context,
             targetingStep,
             targetingScanComplete,
             targetingConfirmedImpacts,
@@ -262,6 +263,7 @@ public partial class DssPrototypeOverlayWindow : Window
         GameStateSnapshot state,
         DssAssistantReadinessSnapshot readiness,
         DssHudGeometry geometry,
+        DssPrototypeSessionContext context,
         int targetingStep,
         bool targetingScanComplete,
         int targetingConfirmedImpacts,
@@ -272,6 +274,15 @@ public partial class DssPrototypeOverlayWindow : Window
     {
         ClearProjectedAimPlan();
 
+        DssModuleSnapshot dssModule =
+            new(
+                "session",
+                "Detailed Surface Scanner",
+                context.DssPatchRadius,
+                context.DssPatchRadiusOriginal,
+                context.DssBlueprint,
+                context.DssEngineeringLevel);
+
         DssProjectedAimPlan plan =
             DssProbeAimSolver.Solve(
                 state,
@@ -279,6 +290,7 @@ public partial class DssPrototypeOverlayWindow : Window
                 geometry,
                 targetingStep,
                 targetingScanComplete,
+                dssModule,
                 targetingConfirmedImpacts,
                 coverageObservation,
                 usedCoverageCandidates);

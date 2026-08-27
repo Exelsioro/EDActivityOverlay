@@ -160,8 +160,10 @@ public sealed class DssSphericalPlacementPlannerTests
         Assert.InRange(kLimb, 0.9999, 1.0001);
 
         double kBack = DssSphericalProjection.ProjectSurfacePolarAngleToDssAim(Math.PI, angularDiameter);
-        double kSafe = DssSphericalProjection.EstimateSafeNormalizedRadius(angularDiameter);
-        Assert.InRange(kBack, kSafe - 1e-4, kSafe + 1e-4);
+        double kMiss = DssSphericalProjection.EstimateBoundaryNormalizedRadius(angularDiameter);
+        double kRear = DssSphericalProjection.EstimateRearAntipodeNormalizedRadius(angularDiameter);
+        Assert.InRange(kBack, kRear - 1e-4, kRear + 1e-4);
+        Assert.InRange(kRear - 1d, kMiss - kRear - 1e-4, kMiss - kRear + 1e-4);
 
         // Monotonic check
         double prevK = -1;
@@ -206,18 +208,18 @@ public sealed class DssSphericalPlacementPlannerTests
     // =========================================================================
 
     [Fact]
-    public void SphericalCapCoverage_EngineeringLevel_IncreasesFootprint()
+    public void SphericalCapCoverage_PatchRadiusRatio_IncreasesFootprint()
     {
-        var baseModule = DssModuleSnapshot.Empty;
-        var g3Module = new DssModuleSnapshot("item", "name", 0, 0, "blueprint", 3);
-        var g5Module = new DssModuleSnapshot("item", "name", 0, 0, "blueprint", 5);
+        var stockModule = new DssModuleSnapshot("item", "name", 20, 20, string.Empty, 0);
+        var expanded30 = new DssModuleSnapshot("item", "name", 26, 20, "expanded", 3);
+        var expanded50 = new DssModuleSnapshot("item", "name", 30, 20, "expanded", 5);
 
-        double alphaBase = DssSphericalCapCoverage.CalculateCapAngularRadius(baseModule, 0, 6);
-        double alphaG3 = DssSphericalCapCoverage.CalculateCapAngularRadius(g3Module, 0, 6);
-        double alphaG5 = DssSphericalCapCoverage.CalculateCapAngularRadius(g5Module, 0, 6);
+        double alphaStock = DssSphericalCapCoverage.CalculateCapAngularRadius(stockModule, 0, 6);
+        double alpha30 = DssSphericalCapCoverage.CalculateCapAngularRadius(expanded30, 0, 6);
+        double alpha50 = DssSphericalCapCoverage.CalculateCapAngularRadius(expanded50, 0, 6);
 
-        Assert.True(alphaG3 > alphaBase);
-        Assert.True(alphaG5 > alphaG3);
+        Assert.True(alpha30 > alphaStock);
+        Assert.True(alpha50 > alpha30);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using EDActivityOverlay.Models;
 
@@ -13,7 +13,8 @@ internal sealed record DssProbeLaunchFrameSnapshot(
     DssAimMissObservation? MissObservation = null,
     DssCoverageObservation? CoverageObservation = null,
     int ConfirmedImpactCount = 0,
-    long UsedCoverageCandidates = 0);
+    long UsedCoverageCandidates = 0,
+    DssModuleSnapshot? DssModule = null);
 
 internal sealed record DssProbeLaunchRecord(
     int LaunchSequence,
@@ -85,22 +86,27 @@ internal static class DssSequentialTargetTelemetryBuilder
                 sequentialStep);
         }
 
-        double angularDiameterDegrees =
-            frame.Readiness.AngularDiameterDegrees;
-
-        if (!DssProbeAimSolver.TryResolvePredictiveTarget(
+        DssProjectedAimPlan resolvedPlan =
+            DssProbeAimSolver.Solve(
                 frame.State,
+                frame.Readiness,
+                frame.Geometry,
                 sequentialStep,
-                angularDiameterDegrees,
+                scanComplete: false,
+                frame.DssModule
+                    ?? DssModuleSnapshot.Empty,
                 frame.ConfirmedImpactCount,
                 frame.CoverageObservation,
-                frame.UsedCoverageCandidates,
-                out DssPredictiveAimTarget resolvedTarget,
-                out _))
+                frame.UsedCoverageCandidates);
+
+        if (!resolvedPlan.IsAvailable)
         {
             return DssSequentialTargetTelemetry.Empty(
                 sequentialStep);
         }
+
+        DssProjectedAimPoint resolvedTarget =
+            resolvedPlan.Points[0];
 
         double targetX =
             resolvedTarget.NormalizedX;
@@ -111,7 +117,7 @@ internal static class DssSequentialTargetTelemetryBuilder
         double uncoveredScore =
             resolvedTarget.CoverageScore;
         string targetSource =
-            resolvedTarget.Role;
+            resolvedPlan.Source;
         double targetRadius =
             Math.Sqrt(
                 targetX * targetX
@@ -155,7 +161,20 @@ internal static class DssProbeLaunchCorrelator
     public static DssProbeLaunchRecord Correlate(
         int launchSequence,
         DssFireInputEvent input,
-        DssProbeLaunchFrameSnapshot? frame)
+        DssProbeLaunchFrameSnapshot? frame) =>
+        Correlate(
+            launchSequence,
+            input,
+            frame,
+            sequentialStep: 1,
+            scanComplete: false);
+
+    public static DssProbeLaunchRecord Correlate(
+        int launchSequence,
+        DssFireInputEvent input,
+        DssProbeLaunchFrameSnapshot? frame,
+        int sequentialStep,
+        bool scanComplete)
     {
         if (frame is null)
         {
@@ -240,7 +259,14 @@ internal static class DssProbeLaunchCorrelator
             DssProbeAimSolver.Solve(
                 frame.State,
                 frame.Readiness,
-                geometry);
+                geometry,
+                sequentialStep,
+                scanComplete,
+                frame.DssModule
+                    ?? DssModuleSnapshot.Empty,
+                frame.ConfirmedImpactCount,
+                frame.CoverageObservation,
+                frame.UsedCoverageCandidates);
 
         DssProjectedAimPoint? nearest =
             plan.IsAvailable

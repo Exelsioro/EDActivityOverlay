@@ -60,11 +60,14 @@ internal sealed partial class DssHudGeometryTracker
 
     private const double MaximumPredictedCenterDisplacementPixels = 120d;
 
-    // When the tracked planet center is this close to the screen reticle,
-    // the Frontier guide-ray cannot be measured (too short). We synthesize
-    // the center at the reticle position and suppress guide-ray detection
-    // until the player pans the camera away.
+    // Guide-ray detection has a dead zone around the fixed reticle. A real
+    // LOCAL marker search is attempted first. If the marker is completely
+    // occluded, allow only one bounded synthetic bridge; it cannot re-arm
+    // until a real center observation is accepted.
     private const double NearReticleLockRadiusPixels = 80d;
+
+    private static readonly TimeSpan NearReticleSyntheticHold =
+        TimeSpan.FromMilliseconds(520);
 
     private static readonly TimeSpan FreshObservationWindow =
         TimeSpan.FromMilliseconds(320);
@@ -99,6 +102,11 @@ internal sealed partial class DssHudGeometryTracker
 
     private int localMisses;
 
+    private bool nearCenterSyntheticActive;
+    private bool nearCenterSyntheticExhausted;
+    private DateTimeOffset nearCenterSyntheticStartedUtc =
+        DateTimeOffset.MinValue;
+
     // Historical-state flag survives active-track loss. It is not rendered once
     // CenterHold expires; it only selects REACQUIRE mode and the stricter
     // temporal confirmation count. Screen-space distance is not a hard gate.
@@ -132,6 +140,11 @@ internal sealed partial class DssHudGeometryTracker
             DateTimeOffset.MinValue;
 
         localMisses = 0;
+
+        nearCenterSyntheticActive = false;
+        nearCenterSyntheticExhausted = false;
+        nearCenterSyntheticStartedUtc =
+            DateTimeOffset.MinValue;
 
         ResetImageMotionTracking();
 
@@ -302,10 +315,12 @@ internal sealed partial class DssHudGeometryTracker
             raw.BodyCenterFound
             && raw.BodyCenterConfidence >= 0.66;
 
-        // Near-reticle check: when the tracked center is inside the
-        // guide-ray dead-zone (~80 px) around the screen reticle, detection
-        // always fails because there is not enough guide path to score.
-        // Recognise this as an intentional centre-aim, not as a lost track.
+        // If LOCAL detection temporarily loses the marker inside the guide-ray
+        // dead zone, bridge the overlap at the fixed reticle. This bridge is
+        // deliberately finite and one-shot: after it expires, the tracker must
+        // obtain a real center observation before synthetic NearCenter can arm
+        // again. That prevents a stale planet center from sticking to the
+        // reticle forever after a fast pan away.
         if (!qualityObservation && hasTrustedCenter)
         {
             double nearDist =
@@ -316,18 +331,49 @@ internal sealed partial class DssHudGeometryTracker
                     raw.ReticleY);
 
             double scaleEstimate =
-                Math.Max(1d, raw.ReticleY / 540d);
+                Math.Max(
+                    1d,
+                    raw.ReticleY / 540d);
 
-            if (nearDist
-                <= NearReticleLockRadiusPixels * scaleEstimate)
+            bool canStartSynthetic =
+                !nearCenterSyntheticActive
+                && !nearCenterSyntheticExhausted
+                && nearDist
+                   <= NearReticleLockRadiusPixels
+                      * scaleEstimate;
+
+            bool canContinueSynthetic =
+                nearCenterSyntheticActive
+                && timestampUtc
+                   - nearCenterSyntheticStartedUtc
+                   <= NearReticleSyntheticHold;
+
+            if (canStartSynthetic)
             {
-                // Synthesize: keep track alive with center at reticle.
+                nearCenterSyntheticActive = true;
+                nearCenterSyntheticStartedUtc =
+                    timestampUtc;
+                canContinueSynthetic = true;
+            }
+
+            if (canContinueSynthetic)
+            {
                 centerX = raw.ReticleX;
                 centerY = raw.ReticleY;
                 velocityX = 0;
                 velocityY = 0;
                 lastCenterObservedUtc = timestampUtc;
-                return DssCenterTrackState.NearCenter;
+
+                return
+                    DssCenterTrackState.NearCenter;
+            }
+
+            if (nearCenterSyntheticActive)
+            {
+                nearCenterSyntheticActive = false;
+                nearCenterSyntheticExhausted = true;
+                nearCenterSyntheticStartedUtc =
+                    DateTimeOffset.MinValue;
             }
         }
 
@@ -514,6 +560,13 @@ internal sealed partial class DssHudGeometryTracker
         hasTrustedCenter = true;
         localMisses = 0;
 
+        // A real accepted center observation re-arms the short synthetic
+        // near-reticle bridge for a future intentional center crossing.
+        nearCenterSyntheticActive = false;
+        nearCenterSyntheticExhausted = false;
+        nearCenterSyntheticStartedUtc =
+            DateTimeOffset.MinValue;
+
         hasHistoricalCenter = true;
     }
 
@@ -534,6 +587,18 @@ internal sealed partial class DssHudGeometryTracker
                 centerX,
                 centerY,
                 raw.BodyCenterConfidence);
+        }
+
+        if (state
+            == DssCenterTrackState.NearCenter
+            && hasTrustedCenter)
+        {
+            return GeometryForCenter(
+                frame,
+                verticalFovDegrees,
+                centerX,
+                centerY,
+                0.75d);
         }
 
         if (state
@@ -955,9 +1020,37 @@ internal sealed partial class DssHudGeometryTracker
 
         if (aimRadius < 1)
         {
+            // At exact center aim the C->reticle direction is undefined, so a
+            // horizon dash cannot be positioned. The trusted radius itself is
+            // still valid and is required for the horizon circle and NEXT AIM.
+            double centeredAgeMs =
+                lastHorizonObservedUtc
+                    == DateTimeOffset.MinValue
+                    ? -1d
+                    : Math.Max(
+                        0d,
+                        (timestampUtc
+                         - lastHorizonObservedUtc)
+                        .TotalMilliseconds);
+
             return geometry with
             {
-                HorizonMarkerFound = false
+                HorizonMarkerFound = true,
+                HorizonMarkerObserved = false,
+                HorizonMarkerX =
+                    geometry.BodyCenterX,
+                HorizonMarkerY =
+                    geometry.BodyCenterY,
+                HorizonMarkerConfidence =
+                    Math.Max(
+                        0.30d,
+                        horizonConfidence * 0.84d),
+                HorizonObservationAgeMilliseconds =
+                    centeredAgeMs,
+                HorizonRadiusPixels =
+                    horizonRadius,
+                HorizonAimErrorPixels =
+                    -horizonRadius
             };
         }
 

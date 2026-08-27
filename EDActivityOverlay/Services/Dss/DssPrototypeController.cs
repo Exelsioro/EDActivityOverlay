@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -819,7 +819,8 @@ internal sealed class DssPrototypeController : IDisposable
                                 missObservation,
                                 coverageObservation,
                                 confirmedImpacts,
-                                usedCoverageCandidates));
+                                usedCoverageCandidates,
+                                dssModule));
 
                         QueueOverlayUpdate(
                             frame,
@@ -1155,7 +1156,9 @@ internal sealed class DssPrototypeController : IDisposable
             DssProbeLaunchCorrelator.Correlate(
                 sequence,
                 e,
-                frame);
+                frame,
+                targetingStepAtFire,
+                targetingCompleteAtFire);
 
         DssSequentialTargetTelemetry targetingTelemetry =
             DssSequentialTargetTelemetryBuilder.Build(
@@ -1172,9 +1175,12 @@ internal sealed class DssPrototypeController : IDisposable
             flightCorrelator.RegisterLaunch(
                 launch);
 
-        // Keep the current step on a native MISS so the user can retry it.
-        // GeometryValid is intentionally not required: step #3 is the body
-        // centre, where C may briefly become Predicting at convergence.
+        // Sequence progression is fire-owned: a valid non-MISS launch advances
+        // immediately so the next target appears without waiting 8-16 seconds
+        // for impact. Impact confirmation is feedback only and must not advance
+        // the same launch a second time.
+        bool sequenceAdvanced = false;
+
         if (!launch.HudMissVisible
             && targetingTelemetry.Available
             && Volatile.Read(ref targetingScanComplete) == 0)
@@ -1185,18 +1191,47 @@ internal sealed class DssPrototypeController : IDisposable
                     targetingTelemetry.CandidateId);
             }
 
-            int currentStep = Volatile.Read(ref targetingSequentialStep);
+            int currentStep =
+                Volatile.Read(
+                    ref targetingSequentialStep);
 
             if (currentStep >= 1
-                && currentStep <= (DssPredictiveBatchPlanner.MaximumBatchCount + DssPredictiveBatchPlanner.MaximumCorrectionShots))
+                && currentStep
+                   <= (DssPredictiveBatchPlanner.MaximumBatchCount
+                       + DssPredictiveBatchPlanner.MaximumCorrectionShots))
             {
-                int nextStep = Interlocked.Increment(ref targetingSequentialStep);
+                int nextStep =
+                    Interlocked.Increment(
+                        ref targetingSequentialStep);
+
+                sequenceAdvanced = true;
 
                 Logger.Logger.Info(
                     $"DSS TARGETING sequence advanced: {currentStep} -> {nextStep}; " +
                     $"launch={sequence}; geometry={launch.GeometryValid}; " +
-                    $"r/Rh={launch.AimNormalizedRadius:0.###}.");
+                    $"r/Rh={launch.AimNormalizedRadius:0.###}; " +
+                    $"targetError={targetingTelemetry.ErrorPixels:0.#} px.");
             }
+        }
+
+        if (!sequenceAdvanced)
+        {
+            string holdReason =
+                launch.HudMissVisible
+                    ? "HUD_MISS"
+                    : Volatile.Read(
+                          ref targetingScanComplete) != 0
+                        ? "SCAN_COMPLETE"
+                        : !targetingTelemetry.Available
+                            ? "TARGET_UNAVAILABLE"
+                            : "STEP_OUT_OF_RANGE";
+
+            Logger.Logger.Info(
+                $"DSS TARGETING sequence held at {targetingStepAtFire}; " +
+                $"launch={sequence}; reason={holdReason}; " +
+                $"targetAvailable={targetingTelemetry.Available}; " +
+                $"geometry={launch.GeometryValid}; " +
+                $"hudMiss={launch.HudMissVisible}.");
         }
 
         Logger.Logger.Info(
