@@ -43,6 +43,21 @@ internal sealed class DssPrototypeController : IDisposable
 
     private DssWindowGraphicsCapture? windowGraphicsCapture;
 
+    // Independent presentation-only motion path. It consumes the same newest
+    // WGC CPU frame as heavy CV, but with its own version cursor and a much
+    // cheaper coarse-to-fine matcher.
+    private readonly DssFastVisualMotionTracker fastVisualMotionTracker =
+        new();
+
+    private CancellationTokenSource? fastVisualMotionCancellation;
+    private Task? fastVisualMotionTask;
+
+    private readonly object fastVisualUpdateGate =
+        new();
+
+    private DssFastVisualMotionSnapshot? latestFastVisualUpdate;
+    private bool fastVisualUpdateDispatchPending;
+
     // Visual updates are latest-frame-wins. The old implementation queued one
     // Dispatcher operation per CV result, so the WPF overlay could render
     // frames that were already 2+ CV cycles old while Elite itself had moved
@@ -190,6 +205,7 @@ internal sealed class DssPrototypeController : IDisposable
         dssSignatureHits = 0;
         dssSignatureMisses = 0;
         tracker.Reset();
+        fastVisualMotionTracker.Reset();
         readinessEvaluator.Reset();
 
         windowGraphicsCapture?.Dispose();
@@ -469,10 +485,62 @@ internal sealed class DssPrototypeController : IDisposable
         captureTask = Task.Run(
             () => CaptureLoopAsync(token),
             token);
+
+        StartFastVisualMotionLoop();
+    }
+
+    private void StartFastVisualMotionLoop()
+    {
+        StopFastVisualMotionLoop();
+
+        if (windowGraphicsCapture is null)
+        {
+            return;
+        }
+
+        fastVisualMotionCancellation =
+            new CancellationTokenSource();
+
+        CancellationToken token =
+            fastVisualMotionCancellation.Token;
+
+        fastVisualMotionTask =
+            Task.Run(
+                () => FastVisualMotionLoopAsync(
+                    token),
+                token);
+    }
+
+    private void StopFastVisualMotionLoop()
+    {
+        CancellationTokenSource? cancellation =
+            fastVisualMotionCancellation;
+
+        fastVisualMotionCancellation = null;
+        fastVisualMotionTask = null;
+
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        finally
+        {
+            cancellation.Dispose();
+        }
     }
 
     private void StopCaptureLoop()
     {
+        StopFastVisualMotionLoop();
+
         CancellationTokenSource? cancellation =
             captureCancellation;
 
@@ -629,6 +697,10 @@ internal sealed class DssPrototypeController : IDisposable
 
                     detectWatch.Stop();
 
+                    fastVisualMotionTracker.UpdateHeavyAnchor(
+                        frame,
+                        tracking);
+
                     long sequence =
                         Interlocked.Increment(
                             ref frameSequence);
@@ -784,6 +856,191 @@ internal sealed class DssPrototypeController : IDisposable
         {
             Logger.Logger.Warning(
                 $"DSS prototype capture loop failed: {ex.Message}");
+        }
+    }
+
+    private async Task FastVisualMotionLoopAsync(
+        CancellationToken token)
+    {
+        long wgcVersion = 0;
+        long accepted = 0;
+        long rejected = 0;
+        double totalTrackMilliseconds = 0d;
+        DateTimeOffset nextDiagnosticsUtc =
+            DateTimeOffset.UtcNow
+            + TimeSpan.FromSeconds(3);
+
+        try
+        {
+            while (!token.IsCancellationRequested
+                   && sessionActive
+                   && captureActive)
+            {
+                DssWindowGraphicsCapture? wgc =
+                    windowGraphicsCapture;
+
+                if (wgc is null)
+                {
+                    return;
+                }
+
+                IntPtr targetWindow =
+                    targetWindowProvider();
+
+                if (!ShouldShowForTarget(
+                        targetWindow))
+                {
+                    await Task.Delay(
+                        25,
+                        token).ConfigureAwait(false);
+
+                    continue;
+                }
+
+                if (!wgc.TryGetLatestFrameAfter(
+                        ref wgcVersion,
+                        out DssCapturedFrame? frame)
+                    || frame is null)
+                {
+                    await Task.Delay(
+                        8,
+                        token).ConfigureAwait(false);
+
+                    continue;
+                }
+
+                Stopwatch watch =
+                    Stopwatch.StartNew();
+
+                bool tracked =
+                    fastVisualMotionTracker.TryTrack(
+                        frame,
+                        out DssFastVisualMotionSnapshot? motion);
+
+                watch.Stop();
+
+                totalTrackMilliseconds +=
+                    watch.Elapsed.TotalMilliseconds;
+
+                if (tracked
+                    && motion is not null)
+                {
+                    accepted++;
+
+                    QueueFastVisualMotion(
+                        motion);
+                }
+                else
+                {
+                    rejected++;
+                }
+
+                DateTimeOffset now =
+                    DateTimeOffset.UtcNow;
+
+                if (now >= nextDiagnosticsUtc)
+                {
+                    long samples =
+                        accepted + rejected;
+
+                    double averageMilliseconds =
+                        samples > 0
+                            ? totalTrackMilliseconds
+                              / samples
+                            : 0d;
+
+                    Logger.Logger.Info(
+                        $"DSS FAST VISUAL: ok={accepted}; reject={rejected}; " +
+                        $"avg={averageMilliseconds:0.00} ms.");
+
+                    accepted = 0;
+                    rejected = 0;
+                    totalTrackMilliseconds = 0;
+                    nextDiagnosticsUtc =
+                        now
+                        + TimeSpan.FromSeconds(3);
+                }
+
+                await Task.Delay(
+                    12,
+                    token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+            when (token.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.Logger.Warning(
+                $"DSS fast visual motion loop failed: {ex.Message}");
+        }
+    }
+
+    private void QueueFastVisualMotion(
+        DssFastVisualMotionSnapshot motion)
+    {
+        bool schedule;
+
+        lock (fastVisualUpdateGate)
+        {
+            latestFastVisualUpdate =
+                motion;
+
+            schedule =
+                !fastVisualUpdateDispatchPending;
+
+            if (schedule)
+            {
+                fastVisualUpdateDispatchPending =
+                    true;
+            }
+        }
+
+        if (schedule)
+        {
+            dispatcher.BeginInvoke(
+                DispatcherPriority.Render,
+                new Action(
+                    DrainLatestFastVisualMotion));
+        }
+    }
+
+    private void DrainLatestFastVisualMotion()
+    {
+        while (true)
+        {
+            DssFastVisualMotionSnapshot? motion;
+
+            lock (fastVisualUpdateGate)
+            {
+                motion =
+                    latestFastVisualUpdate;
+
+                latestFastVisualUpdate =
+                    null;
+
+                if (motion is null)
+                {
+                    fastVisualUpdateDispatchPending =
+                        false;
+
+                    return;
+                }
+            }
+
+            DssPrototypeOverlayWindow? targetOverlay =
+                overlay;
+
+            if (!disposed
+                && sessionActive
+                && captureActive
+                && targetOverlay is not null
+                && targetOverlay.IsVisible)
+            {
+                targetOverlay.UpdateFastVisualMotion(
+                    motion);
+            }
         }
     }
 

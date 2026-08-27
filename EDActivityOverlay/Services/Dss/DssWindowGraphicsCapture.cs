@@ -175,6 +175,42 @@ internal sealed class DssWindowGraphicsCapture : IDisposable
         }
     }
 
+    /// <summary>
+    /// Independent latest-frame reader for additional consumers such as the
+    /// presentation-only motion tracker. The caller owns its version cursor,
+    /// so this does not steal a frame from the heavy DSS CV loop.
+    /// </summary>
+    internal bool TryGetLatestFrameAfter(
+        ref long consumerVersion,
+        out DssCapturedFrame? frame)
+    {
+        frame = null;
+
+        if (Volatile.Read(
+                ref disposed) != 0)
+        {
+            return false;
+        }
+
+        lock (gate)
+        {
+            if (latestFrame is null
+                || producedVersion
+                   == consumerVersion)
+            {
+                return false;
+            }
+
+            consumerVersion =
+                producedVersion;
+
+            frame =
+                latestFrame;
+
+            return true;
+        }
+    }
+
     private void OnFrameArrived(
         Direct3D11CaptureFramePool sender,
         object args)

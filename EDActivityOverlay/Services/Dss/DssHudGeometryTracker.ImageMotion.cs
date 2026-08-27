@@ -28,7 +28,7 @@ internal sealed partial class DssHudGeometryTracker
     private static readonly TimeSpan RecentImageTrackWindow =
         TimeSpan.FromMilliseconds(420);
 
-    private readonly DssCenterImageTracker imageMotionTracker =
+    private readonly DssFastCenterImageTracker imageMotionTracker =
         new();
 
     // Start at the budget so the first frame must establish a heavy anchor.
@@ -85,10 +85,29 @@ internal sealed partial class DssHudGeometryTracker
             centerY
             + velocityY * ageSeconds;
 
+        double trackSpeed =
+            DssVisualMotionPolicy.Speed(
+                velocityX,
+                velocityY);
+
+        bool stationary =
+            DssVisualMotionPolicy.IsStationary(
+                velocityX,
+                velocityY,
+                velocityX,
+                velocityY);
+
+        int searchRadius =
+            DssVisualMotionPolicy.ResolveSearchRadius(
+                stationary,
+                trackSpeed,
+                ageSeconds);
+
         if (!imageMotionTracker.TryTrack(
                 frame,
                 predictedX,
                 predictedY,
+                searchRadius,
                 out DssImageTrackResult? image)
             || image is null
             || image.Confidence
@@ -101,30 +120,77 @@ internal sealed partial class DssHudGeometryTracker
             return false;
         }
 
+        double innovation =
+            DssVisualMotionPolicy.Distance(
+                image.CenterX,
+                image.CenterY,
+                predictedX,
+                predictedY);
+
+        double maximumInnovation =
+            DssVisualMotionPolicy.ResolveMaximumInnovationPixels(
+                stationary,
+                trackSpeed,
+                ageSeconds);
+
+        if (innovation > maximumInnovation)
+        {
+            // Repeated DSS grid / coverage texture can produce an apparently
+            // good SAD match several pixels away while the camera is still.
+            // Do not let that candidate move C; use heavy CV on this frame.
+            consecutiveImageMotionFrames =
+                MaximumConsecutiveImageMotionFrames;
+
+            return false;
+        }
+
         double dt =
             (timestampUtc
              - lastCenterObservedUtc)
             .TotalSeconds;
 
-        if (dt > 0.01d
-            && dt < 0.32d)
-        {
-            UpdateDirectVelocity(
+        double displacement =
+            DssVisualMotionPolicy.Distance(
                 image.CenterX,
                 image.CenterY,
-                dt);
-        }
-        else
+                centerX,
+                centerY);
+
+        double holdRadius =
+            stationary
+                ? DssVisualMotionPolicy.StationaryHoldRadiusPixels
+                : DssVisualMotionPolicy.MovingDeadbandPixels;
+
+        if (displacement <= holdRadius)
         {
+            // A dead-band must hold the position as well as zero velocity.
+            // v36 only zeroed velocity and still assigned the noisy integer
+            // IMAGE coordinate, which produced visible 1-2 px chatter.
             velocityX = 0;
             velocityY = 0;
         }
+        else
+        {
+            if (dt > 0.01d
+                && dt < 0.32d)
+            {
+                UpdateDirectVelocity(
+                    image.CenterX,
+                    image.CenterY,
+                    dt);
+            }
+            else
+            {
+                velocityX = 0;
+                velocityY = 0;
+            }
 
-        centerX =
-            image.CenterX;
+            centerX =
+                image.CenterX;
 
-        centerY =
-            image.CenterY;
+            centerY =
+                image.CenterY;
+        }
 
         lastCenterObservedUtc =
             timestampUtc;
