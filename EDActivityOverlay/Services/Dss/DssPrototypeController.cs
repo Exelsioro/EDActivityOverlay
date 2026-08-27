@@ -1106,43 +1106,34 @@ internal sealed class DssPrototypeController : IDisposable
 
     private void DrainLatestOverlayUpdate()
     {
-        Action? update;
-
-        lock (overlayUpdateGate)
+        // Do not return control to WPF after applying an already stale
+        // snapshot. A CV result can arrive while UpdateGeometry is running.
+        // In v35 that newer result was deferred to another Dispatcher
+        // callback, allowing WPF to compose/render the older geometry in
+        // between. Drain to the newest available snapshot inside this same
+        // callback so only the final state can reach composition.
+        while (true)
         {
-            update =
-                latestOverlayUpdateAction;
+            Action? update;
 
-            latestOverlayUpdateAction =
-                null;
-        }
-
-        update?.Invoke();
-
-        bool reschedule;
-
-        lock (overlayUpdateGate)
-        {
-            reschedule =
-                latestOverlayUpdateAction
-                is not null;
-
-            if (!reschedule)
+            lock (overlayUpdateGate)
             {
-                overlayUpdateDispatchPending =
-                    false;
-            }
-        }
+                update =
+                    latestOverlayUpdateAction;
 
-        if (reschedule)
-        {
-            // Yield back to WPF between applied snapshots. If several CV
-            // results arrive before this callback executes, the next callback
-            // still receives only the newest one.
-            dispatcher.BeginInvoke(
-                DispatcherPriority.Render,
-                new Action(
-                    DrainLatestOverlayUpdate));
+                latestOverlayUpdateAction =
+                    null;
+
+                if (update is null)
+                {
+                    overlayUpdateDispatchPending =
+                        false;
+
+                    return;
+                }
+            }
+
+            update();
         }
     }
 
