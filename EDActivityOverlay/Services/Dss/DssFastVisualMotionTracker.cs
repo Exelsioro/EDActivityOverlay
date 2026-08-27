@@ -4,6 +4,7 @@ namespace EDActivityOverlay.Services.Dss;
 
 internal sealed record DssFastVisualMotionSnapshot(
     DateTimeOffset TimestampUtc,
+    DateTimeOffset ProcessedUtc,
     int FrameWidth,
     int FrameHeight,
     double CenterX,
@@ -39,6 +40,13 @@ internal sealed class DssFastVisualMotionTracker
 
     private const int MinimumSearchRadiusPixels = 18;
     private const int MaximumSearchRadiusPixels = 72;
+
+    // A sharp pan can move the native centre marker farther than the normal
+    // 18 px startup search before FAST has a velocity estimate. Keep the cheap
+    // search as the hot path, then widen only after a miss.
+    private const int RecoveryMinimumSearchRadiusPixels = 48;
+    private const double RecoveryMaximumPredictionGapSeconds = 0.025d;
+    private const double RecoveryMinimumConfidence = 0.84d;
 
     private readonly object gate =
         new();
@@ -251,6 +259,12 @@ internal sealed class DssFastVisualMotionTracker
                     MinimumSearchRadiusPixels,
                     MaximumSearchRadiusPixels);
 
+            int usedSearchRadius =
+                searchRadius;
+
+            bool recoverySearchUsed =
+                false;
+
             if (!TryFindNativeCenterMarker(
                     frame,
                     predictedX,
@@ -258,10 +272,53 @@ internal sealed class DssFastVisualMotionTracker
                     searchRadius,
                     out NativeCenterMarker marker))
             {
-                HandleMiss(
-                    heavySpeed);
+                // Motion onset is the difficult case: both FAST and HEAVY may
+                // still report ~0 velocity while a stale 25-35 ms capture has
+                // already moved the marker well outside the normal 18 px ROI.
+                // Retry the same frame once with a bounded acquisition radius.
+                // This is intentionally a miss-only path so steady-state cost
+                // remains unchanged. After two consecutive failed frames stop
+                // paying for the wide scan and let HEAVY reacquire.
+                if (consecutiveFailures >= 2)
+                {
+                    HandleMiss(
+                        heavySpeed);
 
-                return false;
+                    return false;
+                }
+
+                int recoveryRadius =
+                    Math.Clamp(
+                        Math.Max(
+                            RecoveryMinimumSearchRadiusPixels,
+                            (int)Math.Ceiling(
+                                MaximumVelocityPixelsPerSecond
+                                * Math.Min(
+                                    dt,
+                                    RecoveryMaximumPredictionGapSeconds))
+                            + 8),
+                        searchRadius,
+                        MaximumSearchRadiusPixels);
+
+                if (recoveryRadius <= searchRadius
+                    || !TryFindNativeCenterMarker(
+                        frame,
+                        predictedX,
+                        predictedY,
+                        recoveryRadius,
+                        out marker))
+                {
+                    HandleMiss(
+                        heavySpeed);
+
+                    return false;
+                }
+
+                usedSearchRadius =
+                    recoveryRadius;
+
+                recoverySearchUsed =
+                    true;
             }
 
             double innovation =
@@ -280,8 +337,32 @@ internal sealed class DssFastVisualMotionTracker
                     8d,
                     38d);
 
+            if (recoverySearchUsed)
+            {
+                maximumInnovation =
+                    Math.Max(
+                        maximumInnovation,
+                        Math.Min(
+                            usedSearchRadius - 4d,
+                            56d));
+            }
+
+            // The normal innovation gate assumes the velocity predictor already
+            // knows about the pan. At motion onset that assumption is false.
+            // A high-confidence native disk+guide lock is allowed to establish
+            // the first large displacement instead of waiting for HEAVY CV.
+            bool highConfidenceStartupRecovery =
+                referenceSpeed < 70d
+                && marker.Confidence
+                   >= RecoveryMinimumConfidence
+                && innovation
+                   <= Math.Min(
+                       usedSearchRadius - 2d,
+                       56d);
+
             if (innovation
-                > maximumInnovation)
+                    > maximumInnovation
+                && !highConfidenceStartupRecovery)
             {
                 HandleMiss(
                     heavySpeed);
@@ -358,6 +439,7 @@ internal sealed class DssFastVisualMotionTracker
             snapshot =
                 new DssFastVisualMotionSnapshot(
                     frame.TimestampUtc,
+                    DateTimeOffset.UtcNow,
                     frame.Width,
                     frame.Height,
                     centerX,
@@ -735,7 +817,8 @@ internal sealed class DssFastVisualMotionTracker
         score =
             horizontalHits
             + verticalHits
-            + roundness * 30d
+            + roundness * 35d
+            + coreMean * 0.4d
             + peakLuma * 0.04d
             + neutralHits * 0.08d;
 
@@ -897,82 +980,128 @@ internal sealed class DssFastVisualMotionTracker
             double centerY,
             double scale)
     {
+        // The native guide line terminates at the marker and is also neutral
+        // white. A plain centroid over the whole 11 px neighbourhood therefore
+        // pulls C toward the fixed reticle. Use a smaller, radially tapered
+        // core and refine twice. Pixels near the marker edge still help locate
+        // the disk, while a one-sided guide tail receives almost no weight.
         int radius =
             Math.Clamp(
                 (int)Math.Round(
-                    11d * scale),
-                8,
-                15);
+                    14d * scale),
+                10,
+                18);
 
-        double weightedX = 0d;
-        double weightedY = 0d;
-        double weight = 0d;
+        double currentX =
+            centerX;
 
-        int roundedX =
-            (int)Math.Round(
-                centerX);
+        double currentY =
+            centerY;
 
-        int roundedY =
-            (int)Math.Round(
-                centerY);
+        double radiusSquared =
+            radius * radius;
 
-        for (int y = roundedY - radius;
-             y <= roundedY + radius;
-             y++)
+        for (int iteration = 0;
+             iteration < 3;
+             iteration++)
         {
-            for (int x = roundedX - radius;
-                 x <= roundedX + radius;
-                 x++)
+            double weightedX = 0d;
+            double weightedY = 0d;
+            double weight = 0d;
+
+            int roundedX =
+                (int)Math.Round(
+                    currentX);
+
+            int roundedY =
+                (int)Math.Round(
+                    currentY);
+
+            for (int y = roundedY - radius;
+                 y <= roundedY + radius;
+                 y++)
             {
-                double dx =
-                    x - centerX;
-
-                double dy =
-                    y - centerY;
-
-                if (dx * dx
-                    + dy * dy
-                    > radius * radius)
+                for (int x = roundedX - radius;
+                     x <= roundedX + radius;
+                     x++)
                 {
-                    continue;
+                    double dx =
+                        x - currentX;
+
+                    double dy =
+                        y - currentY;
+
+                    double distanceSquared =
+                        dx * dx
+                        + dy * dy;
+
+                    if (distanceSquared
+                        > radiusSquared)
+                    {
+                        continue;
+                    }
+
+                    int luma =
+                        GetNeutralLuma(
+                            frame,
+                            x,
+                            y,
+                            105,
+                            130);
+
+                    if (luma <= 0)
+                    {
+                        continue;
+                    }
+
+                    double radial =
+                        Math.Max(
+                            0d,
+                            1d
+                            - distanceSquared
+                              / radiusSquared);
+
+                    double radialWeight =
+                        radial * radial;
+
+                    double localWeight =
+                        Math.Max(
+                            1d,
+                            luma - 90d)
+                        * radialWeight;
+
+                    if (localWeight
+                        <= 0.001d)
+                    {
+                        continue;
+                    }
+
+                    weightedX +=
+                        x * localWeight;
+
+                    weightedY +=
+                        y * localWeight;
+
+                    weight +=
+                        localWeight;
                 }
-
-                int luma =
-                    GetNeutralLuma(
-                        frame,
-                        x,
-                        y,
-                        105,
-                        130);
-
-                if (luma <= 0)
-                {
-                    continue;
-                }
-
-                double localWeight =
-                    Math.Max(
-                        1,
-                        luma - 90);
-
-                weightedX +=
-                    x * localWeight;
-
-                weightedY +=
-                    y * localWeight;
-
-                weight +=
-                    localWeight;
             }
+
+            if (weight <= 0d)
+            {
+                break;
+            }
+
+            currentX =
+                weightedX / weight;
+
+            currentY =
+                weightedY / weight;
         }
 
-        return weight > 0d
-            ? (
-                weightedX / weight,
-                weightedY / weight)
-            : (
-                centerX,
-                centerY);
+        return (
+            currentX,
+            currentY);
     }
 
     private static double MeasureRawCoreMean(

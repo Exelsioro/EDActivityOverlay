@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Exploration;
+using EDActivityOverlay.Services.Journal;
 
 namespace EDActivityOverlay.Services.Dss;
 
@@ -108,14 +109,14 @@ internal static class DssProbeAimSolver
             return DssProjectedAimPlan.Empty;
         }
 
-        if (!TryResolvePredictiveTarget(
+        if (!TryResolveSphericalTarget(
                 state,
+                readiness,
                 sequentialStep,
-                readiness.AngularDiameterDegrees,
                 confirmedImpactCount,
                 coverageObservation,
                 usedCoverageCandidates,
-                out DssPredictiveAimTarget target,
+                out DssSphericalAimTarget target,
                 out string source))
         {
             return DssProjectedAimPlan.Empty;
@@ -137,9 +138,55 @@ internal static class DssProbeAimSolver
                 target.CoverageScore);
 
         return new DssProjectedAimPlan(
-            target.PredictedBatchCount,
-            $"TARGETING_V2_{target.Role}/{source}/N{target.PredictedBatchCount}",
+            target.TotalPlanCount,
+            $"TARGETING_V3_{target.Role}/{source}/N{target.TotalPlanCount}",
             new[] { point });
+    }
+
+    internal static bool TryResolveSphericalTarget(
+        GameStateSnapshot state,
+        DssAssistantReadinessSnapshot readiness,
+        int sequentialStep,
+        int confirmedImpactCount,
+        DssCoverageObservation? coverageObservation,
+        long usedCoverageCandidates,
+        out DssSphericalAimTarget target,
+        out string source)
+    {
+        if (!IsWithinTargetingV1Calibration(
+                readiness.AngularDiameterDegrees))
+        {
+            target =
+                DssSphericalAimTarget.Empty(0);
+
+            source =
+                string.Empty;
+
+            return false;
+        }
+
+        (int requestedTarget, string resolvedSource) =
+            ResolveEfficiencyTarget(
+                state);
+
+        source = resolvedSource;
+
+        DssModuleSnapshot dssModule = DssJournalContextReader.ReadLatestDssModule(
+            JournalMonitorService.Instance.JournalDirectory);
+
+        target =
+            DssSphericalPlacementPlanner.Resolve(
+                sequentialStep,
+                requestedTarget,
+                source,
+                readiness.AngularDiameterDegrees,
+                dssModule,
+                readiness.BodyRadiusMeters,
+                confirmedImpactCount,
+                coverageObservation,
+                usedCoverageCandidates);
+
+        return target.Available;
     }
 
     internal static bool TryResolvePredictiveTarget(

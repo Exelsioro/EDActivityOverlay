@@ -6,6 +6,10 @@ internal enum DssCenterTrackState
 {
     Acquiring,
     Tracking,
+    // Center is at or very near the screen reticle; guide-ray detection cannot
+    // work in this zone, so we synthesize center = reticle until the player
+    // pans the camera away.
+    NearCenter,
     Predicting,
     Lost
 }
@@ -55,6 +59,12 @@ internal sealed partial class DssHudGeometryTracker
         TimeSpan.FromMilliseconds(380);
 
     private const double MaximumPredictedCenterDisplacementPixels = 120d;
+
+    // When the tracked planet center is this close to the screen reticle,
+    // the Frontier guide-ray cannot be measured (too short). We synthesize
+    // the center at the reticle position and suppress guide-ray detection
+    // until the player pans the camera away.
+    private const double NearReticleLockRadiusPixels = 80d;
 
     private static readonly TimeSpan FreshObservationWindow =
         TimeSpan.FromMilliseconds(320);
@@ -291,6 +301,35 @@ internal sealed partial class DssHudGeometryTracker
         bool qualityObservation =
             raw.BodyCenterFound
             && raw.BodyCenterConfidence >= 0.66;
+
+        // Near-reticle check: when the tracked center is inside the
+        // guide-ray dead-zone (~80 px) around the screen reticle, detection
+        // always fails because there is not enough guide path to score.
+        // Recognise this as an intentional centre-aim, not as a lost track.
+        if (!qualityObservation && hasTrustedCenter)
+        {
+            double nearDist =
+                Distance(
+                    centerX,
+                    centerY,
+                    raw.ReticleX,
+                    raw.ReticleY);
+
+            double scaleEstimate =
+                Math.Max(1d, raw.ReticleY / 540d);
+
+            if (nearDist
+                <= NearReticleLockRadiusPixels * scaleEstimate)
+            {
+                // Synthesize: keep track alive with center at reticle.
+                centerX = raw.ReticleX;
+                centerY = raw.ReticleY;
+                velocityX = 0;
+                velocityY = 0;
+                lastCenterObservedUtc = timestampUtc;
+                return DssCenterTrackState.NearCenter;
+            }
+        }
 
         if (qualityObservation)
         {

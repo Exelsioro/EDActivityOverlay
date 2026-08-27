@@ -21,7 +21,12 @@ public partial class DssPrototypeOverlayWindow
     // Fast WGC texture tracking supplies a measured centre, so only the small
     // residual interval from that frame to composition needs extrapolation.
     private const double FastVisualMaximumPredictionSeconds = 0.08d;
-    private const double FastVisualMaximumPredictionPixels = 48d;
+
+    // A normal 25-35 ms WGC age plus Dispatcher/composition time already needs
+    // 55-80 px of extrapolation at a 1.7-2.0 kpx/s pan. The old 48 px clamp
+    // therefore guaranteed visible lag even when FAST had the correct marker.
+    // Keep time bounded, but allow enough distance to cover the measured path.
+    private const double FastVisualMaximumPredictionPixels = 128d;
     private const double FastVisualMaximumAgeSeconds = 0.25d;
 
     private readonly TranslateTransform dynamicHudTranslation =
@@ -47,6 +52,30 @@ public partial class DssPrototypeOverlayWindow
     private double dynamicHudFastVelocityX;
     private double dynamicHudFastVelocityY;
     private bool dynamicHudFastAvailable;
+
+    // Presentation latency telemetry. All fields below are touched only on the
+    // WPF dispatcher. "apply" is when the TranslateTransform is actually
+    // changed; "render" is the next CompositionTarget.Rendering callback.
+    private DateTimeOffset fastVisualTelemetryWindowUtc =
+        DateTimeOffset.MinValue;
+
+    private long fastVisualApplySamples;
+    private double fastVisualApplyAgeTotalMilliseconds;
+    private double fastVisualApplyAgeMaximumMilliseconds;
+    private double fastVisualDispatcherAgeTotalMilliseconds;
+    private double fastVisualDispatcherAgeMaximumMilliseconds;
+
+    private long fastVisualRenderSamples;
+    private double fastVisualRenderAgeTotalMilliseconds;
+    private double fastVisualRenderAgeMaximumMilliseconds;
+    private double fastVisualCompositionWaitTotalMilliseconds;
+    private double fastVisualCompositionWaitMaximumMilliseconds;
+
+    private bool fastVisualRenderSamplePending;
+    private DateTimeOffset pendingFastVisualFrameUtc =
+        DateTimeOffset.MinValue;
+    private DateTimeOffset pendingFastVisualApplyUtc =
+        DateTimeOffset.MinValue;
 
     private double dynamicHudReticleX;
     private double dynamicHudReticleY;
@@ -224,18 +253,188 @@ public partial class DssPrototypeOverlayWindow
                   / motion.FrameHeight
                 : 1d;
 
-        // The FAST update already runs on the WPF dispatcher. Apply it
-        // immediately instead of waiting for a later composition callback.
+        // The FAST update already runs on the WPF dispatcher. Measure the age
+        // at the exact point where WPF receives and applies the coordinates.
+        DateTimeOffset applyUtc =
+            DateTimeOffset.UtcNow;
+
         ApplyDynamicHudPose(
-            DateTimeOffset.UtcNow);
+            applyUtc);
+
+        RecordFastVisualApplyTelemetry(
+            motion,
+            applyUtc);
     }
 
     private void OnDynamicHudRendering(
         object? sender,
         EventArgs e)
     {
+        DateTimeOffset renderUtc =
+            DateTimeOffset.UtcNow;
+
         ApplyDynamicHudPose(
-            DateTimeOffset.UtcNow);
+            renderUtc);
+
+        RecordFastVisualRenderTelemetry(
+            renderUtc);
+    }
+
+    private void RecordFastVisualApplyTelemetry(
+        DssFastVisualMotionSnapshot motion,
+        DateTimeOffset applyUtc)
+    {
+        double applyAgeMilliseconds =
+            Math.Max(
+                0d,
+                (applyUtc
+                 - motion.TimestampUtc)
+                .TotalMilliseconds);
+
+        double dispatcherAgeMilliseconds =
+            Math.Max(
+                0d,
+                (applyUtc
+                 - motion.ProcessedUtc)
+                .TotalMilliseconds);
+
+        fastVisualApplySamples++;
+
+        fastVisualApplyAgeTotalMilliseconds +=
+            applyAgeMilliseconds;
+
+        fastVisualApplyAgeMaximumMilliseconds =
+            Math.Max(
+                fastVisualApplyAgeMaximumMilliseconds,
+                applyAgeMilliseconds);
+
+        fastVisualDispatcherAgeTotalMilliseconds +=
+            dispatcherAgeMilliseconds;
+
+        fastVisualDispatcherAgeMaximumMilliseconds =
+            Math.Max(
+                fastVisualDispatcherAgeMaximumMilliseconds,
+                dispatcherAgeMilliseconds);
+
+        // If multiple FAST updates are applied before the next composition
+        // callback, retain only the latest one: presentation is latest-wins.
+        fastVisualRenderSamplePending =
+            true;
+
+        pendingFastVisualFrameUtc =
+            motion.TimestampUtc;
+
+        pendingFastVisualApplyUtc =
+            applyUtc;
+
+        if (fastVisualTelemetryWindowUtc
+            == DateTimeOffset.MinValue)
+        {
+            fastVisualTelemetryWindowUtc =
+                applyUtc;
+        }
+    }
+
+    private void RecordFastVisualRenderTelemetry(
+        DateTimeOffset renderUtc)
+    {
+        if (fastVisualRenderSamplePending)
+        {
+            double renderAgeMilliseconds =
+                Math.Max(
+                    0d,
+                    (renderUtc
+                     - pendingFastVisualFrameUtc)
+                    .TotalMilliseconds);
+
+            double compositionWaitMilliseconds =
+                Math.Max(
+                    0d,
+                    (renderUtc
+                     - pendingFastVisualApplyUtc)
+                    .TotalMilliseconds);
+
+            fastVisualRenderSamples++;
+
+            fastVisualRenderAgeTotalMilliseconds +=
+                renderAgeMilliseconds;
+
+            fastVisualRenderAgeMaximumMilliseconds =
+                Math.Max(
+                    fastVisualRenderAgeMaximumMilliseconds,
+                    renderAgeMilliseconds);
+
+            fastVisualCompositionWaitTotalMilliseconds +=
+                compositionWaitMilliseconds;
+
+            fastVisualCompositionWaitMaximumMilliseconds =
+                Math.Max(
+                    fastVisualCompositionWaitMaximumMilliseconds,
+                    compositionWaitMilliseconds);
+
+            fastVisualRenderSamplePending =
+                false;
+        }
+
+        if (fastVisualTelemetryWindowUtc
+                == DateTimeOffset.MinValue
+            || renderUtc
+               - fastVisualTelemetryWindowUtc
+               < TimeSpan.FromSeconds(3))
+        {
+            return;
+        }
+
+        double applyAgeAverage =
+            fastVisualApplySamples > 0
+                ? fastVisualApplyAgeTotalMilliseconds
+                  / fastVisualApplySamples
+                : 0d;
+
+        double dispatcherAverage =
+            fastVisualApplySamples > 0
+                ? fastVisualDispatcherAgeTotalMilliseconds
+                  / fastVisualApplySamples
+                : 0d;
+
+        double renderAgeAverage =
+            fastVisualRenderSamples > 0
+                ? fastVisualRenderAgeTotalMilliseconds
+                  / fastVisualRenderSamples
+                : 0d;
+
+        double compositionWaitAverage =
+            fastVisualRenderSamples > 0
+                ? fastVisualCompositionWaitTotalMilliseconds
+                  / fastVisualRenderSamples
+                : 0d;
+
+        Logger.Logger.Info(
+            $"DSS FAST WPF: apply={fastVisualApplySamples}; " +
+            $"render={fastVisualRenderSamples}; " +
+            $"applyAgeAvg={applyAgeAverage:0.0} ms; " +
+            $"applyAgeMax={fastVisualApplyAgeMaximumMilliseconds:0.0} ms; " +
+            $"dispatcherAvg={dispatcherAverage:0.0} ms; " +
+            $"dispatcherMax={fastVisualDispatcherAgeMaximumMilliseconds:0.0} ms; " +
+            $"renderAgeAvg={renderAgeAverage:0.0} ms; " +
+            $"renderAgeMax={fastVisualRenderAgeMaximumMilliseconds:0.0} ms; " +
+            $"composeWaitAvg={compositionWaitAverage:0.0} ms; " +
+            $"composeWaitMax={fastVisualCompositionWaitMaximumMilliseconds:0.0} ms.");
+
+        fastVisualApplySamples = 0;
+        fastVisualApplyAgeTotalMilliseconds = 0d;
+        fastVisualApplyAgeMaximumMilliseconds = 0d;
+        fastVisualDispatcherAgeTotalMilliseconds = 0d;
+        fastVisualDispatcherAgeMaximumMilliseconds = 0d;
+
+        fastVisualRenderSamples = 0;
+        fastVisualRenderAgeTotalMilliseconds = 0d;
+        fastVisualRenderAgeMaximumMilliseconds = 0d;
+        fastVisualCompositionWaitTotalMilliseconds = 0d;
+        fastVisualCompositionWaitMaximumMilliseconds = 0d;
+
+        fastVisualTelemetryWindowUtc =
+            renderUtc;
     }
 
     private void ApplyDynamicHudPose(

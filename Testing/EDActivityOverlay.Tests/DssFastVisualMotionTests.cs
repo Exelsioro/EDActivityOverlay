@@ -62,14 +62,36 @@ public sealed class DssFastVisualMotionTests
             double y) =
             DssPrototypeOverlayWindow
                 .CalculateFastVisualResidual(
-                    velocityX: 1000,
+                    velocityX: 2000,
                     velocityY: 0,
                     ageSeconds: 1);
 
         Assert.InRange(
             x,
-            47.99,
-            48.01);
+            127.99,
+            128.01);
+
+        Assert.Equal(
+            0d,
+            y);
+    }
+
+    [Fact]
+    public void FastResidual_CoversMeasuredHighSpeedFrameAge()
+    {
+        (
+            double x,
+            double y) =
+            DssPrototypeOverlayWindow
+                .CalculateFastVisualResidual(
+                    velocityX: 1700,
+                    velocityY: 0,
+                    ageSeconds: 0.04);
+
+        Assert.InRange(
+            x,
+            67.99,
+            68.01);
 
         Assert.Equal(
             0d,

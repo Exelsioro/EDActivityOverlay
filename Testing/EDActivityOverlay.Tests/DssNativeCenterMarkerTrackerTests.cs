@@ -43,6 +43,40 @@ public sealed class DssNativeCenterMarkerTrackerTests
     }
 
     [Fact]
+    public void NativeMarkerTracker_CentroidRejectsThickGuideTailBias()
+    {
+        DssCapturedFrame frame =
+            CreateMarkerFrame(
+                width: 640,
+                height: 360,
+                markerX: 470,
+                markerY: 220,
+                guideHalfWidth: 2);
+
+        bool found =
+            DssFastVisualMotionTracker
+                .TryFindNativeCenterMarker(
+                    frame,
+                    predictedCenterX: 466,
+                    predictedCenterY: 218,
+                    searchRadiusPixels: 24,
+                    out DssFastVisualMotionTracker
+                        .NativeCenterMarker marker);
+
+        Assert.True(found);
+
+        Assert.InRange(
+            marker.X,
+            469.4,
+            470.6);
+
+        Assert.InRange(
+            marker.Y,
+            219.4,
+            220.6);
+    }
+
+    [Fact]
     public void NativeMarkerTracker_RejectsIsolatedStar()
     {
         DssCapturedFrame frame =
@@ -72,7 +106,8 @@ public sealed class DssNativeCenterMarkerTrackerTests
         int markerX,
         int markerY,
         bool drawGuide = true,
-        int radius = 7)
+        int radius = 7,
+        int guideHalfWidth = 0)
     {
         int stride =
             width * 4;
@@ -126,28 +161,41 @@ public sealed class DssNativeCenterMarkerTrackerTests
             double uy =
                 dy / length;
 
+            double nx =
+                -uy;
+
+            double ny =
+                ux;
+
             for (double t = 25;
                  t < length - 8;
                  t += 1)
             {
-                int x =
-                    (int)Math.Round(
-                        reticleX
-                        + ux * t);
+                for (int offset = -guideHalfWidth;
+                     offset <= guideHalfWidth;
+                     offset++)
+                {
+                    int x =
+                        (int)Math.Round(
+                            reticleX
+                            + ux * t
+                            + nx * offset);
 
-                int y =
-                    (int)Math.Round(
-                        reticleY
-                        + uy * t);
+                    int y =
+                        (int)Math.Round(
+                            reticleY
+                            + uy * t
+                            + ny * offset);
 
-                SetPixel(
-                    pixels,
-                    stride,
-                    x,
-                    y,
-                    220,
-                    220,
-                    220);
+                    SetPixel(
+                        pixels,
+                        stride,
+                        x,
+                        y,
+                        220,
+                        220,
+                        220);
+                }
             }
         }
 
