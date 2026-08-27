@@ -18,6 +18,7 @@ public partial class DssPrototypeOverlayWindow : Window
     private const uint WdaExcludeFromCapture = 0x00000011;
 
     private readonly IntPtr targetWindow;
+    private readonly bool excludeFromCapture;
 
     private readonly List<FrameworkElement> aimPointElements =
         new();
@@ -32,10 +33,15 @@ public partial class DssPrototypeOverlayWindow : Window
     private const double AimPointHaloDiameter = 32d;
 
     internal DssPrototypeOverlayWindow(
-        IntPtr targetWindow)
+        IntPtr targetWindow,
+        bool excludeFromCapture)
     {
         this.targetWindow = targetWindow;
+        this.excludeFromCapture =
+            excludeFromCapture;
+
         InitializeComponent();
+        InitializeDynamicHudMotion();
 
         ShowActivated = false;
         Focusable = false;
@@ -89,8 +95,13 @@ public partial class DssPrototypeOverlayWindow : Window
         long usedCoverageCandidates,
         DssCoverageObservation coverageObservation)
     {
+        // v32's helper is still used for stationary dead-band and centre
+        // occlusion hold, but renderUtc=frameUtc disables its old one-shot
+        // latency projection. Motion compensation now belongs to the
+        // composition-rate render pose.
         DssHudGeometry geometry =
             displayGeometrySmoother.Update(
+                frame.TimestampUtc,
                 frame.TimestampUtc,
                 tracking.Geometry);
 
@@ -193,6 +204,15 @@ public partial class DssPrototypeOverlayWindow : Window
             DetectedHorizonDash.Visibility =
                 Visibility.Collapsed;
         }
+
+        UpdateDynamicHudMotionFrame(
+            frame.TimestampUtc,
+            tracking,
+            geometry,
+            scaleX,
+            scaleY,
+            reticleX,
+            reticleY);
 
         DrawProjectedAimPlan(
             state,
@@ -650,13 +670,18 @@ public partial class DssPrototypeOverlayWindow : Window
             WindowsAPI.GWL_EXSTYLE,
             exStyle);
 
-        // The previous prototypes were visible inside their own desktop GDI
-        // captures. That poisoned image tracking and created a feedback loop:
-        // the tracker followed our green/cyan overlay, then snapped back to
-        // Frontier's real marker. Exclude this window from capture explicitly.
+        // When the CV source is Windows.Graphics.Capture for Elite's HWND,
+        // this overlay is a different HWND and is absent from the CV frame.
+        // Keep affinity at NONE so desktop screenshots/video can see it.
+        //
+        // If WGC failed, the controller uses the old desktop GDI source.
+        // Preserve WDA_EXCLUDEFROMCAPTURE in that fallback to avoid feeding
+        // our own HUD back into DSS CV.
         _ = SetWindowDisplayAffinity(
             helper.Handle,
-            WdaExcludeFromCapture);
+            excludeFromCapture
+                ? WdaExcludeFromCapture
+                : 0u);
     }
 
     [DllImport("user32.dll")]

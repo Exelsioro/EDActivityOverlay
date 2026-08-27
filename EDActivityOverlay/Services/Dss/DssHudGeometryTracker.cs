@@ -43,7 +43,7 @@ internal sealed record DssHudTrackResult(
 /// - trusted horizon radius survives visual-signature/visibility gaps and is
 ///   reset only with the actual DSS session.
 /// </summary>
-internal sealed class DssHudGeometryTracker
+internal sealed partial class DssHudGeometryTracker
 {
     // Real GLOBAL / REACQUIRE detector cycles can occasionally take
     // 200-300+ ms. The old 180 ms hold could therefore expire because of our
@@ -123,6 +123,8 @@ internal sealed class DssHudGeometryTracker
 
         localMisses = 0;
 
+        ResetImageMotionTracking();
+
         hasHistoricalCenter = false;
 
         ResetPendingCenter();
@@ -143,6 +145,15 @@ internal sealed class DssHudGeometryTracker
     {
         DateTimeOffset timestampUtc =
             frame.TimestampUtc;
+
+        if (TryProcessImageMotionFrame(
+                frame,
+                verticalFovDegrees,
+                timestampUtc,
+                out DssHudTrackResult imageTracking))
+        {
+            return imageTracking;
+        }
 
         bool strictHorizonReacquisition =
             RequiresStrictHorizonReacquisition(
@@ -235,6 +246,12 @@ internal sealed class DssHudGeometryTracker
                 geometry,
                 timestampUtc,
                 horizonState);
+
+        UpdateImageMotionAnchor(
+            frame,
+            raw,
+            centerState,
+            timestampUtc);
 
         return new DssHudTrackResult(
             geometry,
@@ -433,23 +450,10 @@ internal sealed class DssHudGeometryTracker
 
             if (dt > 0.01 && dt < 0.32)
             {
-                double measuredVelocityX =
-                    (x - centerX) / dt;
-
-                double measuredVelocityY =
-                    (y - centerY) / dt;
-
-                const double alpha = 0.20;
-
-                velocityX =
-                    velocityX * (1d - alpha)
-                    + measuredVelocityX
-                      * alpha;
-
-                velocityY =
-                    velocityY * (1d - alpha)
-                    + measuredVelocityY
-                      * alpha;
+                UpdateDirectVelocity(
+                    x,
+                    y,
+                    dt);
             }
             else
             {

@@ -41,6 +41,16 @@ internal sealed class DssPrototypeController : IDisposable
     private readonly DssCoverageObserver coverageObserver =
         new();
 
+    private DssWindowGraphicsCapture? windowGraphicsCapture;
+
+    // Visual updates are latest-frame-wins. The old implementation queued one
+    // Dispatcher operation per CV result, so the WPF overlay could render
+    // frames that were already 2+ CV cycles old while Elite itself had moved
+    // on. Keep at most one pending visual snapshot.
+    private readonly object overlayUpdateGate = new();
+    private Action? latestOverlayUpdateAction;
+    private bool overlayUpdateDispatchPending;
+
     private DssPrototypeOverlayWindow? overlay;
     private DssPrototypeSessionLogger? sessionLogger;
     private DssFireInputMonitor? fireInputMonitor;
@@ -182,6 +192,28 @@ internal sealed class DssPrototypeController : IDisposable
         tracker.Reset();
         readinessEvaluator.Reset();
 
+        windowGraphicsCapture?.Dispose();
+        windowGraphicsCapture = null;
+
+        bool wgcStarted =
+            DssWindowGraphicsCapture.TryStart(
+                targetWindow,
+                out windowGraphicsCapture,
+                out string wgcFailure);
+
+        if (wgcStarted)
+        {
+            Logger.Logger.Info(
+                "DSS capture source: Windows.Graphics.Capture HWND; " +
+                "overlay is visible to external screenshots/recorders.");
+        }
+        else
+        {
+            Logger.Logger.Warning(
+                "DSS WGC unavailable; falling back to desktop GDI and " +
+                $"keeping overlay excluded from capture. Reason: {wgcFailure}");
+        }
+
         int captureWidth = 1920;
         int captureHeight = 1080;
         if (WindowsAPI.GetWindowRect(
@@ -211,7 +243,9 @@ internal sealed class DssPrototypeController : IDisposable
         StartFireInputMonitor();
 
         overlay = new DssPrototypeOverlayWindow(
-            targetWindow);
+            targetWindow,
+            excludeFromCapture:
+                !wgcStarted);
         overlay.SetContext(
             state,
             sessionContext,
@@ -493,12 +527,37 @@ internal sealed class DssPrototypeController : IDisposable
                 Stopwatch captureWatch =
                     Stopwatch.StartNew();
 
-                bool captured =
-                    DssScreenCapture.TryCaptureTarget(
-                        targetWindow,
-                        out DssCapturedFrame? frame);
+                bool captured;
+                DssCapturedFrame? frame;
+                double captureMilliseconds;
 
-                captureWatch.Stop();
+                DssWindowGraphicsCapture? wgc =
+                    windowGraphicsCapture;
+
+                if (wgc is not null)
+                {
+                    captured =
+                        wgc.TryGetLatestFrame(
+                            out frame);
+
+                    captureWatch.Stop();
+
+                    captureMilliseconds =
+                        wgc.LastCopyMilliseconds;
+                }
+                else
+                {
+                    captured =
+                        DssScreenCapture.TryCaptureTarget(
+                            targetWindow,
+                            out frame);
+
+                    captureWatch.Stop();
+
+                    captureMilliseconds =
+                        captureWatch.Elapsed
+                            .TotalMilliseconds;
+                }
 
                 if (captured && frame is not null)
                 {
@@ -674,7 +733,7 @@ internal sealed class DssPrototypeController : IDisposable
                             readiness,
                             missObservation,
                             coverageObservation,
-                            captureWatch.Elapsed.TotalMilliseconds,
+                            captureMilliseconds,
                             detectWatch.Elapsed.TotalMilliseconds);
 
                         Volatile.Write(
@@ -975,9 +1034,21 @@ internal sealed class DssPrototypeController : IDisposable
         DssPrototypeOverlayWindow? targetOverlay =
             overlay;
 
-        dispatcher.BeginInvoke(
-            DispatcherPriority.Render,
-            new Action(() =>
+        // UpdateGeometry never reads frame pixels; it only needs the frame
+        // timestamp and dimensions. Do not retain an 8.3 MB 1080p BGRA array
+        // inside a queued WPF closure.
+        var overlayFrame =
+            new DssCapturedFrame(
+                frame.TimestampUtc,
+                frame.ScreenLeft,
+                frame.ScreenTop,
+                frame.Width,
+                frame.Height,
+                frame.Stride,
+                Array.Empty<byte>());
+
+        Action update =
+            () =>
             {
                 if (disposed
                     || !sessionActive
@@ -991,7 +1062,7 @@ internal sealed class DssPrototypeController : IDisposable
                 }
 
                 targetOverlay.UpdateGeometry(
-                    frame,
+                    overlayFrame,
                     tracking,
                     readiness,
                     state,
@@ -1002,7 +1073,77 @@ internal sealed class DssPrototypeController : IDisposable
                     Volatile.Read(ref targetingConfirmedImpacts),
                     Volatile.Read(ref targetingUsedCoverageCandidates),
                     coverageObservation);
-            }));
+            };
+
+        bool schedule;
+
+        lock (overlayUpdateGate)
+        {
+            // Replacing this action is intentional. Logic, logging, MISS,
+            // coverage and launch correlation have already consumed every
+            // frame on the capture thread; only presentation is coalesced.
+            latestOverlayUpdateAction =
+                update;
+
+            schedule =
+                !overlayUpdateDispatchPending;
+
+            if (schedule)
+            {
+                overlayUpdateDispatchPending =
+                    true;
+            }
+        }
+
+        if (schedule)
+        {
+            dispatcher.BeginInvoke(
+                DispatcherPriority.Render,
+                new Action(
+                    DrainLatestOverlayUpdate));
+        }
+    }
+
+    private void DrainLatestOverlayUpdate()
+    {
+        Action? update;
+
+        lock (overlayUpdateGate)
+        {
+            update =
+                latestOverlayUpdateAction;
+
+            latestOverlayUpdateAction =
+                null;
+        }
+
+        update?.Invoke();
+
+        bool reschedule;
+
+        lock (overlayUpdateGate)
+        {
+            reschedule =
+                latestOverlayUpdateAction
+                is not null;
+
+            if (!reschedule)
+            {
+                overlayUpdateDispatchPending =
+                    false;
+            }
+        }
+
+        if (reschedule)
+        {
+            // Yield back to WPF between applied snapshots. If several CV
+            // results arrive before this callback executes, the next callback
+            // still receives only the newest one.
+            dispatcher.BeginInvoke(
+                DispatcherPriority.Render,
+                new Action(
+                    DrainLatestOverlayUpdate));
+        }
     }
 
     private void OnJournalEventReceived(
@@ -1047,6 +1188,9 @@ internal sealed class DssPrototypeController : IDisposable
         StopCaptureLoop();
         StopFireInputMonitor();
         exitGraceTimer.Stop();
+
+        windowGraphicsCapture?.Dispose();
+        windowGraphicsCapture = null;
 
         captureActive = false;
         sessionActive = false;
