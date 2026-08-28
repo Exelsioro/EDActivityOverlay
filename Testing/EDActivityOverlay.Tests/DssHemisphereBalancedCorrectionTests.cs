@@ -5,8 +5,21 @@ using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
 
-public sealed class DssHemisphereBalancedCorrectionTests
+[Collection("DssNativeEfficiencyTargetRuntime")]
+public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
 {
+    public DssHemisphereBalancedCorrectionTests()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
+    public void Dispose()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
     private static readonly DssModuleSnapshot Module =
         new(
             "dss",
@@ -30,6 +43,11 @@ public sealed class DssHemisphereBalancedCorrectionTests
     [Fact]
     public void FirstCorrection_WaitsForWholeBaseBatchToImpact()
     {
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 12,
+            stableAge: TimeSpan.FromSeconds(3));
+
         DssSphericalAimTarget whileInFlight =
             DssSphericalPlacementPlanner.Resolve(
                 14,
@@ -44,6 +62,11 @@ public sealed class DssHemisphereBalancedCorrectionTests
 
         Assert.False(
             whileInFlight.Available);
+
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 13,
+            stableAge: TimeSpan.FromSeconds(3));
 
         DssSphericalAimTarget afterBaseImpacts =
             DssSphericalPlacementPlanner.Resolve(
@@ -62,24 +85,17 @@ public sealed class DssHemisphereBalancedCorrectionTests
     }
 
     [Fact]
-    public void SecondCorrection_WaitsForFirstCorrectionImpact()
+    public void SecondCorrection_DoesNotTrustAbsoluteHitCountAtStepEntry()
     {
-        DssSphericalAimTarget beforeImpact =
-            DssSphericalPlacementPlanner.Resolve(
-                15,
-                13,
-                "BODY",
-                30d,
-                Module,
-                1_000_000d,
-                13,
-                StrongNearCoverage,
-                0);
+        // Entering correction #2 records the current native hit count as the
+        // launch baseline for correction #1. A pre-existing absolute count
+        // cannot authorize the next shot by itself.
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 14,
+            stableAge: TimeSpan.FromSeconds(3));
 
-        Assert.False(
-            beforeImpact.Available);
-
-        DssSphericalAimTarget afterImpact =
+        DssSphericalAimTarget target =
             DssSphericalPlacementPlanner.Resolve(
                 15,
                 13,
@@ -91,13 +107,17 @@ public sealed class DssHemisphereBalancedCorrectionTests
                 StrongNearCoverage,
                 0);
 
-        Assert.True(
-            afterImpact.Available);
+        Assert.False(
+            target.Available);
     }
-
     [Fact]
     public void FirstN13Correction_PrefersLargeRearGapOverStrongNearCvHole()
     {
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 13,
+            stableAge: TimeSpan.FromSeconds(3));
+
         DssSphericalAimTarget target =
             DssSphericalPlacementPlanner.Resolve(
                 14,
@@ -128,6 +148,11 @@ public sealed class DssHemisphereBalancedCorrectionTests
     [Fact]
     public void RearCorrection_DoesNotFlipWhileCoverageObserverSettles()
     {
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 13,
+            stableAge: TimeSpan.FromSeconds(3));
+
         DssSphericalAimTarget withCoverage =
             DssSphericalPlacementPlanner.Resolve(
                 14,
@@ -173,6 +198,11 @@ public sealed class DssHemisphereBalancedCorrectionTests
     [Fact]
     public void N6FirstCorrection_CanUseNearbyNearSideCoverageCv()
     {
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 6,
+            stableAge: TimeSpan.FromSeconds(3));
+
         var coverage =
             new DssCoverageObservation(
                 true,

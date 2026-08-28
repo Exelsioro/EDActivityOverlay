@@ -1,15 +1,29 @@
-﻿using System;
+using System;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Dss;
 using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
 
-public sealed class DssProbeAimSolverTests
+[Collection("DssNativeEfficiencyTargetRuntime")]
+public sealed class DssProbeAimSolverTests : IDisposable
 {
+    public DssProbeAimSolverTests()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+    }
+
+    public void Dispose()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+    }
+
     [Fact]
     public void ReadyGeometryProducesProjectedPattern()
     {
+        DssNativeEfficiencyTargetRuntime.SetForTests(
+            6);
+
         GameStateSnapshot state =
             GameStateSnapshot.Empty with
             {

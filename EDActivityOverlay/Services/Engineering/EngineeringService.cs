@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
@@ -94,44 +94,98 @@ public sealed class EngineeringService : IJournalDataConsumer, IDisposable
         RaiseChanged();
     }
 
-    public void AddGradePathToWishlist(IEnumerable<BlueprintRecipe> recipes, int craftCount = 1)
+    public void AddGradePathToWishlist(
+        IEnumerable<BlueprintRecipe> recipes,
+        int pathCount = 1)
     {
-        ArgumentNullException.ThrowIfNull(recipes);
-        BlueprintRecipe[] path = recipes
-            .Where(recipe => !recipe.IsExperimental)
-            .OrderBy(recipe => recipe.Grade)
-            .ToArray();
+        ArgumentNullException.ThrowIfNull(
+            recipes);
+
+        BlueprintRecipe[] path =
+            recipes
+                .Where(
+                    recipe =>
+                        !recipe.IsExperimental)
+                .OrderBy(
+                    recipe =>
+                        recipe.Grade)
+                .ToArray();
+
         if (path.Length == 0)
         {
             return;
         }
 
-        craftCount = Math.Clamp(craftCount, 1, 99);
+        pathCount =
+            Math.Clamp(
+                pathCount,
+                1,
+                99);
+
         lock (sync)
         {
-            foreach (BlueprintRecipe recipe in path)
+            foreach (BlueprintRecipe recipe
+                     in path)
             {
-                WishlistEntry? existing = wishlist.FirstOrDefault(item =>
-                    string.Equals(item.RecipeId, recipe.Id, StringComparison.OrdinalIgnoreCase));
-                WishlistEntry updated = existing is null
-                    ? new WishlistEntry(Guid.NewGuid().ToString("N"), recipe.Id, recipe.DisplayName, craftCount, DateTimeOffset.UtcNow)
-                    : existing with
-                    {
-                        CraftCount = Math.Clamp(existing.CraftCount + craftCount, 1, 999),
-                        DisplayName = recipe.DisplayName
-                    };
+                int applications =
+                    Math.Clamp(
+                        Math.Max(
+                            1,
+                            recipe.Grade)
+                        * pathCount,
+                        1,
+                        999);
+
+                WishlistEntry? existing =
+                    wishlist.FirstOrDefault(
+                        item =>
+                            string.Equals(
+                                item.RecipeId,
+                                recipe.Id,
+                                StringComparison.OrdinalIgnoreCase));
+
+                WishlistEntry updated =
+                    existing is null
+                        ? new WishlistEntry(
+                            Guid.NewGuid()
+                                .ToString(
+                                    "N"),
+                            recipe.Id,
+                            recipe.DisplayName,
+                            applications,
+                            DateTimeOffset.UtcNow)
+                        : existing with
+                        {
+                            CraftCount =
+                                Math.Clamp(
+                                    existing.CraftCount
+                                    + applications,
+                                    1,
+                                    999),
+                            DisplayName =
+                                recipe.DisplayName
+                        };
+
                 if (existing is not null)
                 {
-                    wishlist.Remove(existing);
+                    wishlist.Remove(
+                        existing);
                 }
-                wishlist.Add(updated);
-                repository.UpsertWishlist(updated);
+
+                wishlist.Add(
+                    updated);
+
+                repository.UpsertWishlist(
+                    updated);
             }
-            RebuildSnapshotLocked(DateTimeOffset.UtcNow, persist: false);
+
+            RebuildSnapshotLocked(
+                DateTimeOffset.UtcNow,
+                persist: false);
         }
+
         RaiseChanged();
     }
-
     public void SetWishlistCount(string wishlistId, int craftCount)
     {
         lock (sync)
@@ -194,16 +248,41 @@ public sealed class EngineeringService : IJournalDataConsumer, IDisposable
         RaiseChanged();
     }
 
-    public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
+    public void OnJournalEvent(
+        JournalEventReceivedEventArgs journalEvent)
     {
+        bool changed;
+
         lock (sync)
         {
-            ApplyJournalEvent(journalEvent.EventName, journalEvent.Timestamp, journalEvent.Data);
-            RebuildSnapshotLocked(journalEvent.Timestamp, persist: true);
-        }
-        RaiseChanged();
-    }
+            changed =
+                ApplyJournalEvent(
+                    journalEvent.EventName,
+                    journalEvent.Timestamp,
+                    journalEvent.Data);
 
+            if (changed)
+            {
+                RebuildSnapshotLocked(
+                    journalEvent.Timestamp,
+                    persist: true);
+            }
+        }
+
+        if (changed)
+        {
+            RaiseChanged();
+
+            if (journalEvent.Origin
+                == JournalEventOrigin.Live
+                && IsInventoryMutationEvent(
+                    journalEvent.EventName))
+            {
+                Logger.Logger.Info(
+                    $"Engineering inventory updated from live journal event: {journalEvent.EventName}");
+            }
+        }
+    }
     public void OnCompanionFile(CompanionFileReceivedEventArgs companionFile)
     {
         bool changed = false;
@@ -246,90 +325,250 @@ public sealed class EngineeringService : IJournalDataConsumer, IDisposable
         disposed = true;
     }
 
-    private void ApplyJournalEvent(string eventName, DateTimeOffset timestamp, JsonElement root)
+    private bool ApplyJournalEvent(
+        string eventName,
+        DateTimeOffset timestamp,
+        JsonElement root)
     {
         switch (eventName.ToLowerInvariant())
         {
             case "loadgame":
-                LoadCommander(GetString(root, "Commander"));
-                break;
+                LoadCommander(
+                    GetString(
+                        root,
+                        "Commander"));
+                return true;
+
             case "materials":
-                ReplaceShipMaterials(root, timestamp);
-                break;
+                ReplaceShipMaterials(
+                    root,
+                    timestamp);
+                return true;
+
             case "materialcollected":
-                ApplyShipDelta(root, "Name", "Count", +1, timestamp);
-                break;
+                ApplyShipDelta(
+                    root,
+                    "Name",
+                    "Count",
+                    +1,
+                    timestamp);
+                return true;
+
             case "materialdiscarded":
-                ApplyShipDelta(root, "Name", "Count", -1, timestamp);
-                break;
+                ApplyShipDelta(
+                    root,
+                    "Name",
+                    "Count",
+                    -1,
+                    timestamp);
+                return true;
+
             case "materialtrade":
-                if (root.TryGetProperty("Paid", out JsonElement paid))
+                if (root.TryGetProperty(
+                        "Paid",
+                        out JsonElement paid))
                 {
-                    ApplyShipDelta(paid, "Material", "Quantity", -1, timestamp);
+                    ApplyShipDelta(
+                        paid,
+                        "Material",
+                        "Quantity",
+                        -1,
+                        timestamp);
                 }
-                if (root.TryGetProperty("Received", out JsonElement received))
+
+                if (root.TryGetProperty(
+                        "Received",
+                        out JsonElement received))
                 {
-                    ApplyShipDelta(received, "Material", "Quantity", +1, timestamp);
+                    ApplyShipDelta(
+                        received,
+                        "Material",
+                        "Quantity",
+                        +1,
+                        timestamp);
                 }
-                break;
+
+                return true;
+
             case "engineercraft":
+                SubtractArray(
+                    root,
+                    "Ingredients",
+                    shipMaterials,
+                    timestamp);
+
+                SubtractMaterialContainer(
+                    root,
+                    "Materials",
+                    shipMaterials,
+                    timestamp);
+
+                return true;
+
             case "synthesis":
-                SubtractArray(root, "Ingredients", shipMaterials, timestamp);
-                SubtractArray(root, "Materials", shipMaterials, timestamp);
-                break;
+                SubtractMaterialContainer(
+                    root,
+                    "Materials",
+                    shipMaterials,
+                    timestamp);
+                return true;
+
             case "technologybroker":
-                SubtractArray(root, "Materials", shipMaterials, timestamp);
-                break;
+                SubtractMaterialContainer(
+                    root,
+                    "Materials",
+                    shipMaterials,
+                    timestamp);
+                return true;
+
             case "engineercontribution":
-                if (GetString(root, "Type").Equals("Material", StringComparison.OrdinalIgnoreCase))
+                if (GetString(
+                        root,
+                        "Type")
+                    .Equals(
+                        "Material",
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    ApplyShipDelta(root, "Material", "Quantity", -1, timestamp);
+                    ApplyShipDelta(
+                        root,
+                        "Material",
+                        "Quantity",
+                        -1,
+                        timestamp);
                 }
-                break;
+
+                return true;
+
             case "missioncompleted":
-                AddArray(root, "MaterialsReward", shipMaterials, timestamp);
-                break;
+                AddArray(
+                    root,
+                    "MaterialsReward",
+                    shipMaterials,
+                    timestamp);
+                return true;
+
             case "engineerprogress":
-                ApplyEngineerProgress(root);
-                break;
+                ApplyEngineerProgress(
+                    root);
+                return true;
+
             case "shiplocker":
-                if (HasInventoryArrays(root))
+                if (HasInventoryArrays(
+                        root))
                 {
-                    ReplaceOdysseyInventory(root, shipLocker);
+                    ReplaceOdysseyInventory(
+                        root,
+                        shipLocker);
+
+                    return true;
                 }
-                break;
+
+                return false;
+
             case "backpack":
-                if (HasInventoryArrays(root))
+                if (HasInventoryArrays(
+                        root))
                 {
-                    ReplaceOdysseyInventory(root, backpack);
+                    ReplaceOdysseyInventory(
+                        root,
+                        backpack);
+
+                    return true;
                 }
-                break;
+
+                return false;
+
             case "backpackchange":
-                AddArray(root, "Added", backpack, timestamp);
-                SubtractArray(root, "Removed", backpack, timestamp);
-                break;
+                AddArray(
+                    root,
+                    "Added",
+                    backpack,
+                    timestamp);
+
+                SubtractArray(
+                    root,
+                    "Removed",
+                    backpack,
+                    timestamp);
+
+                return true;
+
             case "buymicroresources":
             case "buymicroresource":
-                ApplyMicroResourcePurchase(root, +1, timestamp);
-                break;
+                ApplyMicroResourcePurchase(
+                    root,
+                    +1,
+                    timestamp);
+                return true;
+
             case "sellmicroresources":
             case "sellmicroresource":
-                ApplyMicroResourcePurchase(root, -1, timestamp);
-                break;
+                ApplyMicroResourcePurchase(
+                    root,
+                    -1,
+                    timestamp);
+                return true;
+
             case "trademicroresources":
-                SubtractArray(root, "Offered", shipLocker, timestamp);
-                ApplyReceivedMicroResource(root, timestamp);
-                break;
+                SubtractArray(
+                    root,
+                    "Offered",
+                    shipLocker,
+                    timestamp);
+
+                ApplyReceivedMicroResource(
+                    root,
+                    timestamp);
+
+                return true;
+
             case "upgradesuit":
             case "upgradeweapon":
             case "applyweaponmods":
             case "applysuitmods":
-                SubtractArray(root, "Resources", shipLocker, timestamp);
-                SubtractArray(root, "Ingredients", shipLocker, timestamp);
-                break;
+                SubtractArray(
+                    root,
+                    "Resources",
+                    shipLocker,
+                    timestamp);
+
+                SubtractArray(
+                    root,
+                    "Ingredients",
+                    shipLocker,
+                    timestamp);
+
+                return true;
+
+            default:
+                return false;
         }
     }
 
+    private static bool IsInventoryMutationEvent(
+        string eventName) =>
+        eventName.ToLowerInvariant()
+            is "materials"
+            or "materialcollected"
+            or "materialdiscarded"
+            or "materialtrade"
+            or "engineercraft"
+            or "synthesis"
+            or "technologybroker"
+            or "engineercontribution"
+            or "missioncompleted"
+            or "shiplocker"
+            or "backpack"
+            or "backpackchange"
+            or "buymicroresources"
+            or "buymicroresource"
+            or "sellmicroresources"
+            or "sellmicroresource"
+            or "trademicroresources"
+            or "upgradesuit"
+            or "upgradeweapon"
+            or "applyweaponmods"
+            or "applysuitmods";
     private void LoadCommander(string commander)
     {
         if (string.IsNullOrWhiteSpace(commander) || string.Equals(state.Commander, commander, StringComparison.Ordinal))
@@ -425,11 +664,85 @@ public sealed class EngineeringService : IJournalDataConsumer, IDisposable
         }
     }
 
-    private static void SubtractArray(JsonElement root, string property, Dictionary<string, MaterialInventoryEntry> destination, DateTimeOffset timestamp)
+    private static void SubtractArray(
+        JsonElement root,
+        string property,
+        Dictionary<string, MaterialInventoryEntry> destination,
+        DateTimeOffset timestamp)
     {
-        if (root.TryGetProperty(property, out JsonElement items) && items.ValueKind == JsonValueKind.Array)
+        if (root.TryGetProperty(
+                property,
+                out JsonElement items)
+            && items.ValueKind
+               == JsonValueKind.Array)
         {
-            ApplyArray(items, destination, -1, timestamp);
+            ApplyArray(
+                items,
+                destination,
+                -1,
+                timestamp);
+        }
+    }
+
+    private static void SubtractMaterialContainer(
+        JsonElement root,
+        string property,
+        Dictionary<string, MaterialInventoryEntry> destination,
+        DateTimeOffset timestamp)
+    {
+        if (!root.TryGetProperty(
+                property,
+                out JsonElement materials))
+        {
+            return;
+        }
+
+        if (materials.ValueKind
+            == JsonValueKind.Array)
+        {
+            ApplyArray(
+                materials,
+                destination,
+                -1,
+                timestamp);
+
+            return;
+        }
+
+        if (materials.ValueKind
+            != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        foreach (JsonProperty material
+                 in materials.EnumerateObject())
+        {
+            if (!material.Value.TryGetInt32(
+                    out int count)
+                || count <= 0)
+            {
+                continue;
+            }
+
+            string id =
+                MaterialName.Normalize(
+                    material.Name);
+
+            if (string.IsNullOrWhiteSpace(
+                    id))
+            {
+                continue;
+            }
+
+            ApplyDelta(
+                destination,
+                id,
+                MaterialName.Friendly(
+                    material.Name),
+                EngineeringMaterialCategory.Unknown,
+                -count,
+                timestamp);
         }
     }
 

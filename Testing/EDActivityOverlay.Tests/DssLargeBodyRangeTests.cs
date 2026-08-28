@@ -5,8 +5,21 @@ using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
 
-public sealed class DssLargeBodyRangeTests
+[Collection("DssNativeEfficiencyTargetRuntime")]
+public sealed class DssLargeBodyRangeTests : IDisposable
 {
+    public DssLargeBodyRangeTests()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
+    public void Dispose()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
     [Fact]
     public void NativeTargetCv_AcceptsObservedN21Body()
     {
@@ -208,27 +221,28 @@ public sealed class DssLargeBodyRangeTests
         int ones =
             target % 10;
 
-        int onesX =
-            width - 148;
-
-        PaintDigit(
-            pixels,
-            stride,
-            onesX,
-            819,
-            ones);
+        int onesLeft =
+            PaintDigitRightAligned(
+                pixels,
+                stride,
+                rightEdgeExclusive:
+                    width - 140,
+                top: 819,
+                digit: ones);
 
         if (target >= 10)
         {
             int tens =
                 target / 10;
 
-            PaintDigit(
-                pixels,
-                stride,
-                onesX - 10,
-                819,
-                tens);
+            _ =
+                PaintDigitRightAligned(
+                    pixels,
+                    stride,
+                    rightEdgeExclusive:
+                        onesLeft - 2,
+                    top: 819,
+                    digit: tens);
         }
 
         return
@@ -448,10 +462,10 @@ public sealed class DssLargeBodyRangeTests
         }
     }
 
-    private static void PaintDigit(
+    private static int PaintDigitRightAligned(
         byte[] pixels,
         int stride,
-        int left,
+        int rightEdgeExclusive,
         int top,
         int digit)
     {
@@ -460,8 +474,11 @@ public sealed class DssLargeBodyRangeTests
                 .GetDigitTemplateForTests(
                     digit);
 
-        const int glyphWidth = 8;
+        const int glyphWidth = 12;
         const int glyphHeight = 14;
+
+        int firstColumn = glyphWidth;
+        int lastColumn = -1;
 
         for (int y = 0;
              y < glyphHeight;
@@ -469,6 +486,42 @@ public sealed class DssLargeBodyRangeTests
         {
             for (int x = 0;
                  x < glyphWidth;
+                 x++)
+            {
+                if (template[
+                        y * glyphWidth + x]
+                    < 25)
+                {
+                    continue;
+                }
+
+                firstColumn =
+                    Math.Min(
+                        firstColumn,
+                        x);
+
+                lastColumn =
+                    Math.Max(
+                        lastColumn,
+                        x);
+            }
+        }
+
+        int visibleWidth =
+            lastColumn >= firstColumn
+                ? lastColumn - firstColumn + 1
+                : 1;
+
+        int visibleLeft =
+            rightEdgeExclusive
+            - visibleWidth;
+
+        for (int y = 0;
+             y < glyphHeight;
+             y++)
+        {
+            for (int x = firstColumn;
+                 x <= lastColumn;
                  x++)
             {
                 byte value =
@@ -483,15 +536,17 @@ public sealed class DssLargeBodyRangeTests
                 SetBgra(
                     pixels,
                     stride,
-                    left + x,
+                    visibleLeft
+                    + (x - firstColumn),
                     top + y,
                     value,
                     value,
                     value);
             }
         }
-    }
 
+        return visibleLeft;
+    }
     private static void SetBgra(
         byte[] pixels,
         int stride,

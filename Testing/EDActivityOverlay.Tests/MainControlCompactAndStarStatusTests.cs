@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
@@ -135,11 +135,20 @@ public sealed class MainControlCompactAndStarStatusTests
                     "MainWindow.xaml.cs"));
 
         Assert.Contains(
-            "CollapsedInteractionStatusBadge.Text = stateText",
+            "InteractionStatusBadge.Text =",
+            code,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "CollapsedInteractionStatusBadge.Text =",
+            code,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "stateText",
             code,
             StringComparison.Ordinal);
     }
-
     private static string FindProjectFile(
         params string[] relative)
     {

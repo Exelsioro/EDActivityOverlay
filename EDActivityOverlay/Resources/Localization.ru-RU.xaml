@@ -14,16 +14,16 @@
     <sys:String x:Key="Loc_JOURNAL_BLUEPRINT_LIST_ACQUISITION_ADVISOR">ЖУРНАЛ  •  СПИСОК ЧЕРТЕЖЕЙ  •  СОВЕТНИК ПО ДОБЫЧЕ</sys:String>
     <sys:String x:Key="Loc_Waiting_for_journal_data">Ожидание данных журнала</sys:String>
     <sys:String x:Key="Loc_CLOSE">ЗАКРЫТЬ</sys:String>
-    <sys:String x:Key="Loc_Quantities_are_read_from_Materials_json_Backpack_json_and_ShipLocker_json_The_plan_shows_e">Количество считывается из файлов Materials.json, Backpack.json и ShipLocker.json. В списке указывается точное число применений модификации, а не гарантированное заполнение уровня.</sys:String>
+    <sys:String x:Key="Loc_Quantities_are_read_from_Materials_json_Backpack_json_and_ShipLocker_json_The_plan_shows_e">Количество материалов обновляется из живого журнала Elite. Полная ветка считает G1×1, G2×2, G3×3, G4×4 и G5×5 применений. Экспериментальный эффект — одно применение.</sys:String>
     <sys:String x:Key="Loc_MATERIALS">МАТЕРИАЛЫ</sys:String>
     <sys:String x:Key="Loc_Search_materials">Поиск материала</sys:String>
     <sys:String x:Key="Loc_MATERIAL">МАТЕРИАЛ</sys:String>
     <sys:String x:Key="Loc_CATEGORY">КАТЕГОРИЯ</sys:String>
     <sys:String x:Key="Loc_AVAILABLE">В НАЛИЧИИ</sys:String>
     <sys:String x:Key="Loc_UPDATED">ОБНОВЛЕНО</sys:String>
-    <sys:String x:Key="Loc_BLUEPRINTS_AND_PLAN">ЧЕРТЕЖИ И ПЛАН</sys:String>
-    <sys:String x:Key="Loc_ADD_BLUEPRINT">ДОБАВИТЬ ЧЕРТЕЖ</sys:String>
-    <sys:String x:Key="Loc_Filter_by_module_or_modification">Фильтр по модулю или модификации</sys:String>
+    <sys:String x:Key="Loc_BLUEPRINTS_AND_PLAN">ЧЕРТЕЖИ, ЭФФЕКТЫ И ПЛАН</sys:String>
+    <sys:String x:Key="Loc_ADD_BLUEPRINT">ДОБАВИТЬ МОДИФИКАЦИЮ / ЭФФЕКТ</sys:String>
+    <sys:String x:Key="Loc_Filter_by_module_or_modification">Фильтр по модулю, модификации или экспериментальному эффекту</sys:String>
     <sys:String x:Key="Loc_PLANNED">ЗАПЛАНИРОВАНО</sys:String>
     <sys:String x:Key="Loc_APPLICATIONS">ПРИМЕНЕНИЙ</sys:String>
     <sys:String x:Key="Loc_QTY">КОЛ-ВО</sys:String>
@@ -919,6 +919,34 @@
     <sys:String x:Key="Loc_DSS_SELECT_LOG_DIRECTORY">Выберите каталог логов DSS</sys:String>
     <sys:String x:Key="Loc_CONTROLS">Управление</sys:String>
     <sys:String x:Key="Loc_EXPERIMENTAL">Экспериментальные</sys:String>
-    <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">ТЕКУЩАЯ · {0} · {1}</sys:String></ResourceDictionary>
+    <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">ТЕКУЩАЯ · {0} · {1}</sys:String>    <sys:String x:Key="Loc_AVAILABLE_EXPERIMENTAL_EFFECTS">ДОСТУПНЫЕ ЭКСПЕРИМЕНТАЛЬНЫЕ ЭФФЕКТЫ</sys:String>
+    <sys:String x:Key="Loc_PIN_EXPERIMENTAL_EFFECT">ЗАКРЕПИТЬ ЭКСП. ЭФФЕКТ</sys:String>
+    <sys:String x:Key="Loc_ENGINEER_EXPERIMENTALS_UNAVAILABLE">Для этого инженера не удалось определить доступные экспериментальные эффекты.</sys:String>
+    <sys:String x:Key="Loc_ROUTE_TO_ENGINEER">МАРШРУТ К ИНЖЕНЕРУ</sys:String>    <sys:String x:Key="Loc_MATERIAL_TRADERS">ТОРГОВЦЫ МАТЕРИАЛАМИ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_HINT">Поиск ближайших торговцев сырьём, промышленными материалами и данными от текущей или введённой системы. «Только нужные» берёт недостающие категории из закреплённого инженерного плана.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ORIGIN">ОТ СИСТЕМЫ:</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_USE_CURRENT">ТЕКУЩАЯ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_NEEDED_ONLY">ТОЛЬКО НУЖНЫЕ ТИПЫ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_FIND">НАЙТИ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SOURCE">Источник: Ardent API / EDDN. Тип торговца определяется по экономике станции.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_TYPE">ТИП ТОРГОВЦА</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SYSTEM">СИСТЕМА</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_STATION">СТАНЦИЯ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ECONOMY">ЭКОНОМИКА</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE">РАССТОЯНИЕ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_TO_STAR">ДО ЗВЕЗДЫ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_UPDATED">ОБНОВЛЕНО</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ACTIONS">ДЕЙСТВИЯ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ROUTE">МАРШРУТ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_RAW">СЫРЬЁ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_MANUFACTURED">ПРОМЫШЛЕННЫЕ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ENCODED">ДАННЫЕ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SEARCHING">Ищу ближайших торговцев материалами…</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SEARCH_FAILED">Не удалось найти торговцев материалами.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_NONE_FOUND">В результатах Ardent не найдено подходящих торговцев.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_FOUND_FORMAT">Найдено ближайших типов торговцев: {0}. Исходная система: {1}.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_CURRENT_SYSTEM_UNAVAILABLE">Текущая система ещё не получена из журнала. Введите систему вручную.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LY_FORMAT">{0:0.0} св. л.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} св. с.</sys:String></ResourceDictionary>
 
 

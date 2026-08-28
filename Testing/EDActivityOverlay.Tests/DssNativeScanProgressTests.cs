@@ -4,8 +4,21 @@ using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
 
-public sealed class DssNativeScanProgressTests
+[Collection("DssNativeEfficiencyTargetRuntime")]
+public sealed class DssNativeScanProgressTests : IDisposable
 {
+    public DssNativeScanProgressTests()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
+    public void Dispose()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
     [Theory]
     [InlineData(29)]
     [InlineData(79)]

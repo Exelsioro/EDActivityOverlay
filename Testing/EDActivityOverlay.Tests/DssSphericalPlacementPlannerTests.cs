@@ -7,8 +7,25 @@ using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
 
-public sealed class DssSphericalPlacementPlannerTests
+[Collection("DssNativeEfficiencyTargetRuntime")]
+public sealed class DssSphericalPlacementPlannerTests : IDisposable
 {
+    public DssSphericalPlacementPlannerTests()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+        DssSphericalPlacementPlanner.ActiveStrategy =
+            DssPlannerStrategy.SphericalCalibrated;
+    }
+
+    public void Dispose()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+        DssSphericalPlacementPlanner.ActiveStrategy =
+            DssPlannerStrategy.SphericalCalibrated;
+    }
+
     // =========================================================================
     // Req 2 & 4: Spherical coordinates and Rotational Symmetry
     // =========================================================================
@@ -327,7 +344,14 @@ public sealed class DssSphericalPlacementPlannerTests
             SuggestedNormalizedY: -0.40d,
             SuggestedUncoveredScore: 0.45d);
 
-        // Step 7 on an N=6 body is the first correction shot
+        // Corrections are authorized by Frontier-native coverage/hit counters,
+        // not the old experimental visual impact count.
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 6,
+            stableAge: TimeSpan.FromSeconds(3));
+
+        // Step 7 on an N=6 body is the first correction shot.
         DssSphericalAimTarget correction = DssSphericalPlacementPlanner.Resolve(
             sequentialStep: 7,
             requestedTarget: 6,

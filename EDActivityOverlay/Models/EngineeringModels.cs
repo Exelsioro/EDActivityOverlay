@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using EDActivityOverlay.Services.Engineering;
 using EDActivityOverlay.Services;
 
@@ -47,8 +47,22 @@ public sealed record BlueprintRecipe(
 {
     public IReadOnlyList<string> Engineers { get; init; } = Array.Empty<string>();
 
+    private string LocalizedExperimentalModuleName =>
+        string.Join(
+            " / ",
+            ModuleName
+                .Split(
+                    " / ",
+                    StringSplitOptions.RemoveEmptyEntries
+                    | StringSplitOptions.TrimEntries)
+                .Select(
+                    CoriolisRussianLocalization.Translate));
+
     public string DisplayName => IsExperimental
-        ? Loc.Format("Loc_Experimental_Format", CoriolisRussianLocalization.Translate(BlueprintName), Loc.Get("Loc_Experimental_Label"))
+        ? Loc.Format(
+            "Loc_Experimental_Format",
+            $"{CoriolisRussianLocalization.Translate(BlueprintName)} · {LocalizedExperimentalModuleName}",
+            Loc.Get("Loc_Experimental_Label"))
         : Loc.Format(
             "Loc_Grade_Format",
             CoriolisRussianLocalization.Translate(ModuleName),

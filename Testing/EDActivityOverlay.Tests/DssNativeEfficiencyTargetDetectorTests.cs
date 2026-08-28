@@ -118,11 +118,11 @@ public sealed class DssNativeEfficiencyTargetDetectorTests
         Assert.True(
             target.Available);
 
-        // Live v48 calibration case:
-        // native Elite target 18, PatchRadius 26/20 = 1.30x area,
-        // completed in 15 probes. The area-scaled model resolves the same N.
+        // Current high-N reserve keeps one additional probe in the predictive
+        // base batch so a useful rear probe is not delayed into correction mode.
+        // Native N18 with PatchRadius 26/20 therefore resolves to N16.
         Assert.Equal(
-            15,
+            16,
             target.TotalPlanCount);
 
         DssNativeEfficiencyTargetRuntime.ResetForTests();

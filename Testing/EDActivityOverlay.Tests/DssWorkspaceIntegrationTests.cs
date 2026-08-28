@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Xunit;
 
@@ -26,7 +26,7 @@ public sealed class DssWorkspaceIntegrationTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "DSS READY · FAR EDGE",
+            "Loc_DSS_READY_FAR_EDGE",
             code,
             StringComparison.Ordinal);
     }
