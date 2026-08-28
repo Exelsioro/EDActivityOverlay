@@ -158,15 +158,34 @@ internal static class DssProbeAimSolver
         DssCoverageObservation? coverageObservation,
         long usedCoverageCandidates)
     {
-        if (scanComplete
-            || !readiness.IsReady
-            || !geometry.BodyCenterFound
-            || !geometry.HorizonMarkerFound
-            || geometry.HorizonRadiusPixels <= 25
-            || !IsSphericalTargetingOperational(
-                readiness.AngularDiameterDegrees))
+        if (scanComplete)
         {
-            return DssProjectedAimPlan.Empty;
+            return
+                DssActionableTargetLeaseRuntime.Resolve(
+                    state,
+                    sequentialStep,
+                    scanComplete: true,
+                    geometry,
+                    DssProjectedAimPlan.Empty);
+        }
+
+        bool geometryUsable =
+            readiness.IsReady
+            && geometry.BodyCenterFound
+            && geometry.HorizonMarkerFound
+            && geometry.HorizonRadiusPixels > 25
+            && IsSphericalTargetingOperational(
+                readiness.AngularDiameterDegrees);
+
+        if (!geometryUsable)
+        {
+            return
+                DssActionableTargetLeaseRuntime.Resolve(
+                    state,
+                    sequentialStep,
+                    scanComplete: false,
+                    geometry,
+                    DssProjectedAimPlan.Empty);
         }
 
         (int requestedTarget, string source) =
@@ -185,30 +204,40 @@ internal static class DssProbeAimSolver
                 coverageObservation,
                 usedCoverageCandidates);
 
-        if (!target.Available)
+        DssProjectedAimPlan rawPlan =
+            DssProjectedAimPlan.Empty;
+
+        if (target.Available)
         {
-            return DssProjectedAimPlan.Empty;
+            DssProjectedAimPoint point =
+                new(
+                    sequentialStep,
+                    target.NormalizedX,
+                    target.NormalizedY,
+                    geometry.BodyCenterX
+                        + target.NormalizedX
+                          * geometry.HorizonRadiusPixels,
+                    geometry.BodyCenterY
+                        + target.NormalizedY
+                          * geometry.HorizonRadiusPixels,
+                    target.Zone,
+                    target.CandidateId,
+                    target.CoverageScore);
+
+            rawPlan =
+                new DssProjectedAimPlan(
+                    target.TotalPlanCount,
+                    $"TARGETING_V3_{target.Role}/{source}/N{target.TotalPlanCount}",
+                    new[] { point });
         }
 
-        DssProjectedAimPoint point =
-            new(
+        return
+            DssActionableTargetLeaseRuntime.Resolve(
+                state,
                 sequentialStep,
-                target.NormalizedX,
-                target.NormalizedY,
-                geometry.BodyCenterX
-                    + target.NormalizedX
-                      * geometry.HorizonRadiusPixels,
-                geometry.BodyCenterY
-                    + target.NormalizedY
-                      * geometry.HorizonRadiusPixels,
-                target.Zone,
-                target.CandidateId,
-                target.CoverageScore);
-
-        return new DssProjectedAimPlan(
-            target.TotalPlanCount,
-            $"TARGETING_V3_{target.Role}/{source}/N{target.TotalPlanCount}",
-            new[] { point });
+                scanComplete: false,
+                geometry,
+                rawPlan);
     }
     internal static bool TryResolveSphericalTarget(
         GameStateSnapshot state,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using EDActivityOverlay.Models;
 
@@ -68,12 +68,12 @@ internal sealed record DssAssistantReadinessSnapshot(
 /// </summary>
 internal sealed class DssAssistantReadinessEvaluator
 {
-    internal const double MinimumReadyAngularDiameterDegrees = 22d;
-    internal const double TargetAngularDiameterDegrees = 28d;
-    internal const double MaximumReadyAngularDiameterDegrees = 32d;
+    internal const double MinimumReadyAngularDiameterDegrees = 21.5d;
+    internal const double TargetAngularDiameterDegrees = 23d;
+    internal const double MaximumReadyAngularDiameterDegrees = 28d;
 
-    private const double ReadyStayMinimumDiameterDegrees = 21.5d;
-    private const double ReadyStayMaximumDiameterDegrees = 33d;
+    private const double ReadyStayMinimumDiameterDegrees = 21.2d;
+    private const double ReadyStayMaximumDiameterDegrees = 29d;
 
     private static readonly TimeSpan MeasurementHold =
         TimeSpan.FromSeconds(2.5);

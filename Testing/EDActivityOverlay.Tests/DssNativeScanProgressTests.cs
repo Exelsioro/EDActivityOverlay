@@ -89,6 +89,7 @@ public sealed class DssNativeScanProgressTests
         Assert.False(
             DssNativeScanProgressRuntime.CanOfferCorrection(
                 requiredHitCount: 6,
+                correctionIndex: 1,
                 out _));
     }
 
@@ -105,6 +106,7 @@ public sealed class DssNativeScanProgressTests
         Assert.False(
             DssNativeScanProgressRuntime.CanOfferCorrection(
                 requiredHitCount: 6,
+                correctionIndex: 1,
                 out _));
     }
 
@@ -121,6 +123,7 @@ public sealed class DssNativeScanProgressTests
         Assert.False(
             DssNativeScanProgressRuntime.CanOfferCorrection(
                 requiredHitCount: 6,
+                correctionIndex: 1,
                 out _));
 
         DssNativeScanProgressRuntime.SetForTests(
@@ -131,6 +134,7 @@ public sealed class DssNativeScanProgressTests
         Assert.True(
             DssNativeScanProgressRuntime.CanOfferCorrection(
                 requiredHitCount: 6,
+                correctionIndex: 1,
                 out _));
     }
 

@@ -1,4 +1,5 @@
 using System;
+using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Dss;
 using Xunit;
 
@@ -160,6 +161,6 @@ public sealed class DssFireAndCorrectionFlightGateTests
                     y,
                     0d,
                     0d,
-                    DssAimZone.Near)
+                    DssAimZone.Disc)
             });
 }
