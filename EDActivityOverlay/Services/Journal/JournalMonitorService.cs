@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.IO;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Exploration;
@@ -15,6 +15,7 @@ public sealed class JournalMonitorService : IDisposable
     private string? currentJournal;
     private long journalOffset;
     private byte[] journalRemainder = Array.Empty<byte>();
+    private bool bootstrapPending = true;
     private bool disposed;
 
     public static JournalMonitorService Instance { get; } = new();
@@ -83,6 +84,7 @@ public sealed class JournalMonitorService : IDisposable
         journalOffset = 0;
         journalRemainder = Array.Empty<byte>();
         companionWriteTimes.Clear();
+        bootstrapPending = true;
         Start(configuredDirectory);
     }
 
@@ -93,11 +95,24 @@ public sealed class JournalMonitorService : IDisposable
             try
             {
                 bool available = Directory.Exists(JournalDirectory);
-                reducer.SetJournalAvailability(JournalDirectory, available);
-                if (available)
+
+                if (available && bootstrapPending)
                 {
-                    await ReadJournalAsync(token).ConfigureAwait(false);
-                    await ReadCompanionFilesAsync(token).ConfigureAwait(false);
+                    await BootstrapAsync(token).ConfigureAwait(false);
+                }
+                else
+                {
+                    reducer.SetJournalAvailability(JournalDirectory, available);
+                    if (available)
+                    {
+                        await ReadJournalAsync(
+                            token,
+                            JournalEventOrigin.Live)
+                            .ConfigureAwait(false);
+
+                        await ReadCompanionFilesAsync(token)
+                            .ConfigureAwait(false);
+                    }
                 }
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -113,7 +128,43 @@ public sealed class JournalMonitorService : IDisposable
         }
     }
 
-    private async Task ReadJournalAsync(CancellationToken token)
+    private async Task BootstrapAsync(CancellationToken token)
+    {
+        reducer.BeginStateBatch(
+            JournalEventOrigin.Bootstrap);
+
+        try
+        {
+            reducer.SetJournalAvailability(
+                JournalDirectory,
+                available: true);
+
+            await ReadJournalAsync(
+                token,
+                JournalEventOrigin.Bootstrap)
+                .ConfigureAwait(false);
+
+            // Companion files are point-in-time snapshots. Applying them after
+            // the journal replay makes the one bootstrap UI state reflect the
+            // actual current game state rather than the last historical event.
+            await ReadCompanionFilesAsync(token)
+                .ConfigureAwait(false);
+
+            bootstrapPending = false;
+        }
+        finally
+        {
+            reducer.EndStateBatch();
+        }
+
+        Logger.Logger.Info(
+            $"Journal bootstrap completed: {Path.GetFileName(currentJournal) ?? "<no journal>"}; " +
+            $"offset={journalOffset}");
+    }
+
+    private async Task ReadJournalAsync(
+        CancellationToken token,
+        JournalEventOrigin origin)
     {
         string? latest = Directory.EnumerateFiles(JournalDirectory, "Journal.*.log")
             .OrderByDescending(File.GetLastWriteTimeUtc)
@@ -182,7 +233,9 @@ public sealed class JournalMonitorService : IDisposable
                 length--;
             }
             string line = Encoding.UTF8.GetString(combined, lineStart, length);
-            TryApplyJournalLine(line);
+            TryApplyJournalLine(
+                line,
+                origin);
             lineStart = index + 1;
         }
 
@@ -240,11 +293,15 @@ public sealed class JournalMonitorService : IDisposable
         }
     }
 
-    private void TryApplyJournalLine(string line)
+    private void TryApplyJournalLine(
+        string line,
+        JournalEventOrigin origin)
     {
         try
         {
-            reducer.ApplyJournalLine(line);
+            reducer.ApplyJournalLine(
+                line,
+                origin);
         }
         catch (System.Text.Json.JsonException ex)
         {

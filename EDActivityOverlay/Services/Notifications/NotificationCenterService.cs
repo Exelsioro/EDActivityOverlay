@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
 
@@ -102,6 +102,11 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
 
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
+        if (journalEvent.Origin == JournalEventOrigin.Bootstrap)
+        {
+            return;
+        }
+
         JsonElement data = journalEvent.Data;
         switch (journalEvent.EventName.ToLowerInvariant())
         {
@@ -217,6 +222,20 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
     private void OnStateChanged(object? sender, GameStateChangedEventArgs e)
     {
         GameStateSnapshot state = e.State;
+        bool isCargoFull =
+            state.CargoCapacity > 0
+            && state.CargoUsed >= state.CargoCapacity;
+
+        if (e.Origin == JournalEventOrigin.Bootstrap)
+        {
+            // Bootstrap establishes the current baseline. Existing conditions
+            // must not be presented as transitions that happened after EDAA
+            // started.
+            lowFuel = state.LowFuel;
+            cargoFull = isCargoFull;
+            return;
+        }
+
         if (state.LowFuel && !lowFuel)
         {
             Publish("flight", NotificationSeverity.Warning,
@@ -225,7 +244,6 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
         }
         lowFuel = state.LowFuel;
 
-        bool isCargoFull = state.CargoCapacity > 0 && state.CargoUsed >= state.CargoCapacity;
         if (isCargoFull && !cargoFull)
         {
             Publish("mining", NotificationSeverity.Information,

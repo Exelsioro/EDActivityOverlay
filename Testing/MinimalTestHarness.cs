@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows10.0.19041")]
+
 namespace MinimalTestHarness
 {
     public class MinimalTestHarness

@@ -235,6 +235,9 @@ namespace EDActivityOverlay.Windows
                 return;
             }
 
+            isSearchInProgress = true;
+            SetSearchControlsEnabled(false);
+
             StatusText.Text = Loc.Get("Loc_Loading_test_data");
             Logger.Logger.Info("Loading test data for trade routes...");
 
@@ -258,6 +261,11 @@ namespace EDActivityOverlay.Windows
             {
                 StatusText.Text = Loc.Get("Loc_Error_loading_test_data");
                 Logger.Logger.Error($"Error loading test data: {ex.Message}");
+            }
+            finally
+            {
+                isSearchInProgress = false;
+                SetSearchControlsEnabled(true);
             }
         }
 

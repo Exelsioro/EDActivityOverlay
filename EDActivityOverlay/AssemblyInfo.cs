@@ -10,3 +10,4 @@ using System.Runtime.CompilerServices;
                                                 // app, or any theme specific resource dictionaries)
 )]
 [assembly: InternalsVisibleTo("EDActivityOverlay.Tests")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows10.0.19041")]

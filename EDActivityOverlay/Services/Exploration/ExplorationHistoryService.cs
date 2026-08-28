@@ -1,4 +1,4 @@
-﻿using EDActivityOverlay.Models;
+using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
 
 namespace EDActivityOverlay.Services.Exploration;
@@ -42,6 +42,13 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
 
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
+        // Historical reconstruction is already owned by the journal importer.
+        // Do not replay the current journal a second time through the live path.
+        if (journalEvent.Origin == JournalEventOrigin.Bootstrap)
+        {
+            return;
+        }
+
         if (liveAccumulator.Apply(journalEvent.Data)) RaiseChanged();
     }
 

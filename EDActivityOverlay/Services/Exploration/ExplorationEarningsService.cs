@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
@@ -145,6 +145,13 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
 
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
+        // This service performs its own full journal rebuild. Bootstrap events
+        // from JournalMonitorService would otherwise be applied twice.
+        if (journalEvent.Origin == JournalEventOrigin.Bootstrap)
+        {
+            return;
+        }
+
         if (!journalEnabled) return;
         string line = journalEvent.Data.GetRawText();
         bool publish;

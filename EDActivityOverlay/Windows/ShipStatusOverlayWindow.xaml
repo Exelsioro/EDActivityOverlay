@@ -1,4 +1,4 @@
-﻿<Window x:Class="EDActivityOverlay.Windows.ShipStatusOverlayWindow"
+<Window x:Class="EDActivityOverlay.Windows.ShipStatusOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource Loc_SHIP_STATUS_WIDGET}" Width="560" Height="92"
@@ -20,7 +20,10 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource Loc_CURRENT_SYSTEM_SHORT}" FontSize="8"
+                        <TextBlock x:Name="CurrentSystemCaptionText"
+                                   Text="{DynamicResource Loc_CURRENT_SYSTEM_SHORT}"
+                                   FontSize="8"
+                                   TextTrimming="CharacterEllipsis"
                                    Foreground="{DynamicResource MutedTextColorBrush}"/>
                         <TextBlock x:Name="CurrentSystemText" Style="{DynamicResource ClickableTextStyle}"
                                    ToolTip="{DynamicResource Loc_CLICK_TO_COPY_SYSTEM}"

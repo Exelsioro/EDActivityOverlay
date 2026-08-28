@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -299,6 +299,66 @@ namespace EDActivityOverlay.Utils
         }
 
         /// <summary>
+        /// Gets the full monitor bounds containing the target window.
+        /// Unlike GetMonitorWorkArea, this includes the taskbar area.
+        /// </summary>
+        public static Rect GetMonitorBounds(
+            IntPtr targetWindow)
+        {
+            try
+            {
+                if (targetWindow != IntPtr.Zero)
+                {
+                    IntPtr monitor =
+                        MonitorFromWindow(
+                            targetWindow,
+                            MONITOR_DEFAULTTONEAREST);
+
+                    if (monitor != IntPtr.Zero)
+                    {
+                        var monitorInfo =
+                            new MONITORINFO
+                            {
+                                cbSize =
+                                    Marshal.SizeOf<MONITORINFO>()
+                            };
+
+                        if (GetMonitorInfo(
+                                monitor,
+                                ref monitorInfo))
+                        {
+                            RECT bounds =
+                                ConvertRectToDips(
+                                    targetWindow,
+                                    monitorInfo.rcMonitor);
+
+                            return
+                                new Rect(
+                                    bounds.Left,
+                                    bounds.Top,
+                                    bounds.Right
+                                    - bounds.Left,
+                                    bounds.Bottom
+                                    - bounds.Top);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Warning(
+                    $"WindowsAPI.GetMonitorBounds: fallback to primary monitor due to error: {ex.Message}");
+            }
+
+            return
+                new Rect(
+                    0,
+                    0,
+                    SystemParameters.PrimaryScreenWidth,
+                    SystemParameters.PrimaryScreenHeight);
+        }
+
+        /// <summary>
         /// Gets working area for the monitor containing the target window.
         /// Falls back to primary working area if monitor detection fails.
         /// </summary>
@@ -480,6 +540,27 @@ namespace EDActivityOverlay.Utils
             return windowProcessId == currentProcessId;
         }
 
+        /// <summary>
+        /// Returns true when the supplied HWND belongs to the expected process.
+        /// Process ownership is more stable than exact HWND equality across
+        /// Alt+Tab/window transitions.
+        /// </summary>
+        public static bool IsWindowOwnedByProcess(
+            IntPtr hWnd,
+            uint processId)
+        {
+            if (hWnd == IntPtr.Zero
+                || processId == 0)
+            {
+                return false;
+            }
+
+            GetWindowThreadProcessId(
+                hWnd,
+                out uint windowProcessId);
+
+            return windowProcessId == processId;
+        }
         /// <summary>
         /// Ensures the cursor is visible without changing the commander's pointer position.
         /// </summary>

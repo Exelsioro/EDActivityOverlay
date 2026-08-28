@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.Windows;
@@ -9,6 +9,7 @@ using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Exploration;
 using EDActivityOverlay.Services.Navigation;
+using EDActivityOverlay.Services.Dss;
 using EDActivityOverlay.Services.Hardware;
 using EDActivityOverlay.Models;
 using System.Collections.Generic;
@@ -117,9 +118,6 @@ namespace EDActivityOverlay.Windows
             new HotkeyOption { Label = "7+", Value = "7" }
         };
 
-        private static readonly List<HotkeyOption> DssEfficiencyTargetOptions = Enumerable.Range(2, 11)
-            .Select(value => new HotkeyOption { Label = value.ToString(), Value = value.ToString() })
-            .ToList();
 
         public SettingsWindow() : this(false, IntPtr.Zero)
         {
@@ -136,6 +134,7 @@ namespace EDActivityOverlay.Windows
             LoadThemes();
             LoadHotkeySettings();
             LoadExplorationDataSettings();
+            LoadExperimentalDssSettings();
             LoadRouteAutomationSettings();
             LoadX52Settings();
             RefreshJournalStatus();
@@ -224,6 +223,11 @@ namespace EDActivityOverlay.Windows
             SaveExplorationDataSettings();
             SaveX52Settings();
 
+            if (!SaveExperimentalDssSettings())
+            {
+                return;
+            }
+
             // Language refresh может перезагрузить controls,
             // поэтому он должен идти после сохранения остальных настроек.
             SaveLanguageSettings();
@@ -296,6 +300,7 @@ namespace EDActivityOverlay.Windows
             ExplorationSpoilerComboBox?.Items.Refresh();
             LoadJournalSettings();
             LoadExplorationDataSettings();
+            LoadExperimentalDssSettings();
             LoadX52Settings();
             _ = RefreshStorageUsageAsync();
             UpdateThemeDetails();
@@ -339,6 +344,151 @@ namespace EDActivityOverlay.Windows
             }
         }
 
+        private void LoadExperimentalDssSettings()
+        {
+            AppSettings settings =
+                SettingsService.Instance.Settings;
+
+            EnableExperimentalDssAssistantCheckBox.IsChecked =
+                settings.EnableExperimentalDssAssistant;
+
+            DssLogDirectoryTextBox.Text =
+                settings.DssResearchLogDirectory;
+
+            UpdateDssLogDirectoryPreview();
+        }
+
+        private bool SaveExperimentalDssSettings()
+        {
+            string configured =
+                DssLogDirectoryTextBox.Text.Trim();
+
+            try
+            {
+                _ =
+                    DssResearchPathResolver.Resolve(
+                        configured);
+            }
+            catch
+            {
+                ApplyStatusText.Text =
+                    Loc.Get(
+                        "Loc_DSS_LOG_PATH_INVALID");
+
+                return false;
+            }
+
+            SettingsService.Instance.SetExperimentalDssSettings(
+                EnableExperimentalDssAssistantCheckBox.IsChecked == true,
+                configured);
+
+            UpdateDssLogDirectoryPreview();
+
+            return true;
+        }
+
+        private void DssLogDirectoryTextBox_TextChanged(
+            object sender,
+            TextChangedEventArgs e)
+        {
+            UpdateDssLogDirectoryPreview();
+        }
+
+        private void UpdateDssLogDirectoryPreview()
+        {
+            if (DssLogDirectoryResolvedText is null
+                || DssLogDirectoryTextBox is null)
+            {
+                return;
+            }
+
+            try
+            {
+                string resolved =
+                    DssResearchPathResolver.Resolve(
+                        DssLogDirectoryTextBox.Text);
+
+                DssLogDirectoryResolvedText.Text =
+                    Loc.Format(
+                        "Loc_DSS_LOG_RESOLVED_FORMAT",
+                        resolved);
+            }
+            catch
+            {
+                DssLogDirectoryResolvedText.Text =
+                    Loc.Get(
+                        "Loc_DSS_LOG_PATH_INVALID");
+            }
+        }
+
+        private void BrowseDssLogDirectoryButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            string initial;
+
+            try
+            {
+                initial =
+                    DssResearchPathResolver.Resolve(
+                        DssLogDirectoryTextBox.Text);
+            }
+            catch
+            {
+                initial =
+                    DssResearchPathResolver.DefaultRoot;
+            }
+
+            var dialog =
+                new OpenFolderDialog
+                {
+                    Title =
+                        Loc.Get(
+                            "Loc_DSS_SELECT_LOG_DIRECTORY"),
+                    InitialDirectory =
+                        Directory.Exists(
+                            initial)
+                            ? initial
+                            : Environment.GetFolderPath(
+                                Environment.SpecialFolder.UserProfile)
+                };
+
+            if (dialog.ShowDialog() == true)
+            {
+                DssLogDirectoryTextBox.Text =
+                    dialog.FolderName;
+            }
+        }
+
+        private void OpenDssLogDirectoryButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            try
+            {
+                string directory =
+                    DssResearchPathResolver.Resolve(
+                        DssLogDirectoryTextBox.Text);
+
+                Directory.CreateDirectory(
+                    directory);
+
+                Process.Start(
+                    new ProcessStartInfo(
+                        directory)
+                    {
+                        UseShellExecute =
+                            true
+                    });
+            }
+            catch
+            {
+                ApplyStatusText.Text =
+                    Loc.Get(
+                        "Loc_DSS_LOG_PATH_INVALID");
+            }
+        }
+
         private void LoadExplorationDataSettings()
         {
             AppSettings settings = SettingsService.Instance.Settings;
@@ -354,9 +504,7 @@ namespace EDActivityOverlay.Windows
             ExplorationPoiRatingComboBox.ItemsSource = ExplorationPoiRatingOptions;
             ExplorationPoiRatingComboBox.SelectedItem = ExplorationPoiRatingOptions.FirstOrDefault(option =>
                 option.Value == settings.ExplorationPoiMinRating.ToString()) ?? ExplorationPoiRatingOptions[2];
-            DssEfficiencyTargetComboBox.ItemsSource = DssEfficiencyTargetOptions;
-            DssEfficiencyTargetComboBox.SelectedItem = DssEfficiencyTargetOptions.FirstOrDefault(option =>
-                option.Value == Math.Clamp(settings.DssEfficiencyTarget, 2, 12).ToString()) ?? DssEfficiencyTargetOptions[4];
+
             RefreshExternalDataStatus();
         }
 
@@ -376,9 +524,7 @@ namespace EDActivityOverlay.Windows
                 EnableExplorationPoiDataCheckBox.IsChecked == true,
                 ExplorationPoiRatingComboBox.SelectedItem is HotkeyOption poiRating
                     && int.TryParse(poiRating.Value, out int parsedRating) ? parsedRating : 4);
-            int dssTarget = DssEfficiencyTargetComboBox.SelectedItem is HotkeyOption dssOption
-                && int.TryParse(dssOption.Value, out int parsedDssTarget) ? parsedDssTarget : 6;
-            SettingsService.Instance.SetDssGuidanceSettings(dssTarget);
+
             RefreshExternalDataStatus();
         }
 

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
@@ -11,6 +11,7 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
     private readonly object sync = new();
     private readonly string statePath;
     private readonly List<ExplorationLogEntry> entries = new();
+    private readonly HashSet<Guid> sessionEntryIds = new();
     private string system = string.Empty;
     private bool started;
 
@@ -18,7 +19,16 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
     public event EventHandler<ExplorationLogChangedEventArgs>? Changed;
     public IReadOnlyList<ExplorationLogEntry> Entries
     {
-        get { lock (sync) return entries.OrderByDescending(item => item.TimestampUtc).ToArray(); }
+        get
+        {
+            lock (sync)
+            {
+                return entries
+                    .Where(item => sessionEntryIds.Contains(item.Id))
+                    .OrderByDescending(item => item.TimestampUtc)
+                    .ToArray();
+            }
+        }
     }
 
     private ExplorationLogService()
@@ -38,6 +48,11 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
 
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
+        if (journalEvent.Origin == JournalEventOrigin.Bootstrap)
+        {
+            return;
+        }
+
         JsonElement root = journalEvent.Data;
         string eventName = journalEvent.EventName.ToLowerInvariant();
         if (eventName is "location" or "fsdjump" or "carrierjump")
@@ -95,6 +110,7 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
         lock (sync)
         {
             entries.Add(entry);
+            sessionEntryIds.Add(entry.Id);
             TrimAndSave();
         }
         RaiseChanged();
@@ -122,7 +138,18 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
             if (entries.Any(item => item.TimestampUtc == time && item.Kind == kind
                                     && item.System.Equals(entrySystem, StringComparison.OrdinalIgnoreCase)
                                     && item.Body.Equals(body, StringComparison.OrdinalIgnoreCase))) return;
-            entries.Add(new ExplorationLogEntry(Guid.NewGuid(), time, kind, entrySystem, body, subject, detail, bookmarked));
+            var entry = new ExplorationLogEntry(
+                Guid.NewGuid(),
+                time,
+                kind,
+                entrySystem,
+                body,
+                subject,
+                detail,
+                bookmarked);
+
+            entries.Add(entry);
+            sessionEntryIds.Add(entry.Id);
             TrimAndSave();
         }
         RaiseChanged();

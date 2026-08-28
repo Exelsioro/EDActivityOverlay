@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
 using EDActivityOverlay.Models.Trading;
@@ -68,6 +68,11 @@ public sealed class TradeRouteProgressTracker : IDisposable
 
     private void OnJournalEvent(object? sender, JournalEventReceivedEventArgs e)
     {
+        if (e.Origin == JournalEventOrigin.Bootstrap)
+        {
+            return;
+        }
+
         if (completed || currentLegIndex >= legs.Length)
         {
             return;

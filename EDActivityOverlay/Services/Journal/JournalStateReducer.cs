@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Exploration;
@@ -19,6 +19,9 @@ internal sealed class JournalStateReducer
     private readonly Dictionary<string, int> refinedMiningCargo = new(StringComparer.OrdinalIgnoreCase);
     private readonly ExplorationProgressStore? explorationProgressStore;
     private GameStateSnapshot state = GameStateSnapshot.Empty;
+    private int stateBatchDepth;
+    private bool stateChangePending;
+    private JournalEventOrigin stateBatchOrigin = JournalEventOrigin.Live;
 
     public JournalStateReducer(ExplorationProgressStore? explorationProgressStore = null)
     {
@@ -44,6 +47,55 @@ internal sealed class JournalStateReducer
         }
     }
 
+    internal void BeginStateBatch(
+        JournalEventOrigin origin)
+    {
+        lock (sync)
+        {
+            stateBatchDepth++;
+            if (stateBatchDepth == 1)
+            {
+                stateBatchOrigin = origin;
+                stateChangePending = false;
+            }
+        }
+    }
+
+    internal void EndStateBatch()
+    {
+        GameStateSnapshot? snapshot = null;
+        JournalEventOrigin origin = JournalEventOrigin.Live;
+
+        lock (sync)
+        {
+            if (stateBatchDepth <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Journal state batch is not active.");
+            }
+
+            stateBatchDepth--;
+
+            if (stateBatchDepth == 0
+                && stateChangePending)
+            {
+                snapshot = state;
+                origin = stateBatchOrigin;
+                stateChangePending = false;
+                stateBatchOrigin = JournalEventOrigin.Live;
+            }
+        }
+
+        if (snapshot is not null)
+        {
+            StateChanged?.Invoke(
+                this,
+                new GameStateChangedEventArgs(
+                    snapshot,
+                    origin));
+        }
+    }
+
     public void SetJournalAvailability(string directory, bool available)
     {
         GameStateSnapshot snapshot = Current;
@@ -59,7 +111,9 @@ internal sealed class JournalStateReducer
         });
     }
 
-    public void ApplyJournalLine(string line)
+    public void ApplyJournalLine(
+        string line,
+        JournalEventOrigin origin = JournalEventOrigin.Live)
     {
         if (string.IsNullOrWhiteSpace(line))
         {
@@ -79,8 +133,14 @@ internal sealed class JournalStateReducer
 
         JournalEventReceived?.Invoke(
             this,
-            new JournalEventReceivedEventArgs(eventName, timestamp, root.Clone()));
-        RaiseStateChanged();
+            new JournalEventReceivedEventArgs(
+                eventName,
+                timestamp,
+                root.Clone(),
+                origin));
+
+        RaiseStateChanged(
+            origin);
     }
 
     public void ApplyStatusJson(string json)
@@ -195,14 +255,29 @@ internal sealed class JournalStateReducer
                         position[0], position[1], position[2]));
                 }
             }
+
+            NavRouteStar? currentRouteStar =
+                navRoute.FirstOrDefault(
+                    item =>
+                        item.System.Equals(
+                            state.StarSystem,
+                            StringComparison.OrdinalIgnoreCase));
+
             state = CopyCollections(state with
             {
-                LastEventUtc = MaxTimestamp(state.LastEventUtc, GetTimestamp(root))
+                LastEventUtc =
+                    MaxTimestamp(
+                        state.LastEventUtc,
+                        GetTimestamp(root)),
+                CurrentStarClass =
+                    !string.IsNullOrWhiteSpace(
+                        currentRouteStar?.StarClass)
+                        ? currentRouteStar.StarClass
+                        : state.CurrentStarClass
             });
         }
         RaiseStateChanged();
     }
-
     public void ApplyMarketJson(string json)
     {
         using JsonDocument document = JsonDocument.Parse(json);
@@ -283,6 +358,30 @@ internal sealed class JournalStateReducer
             case "location":
             case "fsdjump":
             case "carrierjump":
+                string currentStarSystem =
+                    GetString(
+                        root,
+                        "StarSystem",
+                        current.StarSystem);
+
+                string currentStarClass =
+                    GetString(
+                        root,
+                        "StarClass");
+
+                if (string.IsNullOrWhiteSpace(
+                        currentStarClass))
+                {
+                    currentStarClass =
+                        navRoute.FirstOrDefault(
+                            item =>
+                                item.System.Equals(
+                                    currentStarSystem,
+                                    StringComparison.OrdinalIgnoreCase))
+                            ?.StarClass
+                        ?? string.Empty;
+                }
+
                 double jumpFuelUsed = eventName.Equals("FSDJump", StringComparison.OrdinalIgnoreCase)
                     ? TryGetDouble(root, "FuelUsed") : 0;
                 double jumpDistance = eventName.Equals("FSDJump", StringComparison.OrdinalIgnoreCase)
@@ -299,7 +398,8 @@ internal sealed class JournalStateReducer
                 explorationBodies.Clear();
                 return current with
                 {
-                    StarSystem = GetString(root, "StarSystem", current.StarSystem),
+                    StarSystem = currentStarSystem,
+                    CurrentStarClass = currentStarClass,
                     SystemAddress = TryGetInt64(root, "SystemAddress", current.SystemAddress),
                     SystemX = systemPosition[0] ?? current.SystemX,
                     SystemY = systemPosition[1] ?? current.SystemY,
@@ -330,13 +430,12 @@ internal sealed class JournalStateReducer
                     LastOrganicBodyId = -1,
                     OrganicSampleStage = 0,
                     CompletedOrganicSamples = 0,
-                    NewCodexEntries = 0
-                    ,FuelMain = TryGetDouble(root, "FuelLevel", current.FuelMain)
-                    ,LastJumpFuelUsed = jumpFuelUsed > 0 ? jumpFuelUsed : current.LastJumpFuelUsed
-                    ,LastJumpDistanceLy = jumpDistance > 0 ? jumpDistance : current.LastJumpDistanceLy
-                    ,FuelPerLightYearEstimate = fuelRate
-                };
-            case "docked":
+                    NewCodexEntries = 0,
+                    FuelMain = TryGetDouble(root, "FuelLevel", current.FuelMain),
+                    LastJumpFuelUsed = jumpFuelUsed > 0 ? jumpFuelUsed : current.LastJumpFuelUsed,
+                    LastJumpDistanceLy = jumpDistance > 0 ? jumpDistance : current.LastJumpDistanceLy,
+                    FuelPerLightYearEstimate = fuelRate
+                };            case "docked":
                 return current with
                 {
                     StarSystem = GetString(root, "StarSystem", current.StarSystem),
@@ -845,7 +944,28 @@ internal sealed class JournalStateReducer
             materials.OrderByDescending(material => material.Proportion).ToArray());
     }
 
-    private void RaiseStateChanged() => StateChanged?.Invoke(this, new GameStateChangedEventArgs(Current));
+    private void RaiseStateChanged(
+        JournalEventOrigin origin = JournalEventOrigin.Live)
+    {
+        GameStateSnapshot snapshot;
+
+        lock (sync)
+        {
+            if (stateBatchDepth > 0)
+            {
+                stateChangePending = true;
+                return;
+            }
+
+            snapshot = state;
+        }
+
+        StateChanged?.Invoke(
+            this,
+            new GameStateChangedEventArgs(
+                snapshot,
+                origin));
+    }
 
     private static bool HasFlag(ulong flags, int bit) => (flags & (1UL << bit)) != 0;
 
