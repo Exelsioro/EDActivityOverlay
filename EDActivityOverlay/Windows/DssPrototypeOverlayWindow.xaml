@@ -1,4 +1,4 @@
-﻿<Window x:Class="EDActivityOverlay.Windows.DssPrototypeOverlayWindow"
+<Window x:Class="EDActivityOverlay.Windows.DssPrototypeOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None"
@@ -62,18 +62,20 @@
                            FontSize="16"
                            Foreground="#FFFFFFFF"
                            TextAlignment="Center"
-                           Text="DSS CALIBRATING"/>
+                           Text="{DynamicResource Loc_DSS_CALIBRATING}"/>
                 <TextBlock x:Name="ReadinessDetail"
                            Margin="0,3,0,0"
                            FontFamily="Consolas"
                            FontSize="11"
                            Foreground="#FFD8E8F2"
                            TextAlignment="Center"
-                           Text="Experimental ready band: 22–32°"/>
+                           Text="{DynamicResource Loc_DSS_CALIBRATE_HORIZON}"/>
             </StackPanel>
         </Border>
 
-        <Border Canvas.Left="18"
+        <Border x:Name="DebugPanel"
+                Visibility="Collapsed"
+                Canvas.Left="18"
                 Canvas.Top="18"
                 Padding="9,6"
                 CornerRadius="3"
@@ -84,7 +86,7 @@
                        FontFamily="Consolas"
                        FontSize="11"
                        Foreground="#FFE8FFF4"
-                       Text="DSS PROTOTYPE"/>
+                       Text="DSS"/>
         </Border>
     </Canvas>
 </Window>

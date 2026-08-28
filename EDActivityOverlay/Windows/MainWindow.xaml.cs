@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -128,9 +128,9 @@ namespace EDActivityOverlay
             X52IntegrationService.Instance.ControlRequested += OnX52ControlRequested;
             X52IntegrationService.Instance.SetActivity(currentActivity);
             UpdateJournalStatusUi(JournalMonitorService.Instance.Current);
-            dssPrototypeController = new DssPrototypeController(
-                () => targetWindow,
-                Dispatcher);
+            RefreshExperimentalDssLifecycle(
+                SettingsService.Instance.Settings.EnableExperimentalDssAssistant);
+
             Closed += (_, _) =>
             {
                 dssPrototypeController?.Dispose();
@@ -533,6 +533,53 @@ namespace EDActivityOverlay
             return true;
         }
 
+        private void RefreshExperimentalDssLifecycle(
+            bool enabled)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(
+                    new Action(
+                        () =>
+                            RefreshExperimentalDssLifecycle(
+                                enabled)));
+
+                return;
+            }
+
+            if (disposed)
+            {
+                return;
+            }
+
+            if (!enabled)
+            {
+                if (dssPrototypeController is not null)
+                {
+                    dssPrototypeController.Dispose();
+                    dssPrototypeController = null;
+
+                    Logger.Logger.Info(
+                        "Experimental DSS assistant disabled; capture/CV lifecycle stopped.");
+                }
+
+                DssAssistantStateService.Instance.Clear();
+
+                return;
+            }
+
+            if (dssPrototypeController is null)
+            {
+                dssPrototypeController =
+                    new DssPrototypeController(
+                        () => targetWindow,
+                        Dispatcher);
+
+                Logger.Logger.Info(
+                    "Experimental DSS assistant enabled; lifecycle started.");
+            }
+        }
+
         private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
         {
             bool hotkeysChanged = false;
@@ -575,6 +622,9 @@ namespace EDActivityOverlay
             engineeringOverlayWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
             activityWorkspaceWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
             SetChromeStyle(e.Settings.OverlayChromeStyle);
+
+            RefreshExperimentalDssLifecycle(
+                e.Settings.EnableExperimentalDssAssistant);
 
             if (!interactionModeEnabled && interactiveModeActive)
             {

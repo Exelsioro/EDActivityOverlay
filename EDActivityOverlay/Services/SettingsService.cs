@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using EDActivityOverlay.Models;
@@ -316,6 +316,36 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"Exploration data settings updated: enabled={enabled}, edsmFallback={edsmFallback}, cacheHours={cacheHours}, spoilers={spoilerMode}, poi={poiEnabled}, poiRating={poiMinRating}");
         }
 
+        public void SetExperimentalDssSettings(
+            bool enabled,
+            string researchLogDirectory)
+        {
+            researchLogDirectory =
+                researchLogDirectory?.Trim()
+                ?? string.Empty;
+
+            if (_settings.EnableExperimentalDssAssistant == enabled
+                && string.Equals(
+                    _settings.DssResearchLogDirectory,
+                    researchLogDirectory,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.EnableExperimentalDssAssistant =
+                enabled;
+
+            _settings.DssResearchLogDirectory =
+                researchLogDirectory;
+
+            SaveSettings();
+
+            Logger.Logger.Info(
+                $"Experimental DSS settings updated: enabled={enabled}, " +
+                $"customLogDirectory={!string.IsNullOrWhiteSpace(researchLogDirectory)}");
+        }
+
         public void SetDssGuidanceSettings(int efficiencyTarget)
         {
             efficiencyTarget = Math.Clamp(efficiencyTarget, 2, 12);
@@ -536,7 +566,22 @@ namespace EDActivityOverlay.Services
         /// <summary>Minimum EDAstro GEC explorer rating accepted for nearby POIs.</summary>
         public int ExplorationPoiMinRating { get; set; } = 4;
 
-        /// <summary>Manual efficiency target shown by the in-game DSS HUD.</summary>
+        /// <summary>
+        /// Enables the experimental real-time DSS assistant. Opt-in because
+        /// Windows Graphics Capture and live CV can increase system load.
+        /// </summary>
+        public bool EnableExperimentalDssAssistant { get; set; }
+
+        /// <summary>
+        /// Optional root for DSS research/session logs.
+        /// Empty preserves %LOCALAPPDATA%/EDActivityOverlay/Research/DSS.
+        /// </summary>
+        public string DssResearchLogDirectory { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Legacy pre-production manual efficiency target. Retained only for
+        /// settings-file compatibility; production DSS never uses it as authority.
+        /// </summary>
         public int DssEfficiencyTarget { get; set; } = 6;
 
         /// <summary>Remembers whether the Spansh input form is folded in the full workspace.</summary>

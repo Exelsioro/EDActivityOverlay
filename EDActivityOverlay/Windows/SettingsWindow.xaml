@@ -1,348 +1,297 @@
-﻿<Window x:Class="EDActivityOverlay.Windows.SettingsWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{DynamicResource Loc_EDActivityOverlay_Settings}" Height="680" Width="900"
-        Background="{DynamicResource PrimaryBackgroundColorBrush}"
-        WindowStartupLocation="CenterScreen" ResizeMode="CanResize">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <Grid x:Name="HeaderDragArea" Margin="0,0,0,14" MouseLeftButtonDown="Header_MouseLeftButtonDown">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="{DynamicResource Loc_SETTINGS}" FontSize="22" FontWeight="Bold"
-                           Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                <TextBlock Text="{DynamicResource Loc_Overlay_controls_appearance_and_local_game_data}"
-                           Foreground="{DynamicResource MutedTextColorBrush}" FontSize="11"/>
-            </StackPanel>
-            <Border x:Name="OverlayModeBadge" Grid.Column="1" Visibility="Collapsed"
-                    Background="{DynamicResource HighlightBackgroundBrush}" Padding="8,3" VerticalAlignment="Center">
-                <TextBlock Text="{DynamicResource Loc_IN_GAME_OVERLAY}" Foreground="{DynamicResource AccentColorBrush}"
-                           FontWeight="Bold" FontSize="10"/>
-            </Border>
-        </Grid>
-
-        <TabControl Grid.Row="1" Style="{DynamicResource EliteTabControlStyle}">
-            <TabItem Header="{DynamicResource Loc_Appearance}" Style="{DynamicResource EliteTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <Grid Margin="18">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="18"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="{DynamicResource Loc_LANGUAGE}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10"/>
-                            <TextBlock Text="{DynamicResource Loc_Interface_language}"
-                                       Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                            <ComboBox x:Name="LanguageComboBox" Height="35" Margin="0,5,0,20"
-                                      DisplayMemberPath="DisplayName" Style="{DynamicResource ComboBoxStyle}"/>
-
-                            <TextBlock Text="{DynamicResource Loc_THEME}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10"/>
-                            <TextBlock Text="{DynamicResource Loc_Color_theme}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                            <ComboBox x:Name="ThemeComboBox" Height="35" Margin="0,5,0,12"
-                                      SelectionChanged="ThemeComboBox_SelectionChanged"
-                                      Style="{DynamicResource ComboBoxStyle}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Border Background="{DynamicResource HighlightBackgroundBrush}"
-                                    BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Padding="10">
-                                <StackPanel>
-                                    <TextBlock x:Name="ThemeNameText" FontWeight="Bold"
-                                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                                    <TextBlock x:Name="ThemeDescriptionText" Margin="0,3,0,0" TextWrapping="Wrap"
-                                               Foreground="{DynamicResource MutedTextColorBrush}" FontSize="11"/>
-                                    <TextBlock x:Name="ThemeAuthorText" Margin="0,5,0,0"
-                                               Foreground="{DynamicResource SecondaryTextColorBrush}" FontSize="10"/>
-                                </StackPanel>
-                            </Border>
-                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                <Button x:Name="ImportThemeButton" Content="{DynamicResource Loc_IMPORT}" Padding="12,5" Margin="0,0,6,0"
-                                        Click="ImportThemeButton_Click"/>
-                                <Button x:Name="ExportThemeButton" Content="{DynamicResource Loc_EXPORT}" Padding="12,5" Margin="0,0,6,0"
-                                        Click="ExportThemeButton_Click"/>
-                                <Button x:Name="RefreshThemesButton" Content="{DynamicResource Loc_REFRESH}" Padding="12,5"
-                                        Click="RefreshThemesButton_Click"/>
-                            </StackPanel>
-
-                            <TextBlock Text="{DynamicResource Loc_PANEL_STYLE}" FontSize="16" FontWeight="Bold" Margin="0,22,0,8"
-                                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                            <ComboBox x:Name="OverlayChromeStyleComboBox" Height="32"
-                                      Style="{DynamicResource ComboBoxStyle}"/>
-                            <TextBlock Text="{DynamicResource Loc_Compact_keeps_a_filled_card_Minimal_leaves_only_a_guide_edge_and_content}"
-                                       Margin="0,6,0,0" TextWrapping="Wrap" FontSize="10"
-                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="{DynamicResource Loc_THEME_PREVIEW}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10"/>
-                            <Border Background="{DynamicResource ButtonBackgroundColorBrush}"
-                                    BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Padding="14">
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource Loc_ENGINEERING_PLAN}" FontWeight="Bold" FontSize="15"
-                                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                                    <TextBlock Text="{DynamicResource Loc_3_planned_7_material_types_missing}" Margin="0,5,0,12"
-                                               Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Border Background="{DynamicResource HighlightBackgroundBrush}" Padding="8,5">
-                                        <TextBlock Text="{DynamicResource Loc_IMPERIAL_SHIELDING_4_10}"
-                                                   Foreground="{DynamicResource AccentColorBrush}"/>
-                                    </Border>
-                                    <TextBlock Text="{DynamicResource Loc_Engineering_hint_example}" Margin="0,9,0,0"
-                                               Foreground="{DynamicResource MutedTextColorBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <TextBlock Text="{DynamicResource Loc_COLORS}" FontSize="13" FontWeight="Bold" Margin="0,18,0,8"
-                                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                            <Grid x:Name="ColorSwatchGrid">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
-                </ScrollViewer>
-            </TabItem>
-
-            <TabItem Header="{DynamicResource Loc_Overlay}" Style="{DynamicResource EliteTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="18" Width="560" HorizontalAlignment="Left">
-                        <TextBlock Text="{DynamicResource Loc_OVERLAY_BEHAVIOR}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,12"/>
-                        <CheckBox x:Name="EnableInteractionModeCheckBox" Content="{DynamicResource Loc_Enable_interaction_mode}"
-                                  Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="ReturnOnFocusLossCheckBox" Content="{DynamicResource Loc_Return_to_passive_mode_when_overlay_loses_focus}"
-                                  Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="ShowCursorWhenInteractiveCheckBox" Content="{DynamicResource Loc_Show_cursor_in_interactive_mode}"
-                                  Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,14"/>
-                        <TextBlock Text="{DynamicResource Loc_Automatic_return_to_passive_mode}"
-                                   Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                        <ComboBox x:Name="TimeoutComboBox" Height="32" Margin="0,5,0,20"
-                                  Style="{DynamicResource ComboBoxStyle}"/>
-
-                        <TextBlock Text="{DynamicResource Loc_NOTIFICATIONS}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10"/>
-                        <CheckBox x:Name="EnableNotificationsCheckBox"
-                                  Content="{DynamicResource Loc_Enable_overlay_notifications}"
-                                  Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{DynamicResource Loc_Notification_duration_seconds}"
-                                   Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                        <ComboBox x:Name="NotificationDurationComboBox" Height="32" Margin="0,5,0,20"
-                                  Style="{DynamicResource ComboBoxStyle}">
-                            <ComboBoxItem Content="4" Tag="4"/>
-                            <ComboBoxItem Content="6" Tag="6"/>
-                            <ComboBoxItem Content="8" Tag="8"/>
-                            <ComboBoxItem Content="12" Tag="12"/>
-                        </ComboBox>
-
-                        <TextBlock Text="{DynamicResource Loc_SHIP_STATUS_WIDGET}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10"/>
-                        <CheckBox x:Name="EnableShipStatusWidgetCheckBox"
-                                  Content="{DynamicResource Loc_ENABLE_SHIP_STATUS_WIDGET}"
-                                  Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8"/>
-                        <TextBlock Text="{DynamicResource Loc_SHIP_STATUS_WIDGET_POSITION}"
-                                   Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                        <ComboBox x:Name="ShipStatusPositionComboBox" Height="32" Margin="0,5,0,20"
-                                  Style="{DynamicResource ComboBoxStyle}"/>
-
-                        <TextBlock Text="{DynamicResource Loc_LAYOUT}" FontSize="16" FontWeight="Bold"
-                                   Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10"/>
-                        <TextBlock Text="{DynamicResource Loc_Pinned_route_position}"
-                                   Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                        <ComboBox x:Name="PinnedPositionComboBox" Height="32" Margin="0,5,0,8"
-                                  Style="{DynamicResource ComboBoxStyle}"/>
-                        <TextBlock Text="{DynamicResource Loc_Secondary_activities_use_the_opposite_side_when_possible}"
-                                   Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <TabItem Header="{DynamicResource Loc_CONTROLS_AND_DEVICES}" Style="{DynamicResource EliteTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="18">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <Border Style="{DynamicResource SettingsSectionStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource Loc_HOTKEYS}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                    <TextBlock Text="{DynamicResource Loc_Show_or_hide_overlay_windows}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Grid Margin="0,5,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ComboBox x:Name="HotkeyModifierComboBox" Height="32"/><ComboBox x:Name="HotkeyKeyComboBox" Grid.Column="2" Height="32"/>
-                                    </Grid>
-                                    <TextBlock Text="{DynamicResource Loc_Toggle_cursor_interaction}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Grid Margin="0,5,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ComboBox x:Name="InteractiveModifierComboBox" Height="32"/><ComboBox x:Name="InteractiveKeyComboBox" Grid.Column="2" Height="32"/>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{DynamicResource SettingsSectionStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource Loc_QUICK_ACTIVITY_SELECTION}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                    <TextBlock Text="{DynamicResource Loc_Trade}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><ComboBox x:Name="TradeModifierComboBox" Height="30"/><ComboBox x:Name="TradeKeyComboBox" Grid.Column="2" Height="30"/></Grid>
-                                    <TextBlock Text="{DynamicResource Loc_Engineering}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><ComboBox x:Name="EngineeringModifierComboBox" Height="30"/><ComboBox x:Name="EngineeringKeyComboBox" Grid.Column="2" Height="30"/></Grid>
-                                    <TextBlock Text="{DynamicResource Loc_Exploration}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><ComboBox x:Name="ExplorationModifierComboBox" Height="30"/><ComboBox x:Name="ExplorationKeyComboBox" Grid.Column="2" Height="30"/></Grid>
-                                    <TextBlock Text="{DynamicResource Loc_Mining}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><ComboBox x:Name="MiningModifierComboBox" Height="30"/><ComboBox x:Name="MiningKeyComboBox" Grid.Column="2" Height="30"/></Grid>
-                                    <TextBlock Text="{DynamicResource Loc_Fixed_shortcut_Ctrl_7_unpins_the_current_route_Activities_default_to_Ctrl_1_Ctrl_4}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                        <Border Grid.Column="2" Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource Loc_X52_PRO_INTEGRATION}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                <TextBlock Text="{DynamicResource Loc_X52_integration_description}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,14"/>
-                                <CheckBox x:Name="EnableX52SupportCheckBox" Content="{DynamicResource Loc_Enable_X52_support}" Margin="0,0,0,12"/>
-                                <CheckBox x:Name="EnableX52MfdCheckBox" Content="{DynamicResource Loc_Show_game_state_on_X52_MFD}" Margin="14,0,0,9"/>
-                                <CheckBox x:Name="EnableX52LedCheckBox" Content="{DynamicResource Loc_Control_X52_lighting_from_game_state}" Margin="14,0,0,9"/>
-                                <CheckBox x:Name="EnableX52ControlsCheckBox" Content="{DynamicResource Loc_Use_X52_MFD_wheel_for_activity_widgets}" Margin="14,0,0,14"/>
-                                <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold"/>
-                                <TextBlock x:Name="X52StatusText" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                                <Button Content="{DynamicResource Loc_RECONNECT}" Width="150" Height="32" Margin="0,12,0,0" HorizontalAlignment="Left" Click="ReconnectX52Button_Click"/>
-                                <Button Content="{DynamicResource Loc_CONTROL_CHEATSHEET}" Width="210" Height="32" Margin="0,8,0,0" HorizontalAlignment="Left" Click="OpenX52CheatsheetButton_Click"/>
-                                <TextBlock Text="{DynamicResource Loc_X52_controls_hint}" Margin="0,14,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
-            </TabItem>
-
-            <TabItem Header="{DynamicResource Loc_GAME_DATA}" Style="{DynamicResource EliteTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="18">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource Loc_PLAYER_JOURNAL}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                <TextBlock Text="{DynamicResource Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,14"/>
-                                <CheckBox x:Name="EnableJournalCheckBox" Content="{DynamicResource Loc_Enable_Journal_integration}" Margin="0,0,0,14"/>
-                                <TextBlock Text="{DynamicResource Loc_Journal_directory}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                <Grid Margin="0,5,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
-                                    <TextBox x:Name="JournalDirectoryTextBox" ToolTip="{DynamicResource Loc_Leave_empty_to_use_the_Windows_Saved_Games_folder}"/>
-                                    <Button Grid.Column="2" Content="{DynamicResource Loc_BROWSE}" Click="BrowseJournalButton_Click"/>
-                                </Grid>
-                                <TextBlock Text="{DynamicResource Loc_Leave_empty_to_discover_the_Saved_Games_directory_automatically}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap"/>
-                                <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" Margin="0,16,0,0"/>
-                                <TextBlock x:Name="JournalStatusText" Margin="0,6,0,0" Foreground="{DynamicResource PrimaryTextColorBrush}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Grid.Column="2" Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource Loc_STORAGE_USAGE}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                <TextBlock x:Name="StorageUsageText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                                <TextBlock Text="{DynamicResource Loc_STORAGE_CLEANUP_POLICY}" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}"/>
-                                <TextBlock x:Name="StoragePathText" Margin="0,7,0,0" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedTextColorBrush}"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                                    <Button Content="{DynamicResource Loc_REFRESH_SIZE}" Padding="10,4" Click="RefreshStorageUsageButton_Click"/>
-                                    <Button Content="{DynamicResource Loc_CLEAN_EXPIRED_CACHE}" Padding="10,4" Margin="8,0,0,0" Click="CleanupStorageButton_Click"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
-            </TabItem>
-
-            <TabItem Header="{DynamicResource Loc_Exploration}" Style="{DynamicResource EliteTabItemStyle}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="18">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <Border Style="{DynamicResource SettingsSectionStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource Loc_EXPLORATION_DATA}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                    <TextBlock Text="{DynamicResource Loc_Exploration_data_provider_description}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                    <CheckBox x:Name="EnableOnlineExplorationDataCheckBox" Content="{DynamicResource Loc_Enable_online_exploration_data}" Margin="0,0,0,9"/>
-                                    <CheckBox x:Name="EnableEdsmFallbackCheckBox" Content="{DynamicResource Loc_Use_EDSM_as_fallback}" Margin="0,0,0,9"/>
-                                    <CheckBox x:Name="EnableExplorationPoiDataCheckBox" Content="{DynamicResource Loc_Enable_exploration_POI_data}" Margin="0,0,0,12"/>
-                                    <TextBlock Text="{DynamicResource Loc_Exploration_spoiler_mode}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <ComboBox x:Name="ExplorationSpoilerComboBox" Height="30" Margin="0,4,0,10" DisplayMemberPath="Label"/>
-                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="130"/></Grid.ColumnDefinitions>
-                                        <StackPanel><TextBlock Text="{DynamicResource Loc_Exploration_cache_lifetime}" Foreground="{DynamicResource SecondaryTextColorBrush}"/><ComboBox x:Name="ExplorationCacheComboBox" Height="30" Margin="0,4,8,0" DisplayMemberPath="Label"/></StackPanel>
-                                        <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc_POI_minimum_rating}" Foreground="{DynamicResource SecondaryTextColorBrush}"/><ComboBox x:Name="ExplorationPoiRatingComboBox" Height="30" Margin="0,4,0,0" DisplayMemberPath="Label"/></StackPanel>
-                                    </Grid>
-                                    <Button Content="{DynamicResource Loc_REFRESH_DATA}" Width="150" HorizontalAlignment="Left" Margin="0,12,0,0" Click="RefreshExplorationDataButton_Click"/>
-                                    <TextBlock x:Name="ExternalDataStatusText" Margin="0,8,0,0" FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{DynamicResource SettingsSectionStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource Loc_DSS_GUIDANCE}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                    <TextBlock Text="{DynamicResource Loc_DSS_SETTINGS_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                    <TextBlock Text="{DynamicResource Loc_DSS_DEFAULT_TARGET}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                    <ComboBox x:Name="DssEfficiencyTargetComboBox" Height="30" Width="150" HorizontalAlignment="Left" Margin="0,4,0,10" DisplayMemberPath="Label"/>
-                                    <CheckBox x:Name="EnableExperimentalDssOcrCheckBox" Content="{DynamicResource Loc_DSS_EXPERIMENTAL_OCR}" ToolTip="{DynamicResource Loc_DSS_OCR_NOT_IMPLEMENTED_HINT}" IsEnabled="False" Foreground="{DynamicResource MutedTextColorBrush}"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                        <Border Grid.Column="2" Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource Loc_GALAXY_MAP_NAVIGATION}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
-                                <TextBlock Text="{DynamicResource Loc_GALAXY_MAP_NAVIGATION_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                <TextBlock Text="{DynamicResource Loc_ELITE_BINDINGS_FILE}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                <TextBlock Text="{DynamicResource Loc_ELITE_BINDINGS_FILE_HINT}"
-                                           Margin="0,3,0,5"
-                                           FontSize="10"
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
-                                <Grid Margin="0,0,0,6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="6"/>
-                                        <ColumnDefinition Width="88"/>
-                                    </Grid.ColumnDefinitions>
-                                    <ComboBox x:Name="EliteBindingsPresetComboBox"
-                                              Height="30"
-                                              DisplayMemberPath="Label"
-                                              SelectionChanged="EliteBindingsPresetComboBox_SelectionChanged"/>
-                                    <Button Grid.Column="2"
-                                            Height="30"
-                                            Content="{DynamicResource Loc_REFRESH}"
-                                            Click="RefreshBindingsFilesButton_Click"/>
-                                </Grid>
-                                <Button Content="{DynamicResource Loc_OPEN_BINDINGS_FOLDER}"
-                                        HorizontalAlignment="Left"
-                                        Padding="10,4"
-                                        Margin="0,0,0,10"
-                                        Click="OpenBindingsFolderButton_Click"/>
-                                <CheckBox x:Name="EnableExperimentalRouteAutomationCheckBox" Content="{DynamicResource Loc_ENABLE_EXPERIMENTAL_ROUTE_AUTOMATION}" Foreground="{DynamicResource AccentColorBrush}" Margin="0,0,0,12"/>
-                                <TextBlock Text="{DynamicResource Loc_MAP_OPEN_DELAY}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                <TextBox x:Name="RouteAutomationMapDelayTextBox" Margin="0,4,0,9"/>
-                                <TextBlock Text="{DynamicResource Loc_UI_STEP_DELAY}" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
-                                <TextBox x:Name="RouteAutomationStepDelayTextBox" Margin="0,4,0,9"/>
-                                <TextBlock x:Name="RouteAutomationBindingsStatusText" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedTextColorBrush}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
-            </TabItem>
-        </TabControl>
-
-        <Grid Grid.Row="2" Margin="0,14,0,0">
-            <TextBlock x:Name="ApplyStatusText" Text="" VerticalAlignment="Center"
-                       Foreground="{DynamicResource SuccessColorBrush}" FontWeight="Bold"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="ApplyButton" Content="{DynamicResource Loc_APPLY}" Height="34" Width="110" Margin="0,0,8,0"
-                        Click="ApplyButton_Click"/>
-                <Button x:Name="CloseButton" Content="{DynamicResource Loc_CLOSE}" Height="34" Width="90"
-                        Click="CloseButton_Click"/>
-            </StackPanel>
-        </Grid>
-    </Grid>
-</Window>
+<Window x:Class="EDActivityOverlay.Windows.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="{DynamicResource Loc_EDActivityOverlay_Settings}" Height="680" Width="900" Background="{DynamicResource PrimaryBackgroundColorBrush}" WindowStartupLocation="CenterScreen" ResizeMode="CanResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="HeaderDragArea" Margin="0,0,0,14" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="{DynamicResource Loc_SETTINGS}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                <TextBlock Text="{DynamicResource Loc_Overlay_controls_appearance_and_local_game_data}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="11" />
+            </StackPanel>
+            <Border x:Name="OverlayModeBadge" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource HighlightBackgroundBrush}" Padding="8,3" VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource Loc_IN_GAME_OVERLAY}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" FontSize="10" />
+            </Border>
+        </Grid>
+
+        <TabControl Grid.Row="1" Style="{DynamicResource EliteTabControlStyle}">
+            <TabItem Header="{DynamicResource Loc_Appearance}" Style="{DynamicResource EliteTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource Loc_LANGUAGE}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+                            <TextBlock Text="{DynamicResource Loc_Interface_language}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                            <ComboBox x:Name="LanguageComboBox" Height="35" Margin="0,5,0,20" DisplayMemberPath="DisplayName" Style="{DynamicResource ComboBoxStyle}" />
+
+                            <TextBlock Text="{DynamicResource Loc_THEME}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+                            <TextBlock Text="{DynamicResource Loc_Color_theme}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                            <ComboBox x:Name="ThemeComboBox" Height="35" Margin="0,5,0,12" SelectionChanged="ThemeComboBox_SelectionChanged" Style="{DynamicResource ComboBoxStyle}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Border Background="{DynamicResource HighlightBackgroundBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Padding="10">
+                                <StackPanel>
+                                    <TextBlock x:Name="ThemeNameText" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                                    <TextBlock x:Name="ThemeDescriptionText" Margin="0,3,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="11" />
+                                    <TextBlock x:Name="ThemeAuthorText" Margin="0,5,0,0" Foreground="{DynamicResource SecondaryTextColorBrush}" FontSize="10" />
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Button x:Name="ImportThemeButton" Content="{DynamicResource Loc_IMPORT}" Padding="12,5" Margin="0,0,6,0" Click="ImportThemeButton_Click" />
+                                <Button x:Name="ExportThemeButton" Content="{DynamicResource Loc_EXPORT}" Padding="12,5" Margin="0,0,6,0" Click="ExportThemeButton_Click" />
+                                <Button x:Name="RefreshThemesButton" Content="{DynamicResource Loc_REFRESH}" Padding="12,5" Click="RefreshThemesButton_Click" />
+                            </StackPanel>
+
+                            <TextBlock Text="{DynamicResource Loc_PANEL_STYLE}" FontSize="16" FontWeight="Bold" Margin="0,22,0,8" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                            <ComboBox x:Name="OverlayChromeStyleComboBox" Height="32" Style="{DynamicResource ComboBoxStyle}" />
+                            <TextBlock Text="{DynamicResource Loc_Compact_keeps_a_filled_card_Minimal_leaves_only_a_guide_edge_and_content}" Margin="0,6,0,0" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedTextColorBrush}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="{DynamicResource Loc_THEME_PREVIEW}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+                            <Border Background="{DynamicResource ButtonBackgroundColorBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Loc_ENGINEERING_PLAN}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                                    <TextBlock Text="{DynamicResource Loc_3_planned_7_material_types_missing}" Margin="0,5,0,12" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Border Background="{DynamicResource HighlightBackgroundBrush}" Padding="8,5">
+                                        <TextBlock Text="{DynamicResource Loc_IMPERIAL_SHIELDING_4_10}" Foreground="{DynamicResource AccentColorBrush}" />
+                                    </Border>
+                                    <TextBlock Text="{DynamicResource Loc_Engineering_hint_example}" Margin="0,9,0,0" Foreground="{DynamicResource MutedTextColorBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="{DynamicResource Loc_COLORS}" FontSize="13" FontWeight="Bold" Margin="0,18,0,8" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                            <Grid x:Name="ColorSwatchGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource Loc_Overlay}" Style="{DynamicResource EliteTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="18" Width="560" HorizontalAlignment="Left">
+                        <TextBlock Text="{DynamicResource Loc_OVERLAY_BEHAVIOR}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,12" />
+                        <CheckBox x:Name="EnableInteractionModeCheckBox" Content="{DynamicResource Loc_Enable_interaction_mode}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
+                        <CheckBox x:Name="ReturnOnFocusLossCheckBox" Content="{DynamicResource Loc_Return_to_passive_mode_when_overlay_loses_focus}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
+                        <CheckBox x:Name="ShowCursorWhenInteractiveCheckBox" Content="{DynamicResource Loc_Show_cursor_in_interactive_mode}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,14" />
+                        <TextBlock Text="{DynamicResource Loc_Automatic_return_to_passive_mode}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                        <ComboBox x:Name="TimeoutComboBox" Height="32" Margin="0,5,0,20" Style="{DynamicResource ComboBoxStyle}" />
+
+                        <TextBlock Text="{DynamicResource Loc_NOTIFICATIONS}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+                        <CheckBox x:Name="EnableNotificationsCheckBox" Content="{DynamicResource Loc_Enable_overlay_notifications}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
+                        <TextBlock Text="{DynamicResource Loc_Notification_duration_seconds}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                        <ComboBox x:Name="NotificationDurationComboBox" Height="32" Margin="0,5,0,20" Style="{DynamicResource ComboBoxStyle}">
+                            <ComboBoxItem Content="4" Tag="4" />
+                            <ComboBoxItem Content="6" Tag="6" />
+                            <ComboBoxItem Content="8" Tag="8" />
+                            <ComboBoxItem Content="12" Tag="12" />
+                        </ComboBox>
+
+                        <TextBlock Text="{DynamicResource Loc_SHIP_STATUS_WIDGET}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+                        <CheckBox x:Name="EnableShipStatusWidgetCheckBox" Content="{DynamicResource Loc_ENABLE_SHIP_STATUS_WIDGET}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
+                        <TextBlock Text="{DynamicResource Loc_SHIP_STATUS_WIDGET_POSITION}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                        <ComboBox x:Name="ShipStatusPositionComboBox" Height="32" Margin="0,5,0,20" Style="{DynamicResource ComboBoxStyle}" />
+
+                        <TextBlock Text="{DynamicResource Loc_LAYOUT}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="{DynamicResource Loc_Pinned_route_position}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                        <ComboBox x:Name="PinnedPositionComboBox" Height="32" Margin="0,5,0,8" Style="{DynamicResource ComboBoxStyle}" />
+                        <TextBlock Text="{DynamicResource Loc_Secondary_activities_use_the_opposite_side_when_possible}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource Loc_CONTROLS}" Style="{DynamicResource EliteTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="18">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <Border Style="{DynamicResource SettingsSectionStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Loc_HOTKEYS}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                    <TextBlock Text="{DynamicResource Loc_Show_or_hide_overlay_windows}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Grid Margin="0,5,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="HotkeyModifierComboBox" Height="32" /><ComboBox x:Name="HotkeyKeyComboBox" Grid.Column="2" Height="32" />
+                                    </Grid>
+                                    <TextBlock Text="{DynamicResource Loc_Toggle_cursor_interaction}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Grid Margin="0,5,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="InteractiveModifierComboBox" Height="32" /><ComboBox x:Name="InteractiveKeyComboBox" Grid.Column="2" Height="32" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{DynamicResource SettingsSectionStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Loc_QUICK_ACTIVITY_SELECTION}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                    <TextBlock Text="{DynamicResource Loc_Trade}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><ComboBox x:Name="TradeModifierComboBox" Height="30" /><ComboBox x:Name="TradeKeyComboBox" Grid.Column="2" Height="30" /></Grid>
+                                    <TextBlock Text="{DynamicResource Loc_Engineering}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><ComboBox x:Name="EngineeringModifierComboBox" Height="30" /><ComboBox x:Name="EngineeringKeyComboBox" Grid.Column="2" Height="30" /></Grid>
+                                    <TextBlock Text="{DynamicResource Loc_Exploration}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><ComboBox x:Name="ExplorationModifierComboBox" Height="30" /><ComboBox x:Name="ExplorationKeyComboBox" Grid.Column="2" Height="30" /></Grid>
+                                    <TextBlock Text="{DynamicResource Loc_Mining}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <Grid Margin="0,4,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><ComboBox x:Name="MiningModifierComboBox" Height="30" /><ComboBox x:Name="MiningKeyComboBox" Grid.Column="2" Height="30" /></Grid>
+                                    <TextBlock Text="{DynamicResource Loc_Fixed_shortcut_Ctrl_7_unpins_the_current_route_Activities_default_to_Ctrl_1_Ctrl_4}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource Loc_GAME_DATA}" Style="{DynamicResource EliteTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="18">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <Border Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_PLAYER_JOURNAL}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                <TextBlock Text="{DynamicResource Loc_Local_game_state_is_read_only_from_Elite_Dangerous_files}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,14" />
+                                <CheckBox x:Name="EnableJournalCheckBox" Content="{DynamicResource Loc_Enable_Journal_integration}" Margin="0,0,0,14" />
+                                <TextBlock Text="{DynamicResource Loc_Journal_directory}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                <Grid Margin="0,5,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="90" /></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="JournalDirectoryTextBox" ToolTip="{DynamicResource Loc_Leave_empty_to_use_the_Windows_Saved_Games_folder}" />
+                                    <Button Grid.Column="2" Content="{DynamicResource Loc_BROWSE}" Click="BrowseJournalButton_Click" />
+                                </Grid>
+                                <TextBlock Text="{DynamicResource Loc_Leave_empty_to_discover_the_Saved_Games_directory_automatically}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" />
+                                <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" Margin="0,16,0,0" />
+                                <TextBlock x:Name="JournalStatusText" Margin="0,6,0,0" Foreground="{DynamicResource PrimaryTextColorBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_STORAGE_USAGE}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                <TextBlock x:Name="StorageUsageText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                                <TextBlock Text="{DynamicResource Loc_STORAGE_CLEANUP_POLICY}" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" />
+                                <TextBlock x:Name="StoragePathText" Margin="0,7,0,0" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedTextColorBrush}" />
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button Content="{DynamicResource Loc_REFRESH_SIZE}" Padding="10,4" Click="RefreshStorageUsageButton_Click" />
+                                    <Button Content="{DynamicResource Loc_CLEAN_EXPIRED_CACHE}" Padding="10,4" Margin="8,0,0,0" Click="CleanupStorageButton_Click" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource Loc_Exploration}" Style="{DynamicResource EliteTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="18">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <Border Style="{DynamicResource SettingsSectionStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Loc_EXPLORATION_DATA}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                    <TextBlock Text="{DynamicResource Loc_Exploration_data_provider_description}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                                    <CheckBox x:Name="EnableOnlineExplorationDataCheckBox" Content="{DynamicResource Loc_Enable_online_exploration_data}" Margin="0,0,0,9" />
+                                    <CheckBox x:Name="EnableEdsmFallbackCheckBox" Content="{DynamicResource Loc_Use_EDSM_as_fallback}" Margin="0,0,0,9" />
+                                    <CheckBox x:Name="EnableExplorationPoiDataCheckBox" Content="{DynamicResource Loc_Enable_exploration_POI_data}" Margin="0,0,0,12" />
+                                    <TextBlock Text="{DynamicResource Loc_Exploration_spoiler_mode}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                    <ComboBox x:Name="ExplorationSpoilerComboBox" Height="30" Margin="0,4,0,10" DisplayMemberPath="Label" />
+                                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="130" /></Grid.ColumnDefinitions>
+                                        <StackPanel><TextBlock Text="{DynamicResource Loc_Exploration_cache_lifetime}" Foreground="{DynamicResource SecondaryTextColorBrush}" /><ComboBox x:Name="ExplorationCacheComboBox" Height="30" Margin="0,4,8,0" DisplayMemberPath="Label" /></StackPanel>
+                                        <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc_POI_minimum_rating}" Foreground="{DynamicResource SecondaryTextColorBrush}" /><ComboBox x:Name="ExplorationPoiRatingComboBox" Height="30" Margin="0,4,0,0" DisplayMemberPath="Label" /></StackPanel>
+                                    </Grid>
+                                    <Button Content="{DynamicResource Loc_REFRESH_DATA}" Width="150" HorizontalAlignment="Left" Margin="0,12,0,0" Click="RefreshExplorationDataButton_Click" />
+                                    <TextBlock x:Name="ExternalDataStatusText" Margin="0,8,0,0" FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" />
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                        
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource Loc_EXPERIMENTAL}" Style="{DynamicResource EliteTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="18" Width="600" HorizontalAlignment="Left">
+                        <Border Style="{DynamicResource SettingsSectionStyle}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_DSS_EXPERIMENTAL_TITLE}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                <CheckBox x:Name="EnableExperimentalDssAssistantCheckBox" Content="{DynamicResource Loc_DSS_ENABLE_ASSISTANT}" Foreground="{DynamicResource AccentColorBrush}" Margin="0,2,0,8" />
+                                <TextBlock Text="{DynamicResource Loc_DSS_EXPERIMENTAL_WARNING}" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" Margin="0,0,0,18" />
+
+                                <TextBlock Text="{DynamicResource Loc_DSS_LOG_DIRECTORY}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                <Grid Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="90" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="DssLogDirectoryTextBox" TextChanged="DssLogDirectoryTextBox_TextChanged" />
+                                    <Button Grid.Column="2" Content="{DynamicResource Loc_BROWSE}" Click="BrowseDssLogDirectoryButton_Click" />
+                                </Grid>
+                                <TextBlock Text="{DynamicResource Loc_DSS_LOG_DIRECTORY_HINT}" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedTextColorBrush}" />
+                                <TextBlock x:Name="DssLogDirectoryResolvedText" Margin="0,7,0,0" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                <Button Content="{DynamicResource Loc_DSS_OPEN_LOG_FOLDER}" HorizontalAlignment="Left" Padding="10,4" Margin="0,12,0,0" Click="OpenDssLogDirectoryButton_Click" />
+                            </StackPanel>
+                        </Border>
+                    <Border Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_GALAXY_MAP_NAVIGATION}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                <TextBlock Text="{DynamicResource Loc_GALAXY_MAP_NAVIGATION_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                                <TextBlock Text="{DynamicResource Loc_ELITE_BINDINGS_FILE}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                <TextBlock Text="{DynamicResource Loc_ELITE_BINDINGS_FILE_HINT}" Margin="0,3,0,5" FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" />
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="6" />
+                                        <ColumnDefinition Width="88" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="EliteBindingsPresetComboBox" Height="30" DisplayMemberPath="Label" SelectionChanged="EliteBindingsPresetComboBox_SelectionChanged" />
+                                    <Button Grid.Column="2" Height="30" Content="{DynamicResource Loc_REFRESH}" Click="RefreshBindingsFilesButton_Click" />
+                                </Grid>
+                                <Button Content="{DynamicResource Loc_OPEN_BINDINGS_FOLDER}" HorizontalAlignment="Left" Padding="10,4" Margin="0,0,0,10" Click="OpenBindingsFolderButton_Click" />
+                                <CheckBox x:Name="EnableExperimentalRouteAutomationCheckBox" Content="{DynamicResource Loc_ENABLE_EXPERIMENTAL_ROUTE_AUTOMATION}" Foreground="{DynamicResource AccentColorBrush}" Margin="0,0,0,12" />
+                                <TextBlock Text="{DynamicResource Loc_MAP_OPEN_DELAY}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                <TextBox x:Name="RouteAutomationMapDelayTextBox" Margin="0,4,0,9" />
+                                <TextBlock Text="{DynamicResource Loc_UI_STEP_DELAY}" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                                <TextBox x:Name="RouteAutomationStepDelayTextBox" Margin="0,4,0,9" />
+                                <TextBlock x:Name="RouteAutomationBindingsStatusText" TextWrapping="Wrap" FontSize="10" Foreground="{DynamicResource MutedTextColorBrush}" />
+                            </StackPanel>
+                        </Border><Border Style="{DynamicResource SettingsSectionStyle}" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_X52_PRO_INTEGRATION}" Style="{DynamicResource SettingsSectionHeaderStyle}" />
+                                <TextBlock Text="{DynamicResource Loc_X52_integration_description}" Foreground="{DynamicResource MutedTextColorBrush}" TextWrapping="Wrap" Margin="0,0,0,14" />
+                                <CheckBox x:Name="EnableX52SupportCheckBox" Content="{DynamicResource Loc_Enable_X52_support}" Margin="0,0,0,12" />
+                                <CheckBox x:Name="EnableX52MfdCheckBox" Content="{DynamicResource Loc_Show_game_state_on_X52_MFD}" Margin="14,0,0,9" />
+                                <CheckBox x:Name="EnableX52LedCheckBox" Content="{DynamicResource Loc_Control_X52_lighting_from_game_state}" Margin="14,0,0,9" />
+                                <CheckBox x:Name="EnableX52ControlsCheckBox" Content="{DynamicResource Loc_Use_X52_MFD_wheel_for_activity_widgets}" Margin="14,0,0,14" />
+                                <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" />
+                                <TextBlock x:Name="X52StatusText" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                                <Button Content="{DynamicResource Loc_RECONNECT}" Width="150" Height="32" Margin="0,12,0,0" HorizontalAlignment="Left" Click="ReconnectX52Button_Click" />
+                                <Button Content="{DynamicResource Loc_CONTROL_CHEATSHEET}" Width="210" Height="32" Margin="0,8,0,0" HorizontalAlignment="Left" Click="OpenX52CheatsheetButton_Click" />
+                                <TextBlock Text="{DynamicResource Loc_X52_controls_hint}" Margin="0,14,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" />
+                            </StackPanel>
+                        </Border></StackPanel>
+                </ScrollViewer>
+            </TabItem>        </TabControl>
+
+        <Grid Grid.Row="2" Margin="0,14,0,0">
+            <TextBlock x:Name="ApplyStatusText" Text="" VerticalAlignment="Center" Foreground="{DynamicResource SuccessColorBrush}" FontWeight="Bold" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ApplyButton" Content="{DynamicResource Loc_APPLY}" Height="34" Width="110" Margin="0,0,8,0" Click="ApplyButton_Click" />
+                <Button x:Name="CloseButton" Content="{DynamicResource Loc_CLOSE}" Height="34" Width="90" Click="CloseButton_Click" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

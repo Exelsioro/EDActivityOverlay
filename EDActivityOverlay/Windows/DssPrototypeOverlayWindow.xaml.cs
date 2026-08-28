@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Runtime.InteropServices;
 using EDActivityOverlay.Models;
+using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Dss;
 using EDActivityOverlay.Utils;
 
@@ -395,7 +396,9 @@ public partial class DssPrototypeOverlayWindow : Window
                 {
                     Text =
                         targetingMode && primary
-                            ? $"NEXT AIM #{point.Sequence}"
+                            ? Loc.Format(
+                                "Loc_DSS_NEXT_AIM_FORMAT",
+                                point.Sequence)
                             : point.Sequence.ToString(),
                     FontFamily =
                         new FontFamily("Consolas"),
@@ -480,40 +483,50 @@ public partial class DssPrototypeOverlayWindow : Window
         {
             case DssAssistantReadinessState.SelectBodyTarget:
                 ReadinessTitle.Text =
-                    "SELECT BODY AS TARGET";
+                    Loc.Get(
+                        "Loc_DSS_SELECT_BODY_TARGET");
                 ReadinessDetail.Text =
-                    "Target body is required for DSS distance/readiness calculations.";
+                    Loc.Get(
+                        "Loc_DSS_TARGET_REQUIRED_DETAIL");
                 ReadinessPanel.BorderBrush =
                     Brushes.OrangeRed;
                 break;
 
             case DssAssistantReadinessState.NeedBodyRadius:
                 ReadinessTitle.Text =
-                    "BODY DATA REQUIRED";
+                    Loc.Get(
+                        "Loc_DSS_BODY_DATA_REQUIRED");
                 ReadinessDetail.Text =
-                    "Keep the body selected as target; radius data is not available yet.";
+                    Loc.Get(
+                        "Loc_DSS_RADIUS_PENDING_DETAIL");
                 ReadinessPanel.BorderBrush =
                     Brushes.Orange;
                 break;
 
             case DssAssistantReadinessState.Calibrating:
                 ReadinessTitle.Text =
-                    "DSS CALIBRATING";
+                    Loc.Get(
+                        "Loc_DSS_CALIBRATING");
                 ReadinessDetail.Text =
                     readiness.BodyRadiusMeters > 0
-                        ? $"Waiting for a clean horizon observation • " +
-                          $"ready {FormatDistance(readiness.RecommendedNearCenterDistanceMeters)}–" +
-                          $"{FormatDistance(readiness.RecommendedFarCenterDistanceMeters)} " +
-                          $"(target {FormatDistance(readiness.RecommendedTargetCenterDistanceMeters)})"
-                        : "Waiting for a clean horizon observation • " +
-                          "body radius lookup pending";
+                        ? Loc.Format(
+                            "Loc_DSS_CALIBRATING_RANGE_FORMAT",
+                            FormatDistance(
+                                readiness.RecommendedNearCenterDistanceMeters),
+                            FormatDistance(
+                                readiness.RecommendedFarCenterDistanceMeters),
+                            FormatDistance(
+                                readiness.RecommendedTargetCenterDistanceMeters))
+                        : Loc.Get(
+                            "Loc_DSS_CALIBRATING_RADIUS_PENDING");
                 ReadinessPanel.BorderBrush =
                     Brushes.DeepSkyBlue;
                 break;
 
             case DssAssistantReadinessState.TooClose:
                 ReadinessTitle.Text =
-                    "TOO CLOSE — MOVE AWAY";
+                    Loc.Get(
+                        "Loc_DSS_TOO_CLOSE");
                 ReadinessDetail.Text =
                     BuildMeasuredReadinessDetail(
                         readiness);
@@ -523,7 +536,8 @@ public partial class DssPrototypeOverlayWindow : Window
 
             case DssAssistantReadinessState.TooFar:
                 ReadinessTitle.Text =
-                    "TOO FAR — MOVE CLOSER";
+                    Loc.Get(
+                        "Loc_DSS_TOO_FAR");
                 ReadinessDetail.Text =
                     BuildMeasuredReadinessDetail(
                         readiness);
@@ -533,7 +547,8 @@ public partial class DssPrototypeOverlayWindow : Window
 
             case DssAssistantReadinessState.Ready:
                 ReadinessTitle.Text =
-                    "DSS ASSISTANT READY";
+                    Loc.Get(
+                        "Loc_DSS_READY");
                 ReadinessDetail.Text =
                     BuildMeasuredReadinessDetail(
                         readiness);
@@ -553,31 +568,41 @@ public partial class DssPrototypeOverlayWindow : Window
             if (readiness.BodyRadiusMeters <= 0)
             {
                 return
-                    "body centre acquired вЂў horizon not measurable yet вЂў move closer вЂў " +
-                    "physical distance unavailable";
+                    Loc.Get(
+                        "Loc_DSS_TOO_FAR_UNMEASURED_NO_RADIUS");
             }
 
             return
-                "body centre acquired вЂў horizon not measurable yet вЂў move closer вЂў " +
-                $"ready {FormatDistance(readiness.RecommendedNearCenterDistanceMeters)}вЂ“" +
-                $"{FormatDistance(readiness.RecommendedFarCenterDistanceMeters)} " +
-                $"(target {FormatDistance(readiness.RecommendedTargetCenterDistanceMeters)})";
+                Loc.Format(
+                    "Loc_DSS_TOO_FAR_UNMEASURED_RANGE_FORMAT",
+                    FormatDistance(
+                        readiness.RecommendedNearCenterDistanceMeters),
+                    FormatDistance(
+                        readiness.RecommendedFarCenterDistanceMeters),
+                    FormatDistance(
+                        readiness.RecommendedTargetCenterDistanceMeters));
         }
 
         if (readiness.BodyRadiusMeters <= 0)
         {
             return
-                $"diam {readiness.AngularDiameterDegrees:0.0}° " +
-                "• angular readiness active " +
-                "• physical distance unavailable (radius not found)";
+                Loc.Format(
+                    "Loc_DSS_ANGULAR_ONLY_DETAIL_FORMAT",
+                    readiness.AngularDiameterDegrees);
         }
 
         return
-            $"diam {readiness.AngularDiameterDegrees:0.0}° " +
-            $"• dist≈{FormatDistance(readiness.EstimatedCenterDistanceMeters)} " +
-            $"• ready {FormatDistance(readiness.RecommendedNearCenterDistanceMeters)}–" +
-            $"{FormatDistance(readiness.RecommendedFarCenterDistanceMeters)} " +
-            $"• target {FormatDistance(readiness.RecommendedTargetCenterDistanceMeters)}";
+            Loc.Format(
+                "Loc_DSS_MEASURED_DETAIL_FORMAT",
+                readiness.AngularDiameterDegrees,
+                FormatDistance(
+                    readiness.EstimatedCenterDistanceMeters),
+                FormatDistance(
+                    readiness.RecommendedNearCenterDistanceMeters),
+                FormatDistance(
+                    readiness.RecommendedFarCenterDistanceMeters),
+                FormatDistance(
+                    readiness.RecommendedTargetCenterDistanceMeters));
     }
 
     private static string DisplayAngularDiameter(

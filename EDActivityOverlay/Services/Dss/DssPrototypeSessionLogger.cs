@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EDActivityOverlay.Models;
+using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Journal;
 
 namespace EDActivityOverlay.Services.Dss;
@@ -48,12 +49,9 @@ internal sealed class DssPrototypeSessionLogger : IDisposable
     public DssPrototypeSessionLogger(
         DssPrototypeSessionContext context)
     {
-        string root = Path.Combine(
-            Environment.GetFolderPath(
-                Environment.SpecialFolder.LocalApplicationData),
-            "EDActivityOverlay",
-            "Research",
-            "DSS");
+        string root =
+            DssResearchPathResolver.Resolve(
+                SettingsService.Instance.Settings.DssResearchLogDirectory);
 
         DssResearchRetention.Prune(root);
 
