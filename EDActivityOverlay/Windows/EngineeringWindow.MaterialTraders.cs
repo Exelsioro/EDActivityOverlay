@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
@@ -182,56 +182,87 @@ public partial class EngineeringWindow
                 $"Unable to copy material trader system before navigation: {ex.Message}");
         }
 
-        bool automatic =
-            SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
-
         MaterialTraderStatusText.Text =
             Loc.Format(
                 "Loc_NAVIGATION_PREPARING",
                 row.SystemName);
 
-        if (overlayMode)
+        bool automatic =
+            PrepareEngineeringNavigationHandoff();
+
+        await Task.Yield();
+
+        EliteNavigationResult result =
+            await EliteRouteNavigationService.Instance.PrepareAsync(
+                row.SystemName,
+                targetWindow,
+                automatic,
+                materialTraderRouteCancellation.Token);
+
+        MaterialTraderStatusText.Text =
+            string.IsNullOrWhiteSpace(
+                result.Detail)
+                ? Loc.Format(
+                    result.MessageKey,
+                    result.TargetSystem)
+                : Loc.Format(
+                    result.MessageKey,
+                    result.TargetSystem,
+                    result.Detail);
+    }
+
+    private bool PrepareEngineeringNavigationHandoff()
+    {
+        if (fullAssistantVisible)
         {
-            WindowsAPI.SetClickThrough(
-                this,
-                true);
+            fullAssistantVisible =
+                false;
+
+            FullAssistantPanel.Visibility =
+                Visibility.Collapsed;
+
+            EngineeringWidgetHelpPanel.Visibility =
+                Visibility.Collapsed;
+
+            EngineeringWidgetPanel.Visibility =
+                Visibility.Visible;
+
+            MinWidth =
+                0;
+
+            MinHeight =
+                0;
+
+            Width =
+                420;
+
+            Height =
+                340;
+
+            PositionOverTarget();
         }
 
-        try
+        if (parentWindow is not null)
         {
-            await Task.Yield();
-
-            EliteNavigationResult result =
-                await EliteRouteNavigationService.Instance.PrepareAsync(
-                    row.SystemName,
-                    targetWindow,
-                    automatic,
-                    materialTraderRouteCancellation.Token);
-
-            MaterialTraderStatusText.Text =
-                string.IsNullOrWhiteSpace(
-                    result.Detail)
-                    ? Loc.Format(
-                        result.MessageKey,
-                        result.TargetSystem)
-                    : Loc.Format(
-                        result.MessageKey,
-                        result.TargetSystem,
-                        result.Detail);
+            parentWindow.ReturnControlToGameForNavigation();
         }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
+        else
         {
             if (overlayMode
                 && IsLoaded)
             {
-                ApplyInteractionMode(
-                    canInteract: true,
-                    showCursor: true);
+                WindowsAPI.SetClickThrough(
+                    this,
+                    true);
             }
+
+            WindowsAPI.RestoreCursorVisibility();
+            WindowsAPI.TryActivateWindow(
+                targetWindow);
         }
+
+        return
+            SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
     }
 
     private sealed record MaterialTraderRow(

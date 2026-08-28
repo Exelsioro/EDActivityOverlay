@@ -942,6 +942,36 @@ namespace EDActivityOverlay
             Logger.Logger.Info($"Exclusive overlay interaction ended; restored interactive={restoreInteractive}.");
         }
 
+        public void ReturnControlToGameForNavigation()
+        {
+            exclusiveOverlayInteraction =
+                false;
+
+            interactionStateBeforeExclusiveOverlay =
+                false;
+
+            interactiveModeActive =
+                false;
+
+            interactiveModeEnteredAtUtc =
+                DateTime.UtcNow;
+
+            interactiveFocusLossGraceUntilUtc =
+                interactiveModeEnteredAtUtc;
+
+            UpdateOverlayInteractionModes();
+            UpdateInteractionStatusUi();
+
+            WindowsAPI.RestoreCursorVisibility();
+
+            bool focused =
+                WindowsAPI.TryActivateWindow(
+                    targetWindow);
+
+            Logger.Logger.Info(
+                $"Navigation handoff returned control to Elite: focused={focused}, target={targetWindow}.");
+        }
+
         private static bool IsWindowFocused(Window? window, IntPtr foregroundWindow)
         {
             if (window == null || !window.IsLoaded)

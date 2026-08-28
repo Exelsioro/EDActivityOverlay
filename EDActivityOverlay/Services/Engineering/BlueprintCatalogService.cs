@@ -160,19 +160,26 @@ public sealed class BlueprintCatalogService
                                     : recipe;
                         }
 
-                        IReadOnlyList<string> experimentalEngineers =
-                            ResolveExperimentalEngineers(
+                        IReadOnlyList<string> experimentalModules =
+                            ResolveExperimentalModules(
                                 recipe,
                                 assignments);
 
+                        IReadOnlyList<string> experimentalEngineers =
+                            ResolveExperimentalEngineers(
+                                experimentalModules,
+                                assignments);
+
                         return
-                            experimentalEngineers.Count > 0
-                                ? recipe with
-                                {
-                                    Engineers =
-                                        experimentalEngineers
-                                }
-                                : recipe;
+                            recipe with
+                            {
+                                ModuleName =
+                                    FormatExperimentalModuleName(
+                                        experimentalModules,
+                                        assignments),
+                                Engineers =
+                                    experimentalEngineers
+                            };
                     })
                 .OrderBy(
                     recipe =>
@@ -229,7 +236,8 @@ public sealed class BlueprintCatalogService
         IReadOnlyDictionary<string, IReadOnlyList<string>> RecipeEngineers,
         IReadOnlyDictionary<string, IReadOnlyList<string>> ModuleEngineers,
         IReadOnlyDictionary<string, IReadOnlyList<string>> ExperimentalModules,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> ExperimentalModulesByName);
+        IReadOnlyDictionary<string, IReadOnlyList<string>> ExperimentalModulesByName,
+        IReadOnlyDictionary<string, string> ModuleDisplayNames);
 
     private static EngineeringCatalogAssignments ParseEngineeringAssignments(
         string? source)
@@ -246,6 +254,8 @@ public sealed class BlueprintCatalogService
                     new Dictionary<string, IReadOnlyList<string>>(
                         StringComparer.OrdinalIgnoreCase),
                     new Dictionary<string, IReadOnlyList<string>>(
+                        StringComparer.OrdinalIgnoreCase),
+                    new Dictionary<string, string>(
                         StringComparer.OrdinalIgnoreCase));
         }
 
@@ -265,6 +275,10 @@ public sealed class BlueprintCatalogService
             new(
                 StringComparer.OrdinalIgnoreCase);
 
+        Dictionary<string, string> moduleDisplayNames =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
         const string normalPattern =
             "new\\s+EngineeringRecipe\\(\\s*\\\"[^\\\"]*\\\"\\s*,\\s*\\\"(?<fd>[^\\\"]+)\\\"\\s*,\\s*\\\"[^\\\"]*\\\"\\s*,\\s*ItemData\\.ShipModule\\.ModuleTypes\\.(?<module>[A-Za-z0-9_]+)\\s*,\\s*(?<grade>[1-5])\\s*,\\s*\\\"(?<engineers>[^\\\"]*)\\\"";
 
@@ -277,9 +291,17 @@ public sealed class BlueprintCatalogService
             string recipeKey =
                 $"{match.Groups["fd"].Value}:G{match.Groups["grade"].Value}";
 
+            string rawModule =
+                match.Groups["module"].Value;
+
             string module =
                 NormalizeModuleType(
-                    match.Groups["module"].Value);
+                    rawModule);
+
+            moduleDisplayNames.TryAdd(
+                module,
+                HumanizeModuleType(
+                    rawModule));
 
             string[] engineerNames =
                 match.Groups["engineers"].Value
@@ -308,12 +330,15 @@ public sealed class BlueprintCatalogService
                      multiModuleSpecialPattern,
                      RegexOptions.CultureInvariant))
         {
-            string[] modules =
+            string[] rawModules =
                 match.Groups["modules"].Value
                     .Split(
                         ',',
                         StringSplitOptions.RemoveEmptyEntries
-                        | StringSplitOptions.TrimEntries)
+                        | StringSplitOptions.TrimEntries);
+
+            string[] modules =
+                rawModules
                     .Select(
                         NormalizeModuleType)
                     .Where(
@@ -321,6 +346,23 @@ public sealed class BlueprintCatalogService
                             !string.IsNullOrWhiteSpace(
                                 item))
                     .ToArray();
+
+            foreach (string rawModule
+                     in rawModules)
+            {
+                string normalizedModule =
+                    NormalizeModuleType(
+                        rawModule);
+
+                if (!string.IsNullOrWhiteSpace(
+                        normalizedModule))
+                {
+                    moduleDisplayNames.TryAdd(
+                        normalizedModule,
+                        HumanizeModuleType(
+                            rawModule));
+                }
+            }
 
             AddRange(
                 experimentalModuleBuilders,
@@ -343,9 +385,17 @@ public sealed class BlueprintCatalogService
                      singleModuleSpecialPattern,
                      RegexOptions.CultureInvariant))
         {
+            string rawModule =
+                match.Groups["module"].Value;
+
             string module =
                 NormalizeModuleType(
-                    match.Groups["module"].Value);
+                    rawModule);
+
+            moduleDisplayNames.TryAdd(
+                module,
+                HumanizeModuleType(
+                    rawModule));
 
             AddRange(
                 experimentalModuleBuilders,
@@ -368,10 +418,11 @@ public sealed class BlueprintCatalogService
                 Freeze(
                     experimentalModuleBuilders),
                 Freeze(
-                    experimentalNameBuilders));
+                    experimentalNameBuilders),
+                moduleDisplayNames);
     }
 
-    private static IReadOnlyList<string> ResolveExperimentalEngineers(
+    private static IReadOnlyList<string> ResolveExperimentalModules(
         BlueprintRecipe recipe,
         EngineeringCatalogAssignments assignments)
     {
@@ -383,23 +434,74 @@ public sealed class BlueprintCatalogService
                     "experimental:".Length..]
                 : recipe.Id;
 
-        IReadOnlyList<string>? modules =
-            assignments.ExperimentalModules.TryGetValue(
+        if (assignments.ExperimentalModules.TryGetValue(
                 fdName,
                 out IReadOnlyList<string>? exact)
-                ? exact
-                : null;
-
-        if (modules is null)
+            && exact.Count > 0)
         {
+            return exact;
+        }
+
+        return
             assignments.ExperimentalModulesByName.TryGetValue(
                 MaterialName.Normalize(
                     recipe.BlueprintName),
-                out modules);
+                out IReadOnlyList<string>? byName)
+                ? byName
+                : Array.Empty<string>();
+    }
+
+    private static string FormatExperimentalModuleName(
+        IReadOnlyList<string> modules,
+        EngineeringCatalogAssignments assignments)
+    {
+        if (modules.Count == 0)
+        {
+            return
+                "Module";
         }
 
-        if (modules is null
-            || modules.Count == 0)
+        return
+            string.Join(
+                " / ",
+                modules
+                    .Select(
+                        module =>
+                            assignments.ModuleDisplayNames.TryGetValue(
+                                module,
+                                out string? displayName)
+                                ? displayName
+                                : HumanizeModuleType(
+                                    module))
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string HumanizeModuleType(
+        string value)
+    {
+        if (string.IsNullOrWhiteSpace(
+                value))
+        {
+            return
+                "Module";
+        }
+
+        string trimmed =
+            value.Trim();
+
+        return
+            Regex.Replace(
+                trimmed,
+                "([a-z0-9])([A-Z])",
+                "$1 $2");
+    }
+
+    private static IReadOnlyList<string> ResolveExperimentalEngineers(
+        IReadOnlyList<string> modules,
+        EngineeringCatalogAssignments assignments)
+    {
+        if (modules.Count == 0)
         {
             return
                 Array.Empty<string>();

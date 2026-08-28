@@ -765,55 +765,34 @@ public partial class EngineeringWindow : Window
                 $"Unable to copy engineer system before navigation: {ex.Message}");
         }
 
-        bool automatic =
-            SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
-
         EngineerNavigationStatusText.Text =
             Loc.Format(
                 "Loc_NAVIGATION_PREPARING",
                 target);
 
-        if (overlayMode)
-        {
-            WindowsAPI.SetClickThrough(
-                this,
-                true);
-        }
+        bool automatic =
+            PrepareEngineeringNavigationHandoff();
 
-        try
-        {
-            await Task.Yield();
+        await Task.Yield();
 
-            EliteNavigationResult result =
-                await EliteRouteNavigationService.Instance.PrepareAsync(
-                    target,
-                    targetWindow,
-                    automatic,
-                    engineerNavigationCancellation.Token);
+        EliteNavigationResult result =
+            await EliteRouteNavigationService.Instance.PrepareAsync(
+                target,
+                targetWindow,
+                automatic,
+                engineerNavigationCancellation.Token);
 
-            EngineerNavigationStatusText.Text =
-                string.IsNullOrWhiteSpace(
-                    result.Detail)
-                    ? Loc.Format(
-                        result.MessageKey,
-                        result.TargetSystem)
-                    : Loc.Format(
-                        result.MessageKey,
-                        result.TargetSystem,
-                        result.Detail);
-        }
-        finally
-        {
-            if (overlayMode
-                && IsLoaded)
-            {
-                ApplyInteractionMode(
-                    canInteract: true,
-                    showCursor: true);
-            }
-        }
+        EngineerNavigationStatusText.Text =
+            string.IsNullOrWhiteSpace(
+                result.Detail)
+                ? Loc.Format(
+                    result.MessageKey,
+                    result.TargetSystem)
+                : Loc.Format(
+                    result.MessageKey,
+                    result.TargetSystem,
+                    result.Detail);
     }
-
     private void OpenEngineerWiki_Click(object sender, RoutedEventArgs e)
     {
         if (selectedEngineer is not null)
