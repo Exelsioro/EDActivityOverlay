@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 
 namespace EDActivityOverlay.Models;
 
@@ -133,6 +133,7 @@ public sealed record GameStateSnapshot
     public string Ship { get; init; } = string.Empty;
     public string ShipName { get; init; } = string.Empty;
     public string StarSystem { get; init; } = string.Empty;
+    public string CurrentStarClass { get; init; } = string.Empty;
     public long SystemAddress { get; init; }
     public double? SystemX { get; init; }
     public double? SystemY { get; init; }
@@ -298,17 +299,28 @@ public sealed record GameStateSnapshot
         && DateTimeOffset.UtcNow - timestamp < TimeSpan.FromMinutes(10);
 }
 
-public sealed class GameStateChangedEventArgs(GameStateSnapshot state) : EventArgs
+public enum JournalEventOrigin
+{
+    Live,
+    Bootstrap
+}
+
+public sealed class GameStateChangedEventArgs(
+    GameStateSnapshot state,
+    JournalEventOrigin origin = JournalEventOrigin.Live) : EventArgs
 {
     public GameStateSnapshot State { get; } = state;
+    public JournalEventOrigin Origin { get; } = origin;
 }
 
 public sealed class JournalEventReceivedEventArgs(
     string eventName,
     DateTimeOffset timestamp,
-    System.Text.Json.JsonElement data) : EventArgs
+    System.Text.Json.JsonElement data,
+    JournalEventOrigin origin = JournalEventOrigin.Live) : EventArgs
 {
     public string EventName { get; } = eventName;
     public DateTimeOffset Timestamp { get; } = timestamp;
     public System.Text.Json.JsonElement Data { get; } = data;
+    public JournalEventOrigin Origin { get; } = origin;
 }

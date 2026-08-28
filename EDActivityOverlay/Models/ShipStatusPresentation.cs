@@ -1,4 +1,4 @@
-﻿namespace EDActivityOverlay.Models;
+namespace EDActivityOverlay.Models;
 
 public enum ShipStatusAdvisoryKind
 {
@@ -16,4 +16,10 @@ public sealed record ShipStatusPresentation(
     int RemainingJumps,
     bool NextStarScoopable,
     double FuelPercent,
-    ShipStatusAdvisoryKind Advisory);
+    ShipStatusAdvisoryKind Advisory)
+{
+    public string CurrentStarClass { get; init; } =
+        string.Empty;
+
+    public bool CurrentStarScoopable { get; init; }
+}

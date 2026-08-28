@@ -116,6 +116,7 @@ namespace EDActivityOverlay
             shipStatusOverlayWindow.SetContextSuppression(IsTradeSurfaceVisible);
             SetupUpdateTimer();
             LoadConfiguredSettings();
+            RestoreMainOverlayCollapsedState();
             SetChromeStyle(SettingsService.Instance.Settings.OverlayChromeStyle);
             UpdateOverlayInteractionModes();
             UpdateInteractionStatusUi();
@@ -229,49 +230,34 @@ namespace EDActivityOverlay
 
         private void SetupOverlay()
         {
-            // Set up overlay behavior when window is loaded
-            this.Loaded += (s, e) =>
+            Loaded += (_, _) =>
             {
                 try
                 {
-                    WindowsAPI.SetupOverlayWindow(this);
-                    WindowsAPI.SetClickThrough(this, !(interactionModeEnabled && interactiveModeActive));
-                    
-                    // Position at a safe location initially on the target monitor (or primary monitor fallback)
-                    var workArea = WindowsAPI.GetMonitorWorkArea(targetWindow);
-                    
-                    // Default safe position (bottom-left of screen)
-                    this.Left = workArea.Left + 50;
-                    this.Top = workArea.Bottom - this.Height - 50;
-                    
-                    Logger.Logger.Info($"MainWindow positioned at safe location: Left={this.Left}, Top={this.Top}, WorkArea={workArea.Width}x{workArea.Height}");
-                    
-                    // If target is set, try relative positioning with bounds checking
-                    if (targetWindow != IntPtr.Zero)
-                    {
-                        try
-                        {
-                            ApplyAdaptiveSizeForTarget();
-                            // Use new WindowInteropHelper positioning method
-                            WindowsAPI.PositionWindowRelativeToTarget(this, targetWindow, RelativePosition.BottomLeft);
-                            Logger.Logger.Info($"MainWindow repositioned relative to target: Left={this.Left}, Top={this.Top}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Logger.Error($"Error positioning MainWindow relative to target: {ex.Message}");
-                        }
-                    }
-                    
-                    // Set up global hotkeys after window is loaded
+                    WindowsAPI.SetupOverlayWindow(
+                        this);
+
+                    WindowsAPI.SetClickThrough(
+                        this,
+                        !(interactionModeEnabled
+                          && interactiveModeActive));
+
+                    ApplyAdaptiveSizeForTarget();
+                    PositionMainOverlayInPhysicalCorner();
+
+                    Logger.Logger.Info(
+                        $"MainWindow positioned in physical monitor corner: " +
+                        $"Left={Left}, Top={Top}");
+
                     SetupGlobalHotkeys();
                 }
                 catch (Exception ex)
                 {
-                    Logger.Logger.Error($"Error setting up overlay: {ex.Message}");
+                    Logger.Logger.Error(
+                        $"Error setting up overlay: {ex.Message}");
                 }
             };
         }
-
         private void SetupUpdateTimer()
         {
             updateTimer = new DispatcherTimer
@@ -282,170 +268,239 @@ namespace EDActivityOverlay
             updateTimer.Start();
         }
 
-        private void UpdateTimer_Tick(object? sender, EventArgs e)
+        private void UpdateTimer_Tick(
+            object? sender,
+            EventArgs e)
         {
-            if (disposed || updateTimer == null)
-                return;
-
-            if (targetWindow != IntPtr.Zero)
+            if (disposed
+                || updateTimer == null)
             {
-                // State machine transition from Waiting to ForceShow on target detection
-                if (currentState == OverlayState.Waiting)
+                return;
+            }
+
+            if (targetWindow == IntPtr.Zero)
+            {
+                return;
+            }
+
+            if (currentState == OverlayState.Waiting)
+            {
+                currentState =
+                    OverlayState.ForceShow;
+
+                Logger.Logger.Info(
+                    "State transition: Waiting -> ForceShow");
+            }
+
+            if (!WindowsAPI.IsWindow(
+                    targetWindow))
+            {
+                Logger.Logger.Info(
+                    "Target window no longer exists - shutting down application");
+
+                ShutdownApplication(
+                    "Target window closed");
+
+                return;
+            }
+
+            if (!IsTargetProcessRunning())
+            {
+                Logger.Logger.Info(
+                    "Target process is no longer running - shutting down application");
+
+                ShutdownApplication(
+                    "Target process terminated");
+
+                return;
+            }
+
+            try
+            {
+                ApplyAdaptiveSizeForTarget();
+                PositionMainOverlayInPhysicalCorner();
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error(
+                    $"Error updating MainWindow position: {ex.Message}");
+            }
+
+            IntPtr foregroundWindow =
+                WindowsAPI.GetForegroundWindow();
+
+            bool targetHasFocus =
+                WindowsAPI.IsWindowOwnedByProcess(
+                    foregroundWindow,
+                    targetProcessId);
+
+            bool overlayHasFocus =
+                WindowsAPI.IsOverlayWindow(
+                    foregroundWindow);
+
+            IntPtr visibilityWindow =
+                targetHasFocus
+                && foregroundWindow != IntPtr.Zero
+                    ? foregroundWindow
+                    : targetWindow;
+
+            bool targetMinimized =
+                WindowsAPI.IsIconic(
+                    visibilityWindow);
+
+            bool targetVisible =
+                WindowsAPI.IsWindowVisible(
+                    visibilityWindow);
+
+            EvaluateInteractiveAutoReturn(
+                foregroundWindow);
+
+            bool shouldBeVisible =
+                targetVisible
+                && !targetMinimized;
+
+            bool shouldBeTopmost =
+                false;
+
+            if (currentState == OverlayState.ForceShow)
+            {
+                shouldBeTopmost =
+                    targetHasFocus
+                    || overlayHasFocus;
+            }
+            else if (currentState == OverlayState.Auto)
+            {
+                shouldBeVisible =
+                    shouldBeVisible
+                    && (targetHasFocus
+                        || overlayHasFocus);
+
+                shouldBeTopmost =
+                    targetHasFocus
+                    || overlayHasFocus;
+            }
+
+            if (IsVisible
+                && IsLoaded)
+            {
+                WindowsAPI.SetTopmost(
+                    this,
+                    shouldBeTopmost);
+            }
+
+            if (forceVisible
+                && targetVisible
+                && !targetMinimized)
+            {
+                shouldBeVisible =
+                    true;
+
+                Logger.Logger.Info(
+                    "Using forceVisible flag for initial display");
+            }
+
+            if (shouldBeVisible
+                && !IsVisible)
+            {
+                Logger.Logger.Info(
+                    $"MainWindow showing - state: {currentState}, " +
+                    $"targetVisible: {targetVisible}, targetFocus: {targetHasFocus}, " +
+                    $"overlayFocus: {overlayHasFocus}, forced: {forceVisible}");
+
+                WindowState =
+                    WindowState.Normal;
+
+                Show();
+                ApplyAdaptiveSizeForTarget();
+                PositionMainOverlayInPhysicalCorner();
+
+                WindowsAPI.SetTopmost(
+                    this,
+                    shouldBeTopmost);
+
+                if (forceVisible)
                 {
-                    currentState = OverlayState.ForceShow;
-                    Logger.Logger.Info("State transition: Waiting -> ForceShow");
-                }
-                
-                // Check if target window still exists
-                if (!WindowsAPI.IsWindow(targetWindow))
-                {
-                    // If target window is completely gone, reset state and close entire application
-                    Logger.Logger.Info("Target window no longer exists - shutting down application");
-                    ShutdownApplication("Target window closed");
-                    return;
-                }
-                
-                // Additional check: verify the target process is still running
-                if (!IsTargetProcessRunning())
-                {
-                    Logger.Logger.Info("Target process is no longer running - shutting down application");
-                    ShutdownApplication("Target process terminated");
-                    return;
+                    forceVisible =
+                        false;
+
+                    Logger.Logger.Info(
+                        "Resetting forceVisible flag after successful show");
                 }
 
-                // Update position to follow target window with bounds checking
-                try
+                if (!activityHiddenByHotkey
+                    && !OverlayVisibilityState.SuppressActivity
+                    && isToggleActive
+                    && tradeRouteWindow != null
+                    && !tradeRouteWindow.IsVisible)
                 {
-                    ApplyAdaptiveSizeForTarget();
-                    // Use new WindowInteropHelper positioning method
-                    WindowsAPI.PositionWindowRelativeToTarget(this, targetWindow, RelativePosition.BottomLeft);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Logger.Error($"Error updating MainWindow position: {ex.Message}");
+                    tradeRouteWindow.Show();
                 }
 
-                // Check target window focus and visibility state
-                IntPtr foregroundWindow = WindowsAPI.GetForegroundWindow();
-                bool targetHasFocus = (foregroundWindow == targetWindow);
-                bool overlayHasFocus = WindowsAPI.IsOverlayWindow(foregroundWindow);
-                bool targetMinimized = WindowsAPI.IsIconic(targetWindow);
-                bool targetVisible = WindowsAPI.IsWindowVisible(targetWindow);
-                EvaluateInteractiveAutoReturn(foregroundWindow);
-                
-                // Determine if main overlay should be visible based on state machine
-                bool shouldBeVisible = targetVisible && !targetMinimized;
-                
-                // Determine if overlay should be topmost based on focus and state
-                bool shouldBeTopmost = false;
-                
-                if (currentState == OverlayState.ForceShow)
+                if (!activityHiddenByHotkey
+                    && !OverlayVisibilityState.SuppressActivity
+                    && isResultsActive
+                    && resultsOverlayWindow != null
+                    && !resultsOverlayWindow.IsVisible)
                 {
-                    shouldBeTopmost = targetHasFocus || overlayHasFocus;
+                    resultsOverlayWindow.Show();
                 }
-                else if (currentState == OverlayState.Auto)
-                {
-                    shouldBeVisible = shouldBeVisible && (targetHasFocus || overlayHasFocus);
-                    shouldBeTopmost = targetHasFocus || overlayHasFocus;
-                }
-                
-                if (this.IsVisible && this.IsLoaded)
-                {
-                    WindowsAPI.SetTopmost(this, shouldBeTopmost);
-                }
-                
-                if (forceVisible && targetVisible && !targetMinimized)
-                {
-                    shouldBeVisible = true;
-                    Logger.Logger.Info("Using forceVisible flag for initial display");
-                }
-                
-                if (shouldBeVisible && !this.IsVisible)
-                {
-                    Logger.Logger.Info($"MainWindow showing - state: {currentState}, targetVisible: {targetVisible}, targetFocus: {targetHasFocus}, overlayFocus: {overlayHasFocus}, forced: {forceVisible}");
-                    this.Visibility = Visibility.Visible;
-                    this.WindowState = WindowState.Normal;
-                    this.Show();
-                    
-                    if (forceVisible)
-                    {
-                        forceVisible = false;
-                        Logger.Logger.Info("Resetting forceVisible flag after successful show");
-                    }
-                    
-                    if (!activityHiddenByHotkey && !OverlayVisibilityState.SuppressActivity
-                        && isToggleActive && tradeRouteWindow != null && !tradeRouteWindow.IsVisible)
-                    {
-                        tradeRouteWindow.Show();
-                    }
-                    
-                    if (!activityHiddenByHotkey && !OverlayVisibilityState.SuppressActivity
-                        && isResultsActive && resultsOverlayWindow != null && !resultsOverlayWindow.IsVisible)
-                    {
-                        resultsOverlayWindow.Show();
-                    }
 
-                    if (!overlaysSuppressedByHotkey
-                        && !activityHiddenByHotkey
-                        && currentActivity == ActivityType.Engineering
-                        && engineeringOverlayWindow is { IsLoaded: true, IsVisible: false })
-                    {
-                        engineeringOverlayWindow.Show();
-                    }
-                }
-                else if (!shouldBeVisible && this.IsVisible)
+                if (!overlaysSuppressedByHotkey
+                    && !activityHiddenByHotkey
+                    && currentActivity == ActivityType.Engineering
+                    && engineeringOverlayWindow
+                       is
+                       {
+                           IsLoaded: true,
+                           IsVisible: false
+                       })
                 {
-                    Logger.Logger.Info($"MainWindow hiding - state: {currentState}, targetFocus: {targetHasFocus}, overlayFocus: {overlayHasFocus}");
-                    this.Hide();
-                    this.Visibility = Visibility.Hidden;
-                    
-                    if (tradeRouteWindow != null && tradeRouteWindow.IsVisible)
-                    {
-                        tradeRouteWindow.Hide();
-                    }
-                    
-                    if (resultsOverlayWindow != null && resultsOverlayWindow.IsVisible)
-                    {
-                        resultsOverlayWindow.Hide();
-                    }
-
-                    if (engineeringOverlayWindow?.IsVisible == true)
-                    {
-                        engineeringOverlayWindow.Hide();
-                    }
-                }
-                
-                if (currentState == OverlayState.ForceShow && this.IsVisible)
-                {
-                    if (!targetHasFocus || overlayHasFocus)
-                    {
-                        currentState = OverlayState.Auto;
-                        Logger.Logger.Info("State transition: ForceShow -> Auto (focus change detected)");
-                    }
+                    engineeringOverlayWindow.Show();
                 }
             }
-        }
+            else if (!shouldBeVisible
+                     && IsVisible)
+            {
+                Logger.Logger.Info(
+                    $"MainWindow hiding - state: {currentState}, " +
+                    $"targetFocus: {targetHasFocus}, overlayFocus: {overlayHasFocus}");
 
+                Hide();
+
+                if (tradeRouteWindow != null
+                    && tradeRouteWindow.IsVisible)
+                {
+                    tradeRouteWindow.Hide();
+                }
+
+                if (resultsOverlayWindow != null
+                    && resultsOverlayWindow.IsVisible)
+                {
+                    resultsOverlayWindow.Hide();
+                }
+
+                if (engineeringOverlayWindow?.IsVisible == true)
+                {
+                    engineeringOverlayWindow.Hide();
+                }
+            }
+
+            if (currentState == OverlayState.ForceShow
+                && IsVisible
+                && (!targetHasFocus
+                    || overlayHasFocus))
+            {
+                currentState =
+                    OverlayState.Auto;
+
+                Logger.Logger.Info(
+                    "State transition: ForceShow -> Auto (focus change detected)");
+            }
+        }
         private void ApplyAdaptiveSizeForTarget()
         {
-            if (targetWindow == IntPtr.Zero || !WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT targetRect))
-            {
-                return;
-            }
-
-            double targetWidth = targetRect.Right - targetRect.Left;
-            double targetHeight = targetRect.Bottom - targetRect.Top;
-            OverlayLayoutHelper.TryApplyAdaptiveSize(
-                this,
-                baseWindowWidth,
-                baseWindowHeight,
-                targetWidth,
-                targetHeight,
-                OverlayLayoutSettings.MainMinScale,
-                OverlayLayoutSettings.MainMaxScale,
-                ref lastAppliedScale);
+            ApplyMainOverlaySizeForCurrentState();
         }
-
         private void LoadConfiguredSettings()
         {
             var settings = SettingsService.Instance.Settings;
@@ -659,27 +714,11 @@ namespace EDActivityOverlay
             return true;
         }
 
-        private void UpdateJournalStatusUi(GameStateSnapshot state)
+        private void UpdateJournalStatusUi(
+            GameStateSnapshot state)
         {
-            if (LocationStatusText == null)
-            {
-                return;
-            }
-            if (!state.JournalAvailable)
-            {
-                LocationStatusText.Text = Loc.Get("Loc_JOURNAL_NOT_FOUND");
-                return;
-            }
-
-            string system = string.IsNullOrWhiteSpace(state.StarSystem)
-                ? Loc.Get("Loc_WAITING_FOR_GAME")
-                : state.StarSystem.ToUpperInvariant();
-            string location = state.Docked && !string.IsNullOrWhiteSpace(state.Station)
-                ? $"  /  {state.Station.ToUpperInvariant()}"
-                : string.Empty;
-            LocationStatusText.Text = $"{(state.IsLive ? Loc.Get("Loc_LIVE") : Loc.Get("Loc_JOURNAL"))}  •  {system}{location}";
+            // The compact controller no longer duplicates system/location data.
         }
-
         private int NormalizeAutoReturnTimeout(int value)
         {
             return value switch
@@ -746,28 +785,76 @@ namespace EDActivityOverlay
 
         private void UpdateInteractionStatusUi()
         {
-            if (InteractionStatusBadge == null || InteractionHintText == null)
+            if (InteractionStatusBadge == null
+                || CollapsedInteractionStatusBadge == null
+                || InteractionHintText == null)
             {
                 return;
             }
 
-            bool canInteract = exclusiveOverlayInteraction || (interactionModeEnabled && interactiveModeActive);
-            string stateText = canInteract ? Loc.Get("Loc_INTERACTIVE") : Loc.Get("Loc_PASSIVE");
-            InteractionStatusBadge.Text = stateText;
+            bool canInteract =
+                exclusiveOverlayInteraction
+                || (interactionModeEnabled
+                    && interactiveModeActive);
 
-            InteractionStatusBadge.Background = chromeStyle == OverlayChromeStyles.Minimal
-                ? Brushes.Transparent
-                : canInteract
-                    ? new SolidColorBrush(Color.FromArgb(180, 180, 95, 0))
-                    : new SolidColorBrush(Color.FromArgb(120, 70, 25, 0));
+            string stateText =
+                canInteract
+                    ? Loc.Get(
+                        "Loc_INTERACTIVE")
+                    : Loc.Get(
+                        "Loc_PASSIVE");
 
-            string interactionHotkeyText = FormatHotkeyDisplay(SettingsService.Instance.Settings.InteractiveHotkeyModifiers, SettingsService.Instance.Settings.InteractiveHotkeyKey);
-            string toggleHotkeyText = FormatHotkeyDisplay(SettingsService.Instance.Settings.ToggleHotkeyModifiers, SettingsService.Instance.Settings.ToggleHotkeyKey);
-            string overlaysStateText = overlaysSuppressedByHotkey ? Loc.Get("Loc_HIDDEN") : ActivityOptions.First(option => option.Activity == currentActivity).Label;
+            InteractionStatusBadge.Text =
+                stateText;
+
+            CollapsedInteractionStatusBadge.Text =
+                stateText;
+
+            InteractionStatusBadge.Background =
+                chromeStyle == OverlayChromeStyles.Minimal
+                    ? Brushes.Transparent
+                    : canInteract
+                        ? new SolidColorBrush(
+                            Color.FromArgb(
+                                180,
+                                180,
+                                95,
+                                0))
+                        : new SolidColorBrush(
+                            Color.FromArgb(
+                                120,
+                                70,
+                                25,
+                                0));
+
+            string interactionHotkeyText =
+                FormatHotkeyDisplay(
+                    SettingsService.Instance.Settings.InteractiveHotkeyModifiers,
+                    SettingsService.Instance.Settings.InteractiveHotkeyKey);
+
+            string toggleHotkeyText =
+                FormatHotkeyDisplay(
+                    SettingsService.Instance.Settings.ToggleHotkeyModifiers,
+                    SettingsService.Instance.Settings.ToggleHotkeyKey);
+
+            string overlaysStateText =
+                overlaysSuppressedByHotkey
+                    ? Loc.Get(
+                        "Loc_HIDDEN")
+                    : ActivityOptions
+                        .First(
+                            option =>
+                                option.Activity
+                                == currentActivity)
+                        .Label;
+
             InteractionHintText.Text =
-                Loc.Format("Loc_Main_Hint_Format", toggleHotkeyText, overlaysStateText, interactionHotkeyText);
+                Loc.Format(
+                    "Loc_Main_Hint_Format",
+                    toggleHotkeyText,
+                    overlaysStateText,
+                    interactionHotkeyText);
         }
-
         private void SetChromeStyle(string? value)
         {
             chromeStyle = OverlayChromeStyles.Normalize(value);

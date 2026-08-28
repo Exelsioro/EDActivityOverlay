@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
 using EDActivityOverlay.Models;
@@ -528,27 +528,65 @@ namespace EDActivityOverlay
 
         public void EnsureVisibleAfterTargetDetection()
         {
-            Logger.Logger.Info("Setting forceVisible flag and transitioning to ForceShow state for target detection");
-            forceVisible = true;
+            Logger.Logger.Info(
+                "Setting forceVisible flag and transitioning to ForceShow state for target detection");
+
+            forceVisible =
+                true;
 
             if (currentState == OverlayState.Waiting)
             {
-                currentState = OverlayState.ForceShow;
-                Logger.Logger.Info("State transition: Waiting -> ForceShow (triggered by target detection)");
+                currentState =
+                    OverlayState.ForceShow;
+
+                Logger.Logger.Info(
+                    "State transition: Waiting -> ForceShow (triggered by target detection)");
             }
 
-            if (IsLoaded && targetWindow != IntPtr.Zero)
+            if (targetWindow == IntPtr.Zero)
             {
-                bool targetVisible = WindowsAPI.IsWindowVisible(targetWindow);
-                bool targetMinimized = WindowsAPI.IsIconic(targetWindow);
-                if (targetVisible && !targetMinimized && !IsVisible)
-                {
-                    Logger.Logger.Info("Showing MainWindow immediately after target detection");
-                    Show();
-                }
+                return;
             }
-        }
 
+            ApplyAdaptiveSizeForTarget();
+            PositionMainOverlayInPhysicalCorner();
+
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            bool targetVisible =
+                WindowsAPI.IsWindowVisible(
+                    targetWindow);
+
+            bool targetMinimized =
+                WindowsAPI.IsIconic(
+                    targetWindow);
+
+            if (!targetVisible
+                || targetMinimized
+                || IsVisible)
+            {
+                return;
+            }
+
+            Logger.Logger.Info(
+                "Showing MainWindow immediately after target detection");
+
+            Show();
+            ApplyAdaptiveSizeForTarget();
+            PositionMainOverlayInPhysicalCorner();
+
+            bool targetFocused =
+                WindowsAPI.IsWindowOwnedByProcess(
+                    WindowsAPI.GetForegroundWindow(),
+                    targetProcessId);
+
+            WindowsAPI.SetTopmost(
+                this,
+                targetFocused);
+        }
         protected override void OnClosed(EventArgs e)
         {
             Logger.Logger.Info("MainWindow is closing - cleaning up resources");

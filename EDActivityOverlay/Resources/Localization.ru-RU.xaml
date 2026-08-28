@@ -783,8 +783,8 @@
     <sys:String x:Key="Loc_SHIP_STATUS_WIDGET_POSITION">Положение виджета</sys:String>
     <sys:String x:Key="Loc_CURRENT_SYSTEM_SHORT">ТЕКУЩАЯ</sys:String>
     <sys:String x:Key="Loc_NEXT_SYSTEM_SHORT">СЛЕДУЮЩАЯ СИСТЕМА</sys:String>
-    <sys:String x:Key="Loc_SCOOPABLE_SHORT">ЗАПРАВЛЯЕМАЯ</sys:String>
-    <sys:String x:Key="Loc_NOT_SCOOPABLE_SHORT">НЕЗАПРАВЛЯЕМАЯ</sys:String>
+    <sys:String x:Key="Loc_SCOOPABLE_SHORT">ТОПЛИВНАЯ</sys:String>
+    <sys:String x:Key="Loc_NOT_SCOOPABLE_SHORT">НЕТОПЛИВНАЯ</sys:String>
     <sys:String x:Key="Loc_SHIP_STATUS_ROUTE_CAPTION_FORMAT">МАРШРУТ · {0} ПРЫЖ. · {1} · {2}</sys:String>
     <sys:String x:Key="Loc_SHIP_STATUS_FUEL_CRITICAL_FORMAT">КРИТИЧЕСКИЙ ЗАПАС ТОПЛИВА · {0:0}% — маршрут может превышать безопасный резерв.</sys:String>
     <sys:String x:Key="Loc_SHIP_STATUS_FUEL_CAUTION_FORMAT">МАЛО ТОПЛИВА · {0:0}% — заправьтесь при следующей возможности.</sys:String>
@@ -919,6 +919,6 @@
     <sys:String x:Key="Loc_DSS_SELECT_LOG_DIRECTORY">Выберите каталог логов DSS</sys:String>
     <sys:String x:Key="Loc_CONTROLS">Управление</sys:String>
     <sys:String x:Key="Loc_EXPERIMENTAL">Экспериментальные</sys:String>
-</ResourceDictionary>
+    <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">ТЕКУЩАЯ · {0} · {1}</sys:String></ResourceDictionary>
 
 

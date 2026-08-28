@@ -246,6 +246,24 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"Ship status widget settings updated: enabled={enabled}, position={position}");
         }
 
+        public void SetMainOverlayCollapsed(
+            bool collapsed)
+        {
+            if (_settings.MainOverlayCollapsed
+                == collapsed)
+            {
+                return;
+            }
+
+            _settings.MainOverlayCollapsed =
+                collapsed;
+
+            SaveSettings();
+
+            Logger.Logger.Info(
+                $"Main overlay collapsed state updated: {collapsed}");
+        }
+
         public void SetPinnedRoutePosition(string position)
         {
             if (string.Equals(_settings.PinnedRoutePosition, position, StringComparison.OrdinalIgnoreCase))
@@ -521,6 +539,9 @@ namespace EDActivityOverlay.Services
 
         /// <summary>Lifetime of an overlay notification in seconds.</summary>
         public int NotificationDurationSeconds { get; set; } = 6;
+
+        /// <summary>Remembers whether the small main overlay controller is collapsed.</summary>
+        public bool MainOverlayCollapsed { get; set; }
 
         /// <summary>Shows persistent route context and active ship advisories.</summary>
         public bool EnableShipStatusWidget { get; set; } = true;

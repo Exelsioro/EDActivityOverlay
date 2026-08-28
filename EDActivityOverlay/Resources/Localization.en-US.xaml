@@ -919,6 +919,6 @@
     <sys:String x:Key="Loc_DSS_SELECT_LOG_DIRECTORY">Select DSS log directory</sys:String>
     <sys:String x:Key="Loc_CONTROLS">Controls</sys:String>
     <sys:String x:Key="Loc_EXPERIMENTAL">Experimental</sys:String>
-</ResourceDictionary>
+    <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">CURRENT · {0} · {1}</sys:String></ResourceDictionary>
 
 

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using EDActivityOverlay.Models;
@@ -71,7 +71,20 @@ public partial class ShipStatusOverlayWindow : Window
         nextSystem = view.NextSystem;
         CurrentSystemText.Text = string.IsNullOrWhiteSpace(currentSystem)
             ? Loc.Get("Loc_WAITING_FOR_GAME") : currentSystem.ToUpperInvariant();
-        NextSystemText.Text = string.IsNullOrWhiteSpace(nextSystem)
+
+        CurrentSystemCaptionText.Text =
+            string.IsNullOrWhiteSpace(
+                view.CurrentStarClass)
+                ? Loc.Get(
+                    "Loc_CURRENT_SYSTEM_SHORT")
+                : Loc.Format(
+                    "Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT",
+                    view.CurrentStarClass,
+                    view.CurrentStarScoopable
+                        ? Loc.Get(
+                            "Loc_SCOOPABLE_SHORT")
+                        : Loc.Get(
+                            "Loc_NOT_SCOOPABLE_SHORT"));        NextSystemText.Text = string.IsNullOrWhiteSpace(nextSystem)
             ? Loc.Get("Loc_ROUTE_NOT_PLOTTED") : nextSystem.ToUpperInvariant();
         RouteCaptionText.Text = view.RemainingJumps > 0
             ? Loc.Format("Loc_SHIP_STATUS_ROUTE_CAPTION_FORMAT", view.RemainingJumps, view.NextStarClass,
@@ -102,9 +115,19 @@ public partial class ShipStatusOverlayWindow : Window
         bool targetReady = enabled && !contextSuppressed && !OverlayVisibilityState.SuppressAll
             && targetWindow != IntPtr.Zero && WindowsAPI.IsWindow(targetWindow)
             && WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow);
-        IntPtr foreground = WindowsAPI.GetForegroundWindow();
-        bool focused = foreground == targetWindow || WindowsAPI.IsOverlayWindow(foreground);
-        if (!targetReady || !focused) { if (IsVisible) Hide(); return; }
+        IntPtr foreground =
+            WindowsAPI.GetForegroundWindow();
+
+        WindowsAPI.GetWindowThreadProcessId(
+            targetWindow,
+            out uint targetProcessId);
+
+        bool focused =
+            WindowsAPI.IsWindowOwnedByProcess(
+                foreground,
+                targetProcessId)
+            || WindowsAPI.IsOverlayWindow(
+                foreground);        if (!targetReady || !focused) { if (IsVisible) Hide(); return; }
         PositionOverlay();
         if (!IsVisible) Show();
         WindowsAPI.SetTopmost(this, true);
