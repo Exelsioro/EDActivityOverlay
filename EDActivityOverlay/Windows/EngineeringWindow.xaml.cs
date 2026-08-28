@@ -21,6 +21,8 @@ public partial class EngineeringWindow : Window
     private EngineeringSnapshot snapshot = EngineeringSnapshot.Empty;
     private string placement = "MiddleRight";
     private bool fullAssistantVisible;
+    private string chromeStyle =
+        OverlayChromeStyles.Compact;
     private string? widgetHelpMaterialId;
     private EngineerRow? selectedEngineer;
     private EngineerBlueprintRow? selectedEngineerBlueprint;
@@ -44,6 +46,7 @@ public partial class EngineeringWindow : Window
         if (overlayMode)
         {
             WindowStyle = WindowStyle.None;
+            AllowsTransparency = true;
             ResizeMode = ResizeMode.NoResize;
             ShowInTaskbar = false;
             Topmost = true;
@@ -289,25 +292,107 @@ public partial class EngineeringWindow : Window
         PositionOverTarget();
     }
 
-    public void SetChromeStyle(string value)
+    public void SetChromeStyle(
+        string value)
     {
-        string normalized = OverlayChromeStyles.Normalize(value);
-        OverlayChromeHelper.Apply(EngineeringWidgetPanel, normalized);
-        OverlayChromeHelper.Apply(EngineeringWidgetHelpPanel, normalized);
+        chromeStyle =
+            OverlayChromeStyles.Normalize(
+                value);
+
+        OverlayChromeHelper.Apply(
+            EngineeringWidgetPanel,
+            chromeStyle);
+
+        OverlayChromeHelper.Apply(
+            EngineeringWidgetHelpPanel,
+            chromeStyle);
+
+        ApplyWindowSurface();
     }
 
-    public void ApplyInteractionMode(bool canInteract, bool showCursor)
+    private void ApplyWindowSurface()
     {
-        if (!overlayMode || !IsLoaded) return;
-        WindowsAPI.SetClickThrough(this, !canInteract);
-        WidgetInteractionHint.Text = canInteract ? Loc.Get("Loc_DRAG_TO_MOVE") : Loc.Get("Loc_CTRL_6_INTERACT");
-        if (canInteract && showCursor) WindowsAPI.EnsureCursorVisibleOnWindow(this);
-        else WindowsAPI.RestoreCursorVisibility();
-        WindowsAPI.SetTopmost(this, true);
-    }
+        if (!overlayMode)
+        {
+            SetResourceReference(
+                Window.BackgroundProperty,
+                "PrimaryBackgroundColorBrush");
 
+            return;
+        }
+
+        bool transparentSurface =
+            !fullAssistantVisible
+            || chromeStyle
+               == OverlayChromeStyles.Minimal;
+
+        if (transparentSurface)
+        {
+            Background =
+                System.Windows.Media.Brushes.Transparent;
+        }
+        else
+        {
+            SetResourceReference(
+                Window.BackgroundProperty,
+                "PrimaryBackgroundColorBrush");
+        }
+    }
+    public void ApplyInteractionMode(
+        bool canInteract,
+        bool showCursor)
+    {
+        if (!overlayMode
+            || !IsLoaded)
+        {
+            return;
+        }
+
+        WindowsAPI.SetClickThrough(
+            this,
+            !canInteract);
+
+        // WS_EX_TRANSPARENT alone is not enough for WPF: the overlay HWND can
+        // still become the cursor surface while Elite keeps its own cursor hidden.
+        // Disable WPF hit testing and force an invisible cursor while passive.
+        IsHitTestVisible =
+            canInteract;
+
+        ForceCursor =
+            !canInteract;
+
+        Cursor =
+            canInteract
+            && showCursor
+                ? Cursors.Arrow
+                : Cursors.None;
+
+        WidgetInteractionHint.Text =
+            canInteract
+                ? Loc.Get(
+                    "Loc_DRAG_TO_MOVE")
+                : Loc.Get(
+                    "Loc_CTRL_6_INTERACT");
+
+        if (canInteract
+            && showCursor)
+        {
+            WindowsAPI.EnsureCursorVisibleOnWindow(
+                this);
+        }
+        else
+        {
+            WindowsAPI.RestoreCursorVisibility();
+        }
+
+        WindowsAPI.SetTopmost(
+            this,
+            true);
+    }
     private void PositionOverTarget()
     {
+        ApplyWindowSurface();
+
         if (!overlayMode || targetWindow == IntPtr.Zero
             || !WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT rect)) return;
         double targetWidth = rect.Right - rect.Left;
