@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -137,17 +137,61 @@ public sealed class BlueprintCatalogService
             }
         }
 
-        IReadOnlyDictionary<string, IReadOnlyList<string>> engineerMap = ParseEngineerMap(engineerRecipeSource);
-        return result
-            .Select(recipe => engineerMap.TryGetValue(recipe.Id, out IReadOnlyList<string>? engineers)
-                ? recipe with { Engineers = engineers }
-                : recipe)
-            .OrderBy(recipe => recipe.ModuleName)
-            .ThenBy(recipe => recipe.BlueprintName)
-            .ThenBy(recipe => recipe.Grade)
-            .ToArray();
+        EngineeringCatalogAssignments assignments =
+            ParseEngineeringAssignments(
+                engineerRecipeSource);
+
+        return
+            result
+                .Select(
+                    recipe =>
+                    {
+                        if (!recipe.IsExperimental)
+                        {
+                            return
+                                assignments.RecipeEngineers.TryGetValue(
+                                    recipe.Id,
+                                    out IReadOnlyList<string>? engineers)
+                                    ? recipe with
+                                    {
+                                        Engineers =
+                                            engineers
+                                    }
+                                    : recipe;
+                        }
+
+                        IReadOnlyList<string> experimentalEngineers =
+                            ResolveExperimentalEngineers(
+                                recipe,
+                                assignments);
+
+                        return
+                            experimentalEngineers.Count > 0
+                                ? recipe with
+                                {
+                                    Engineers =
+                                        experimentalEngineers
+                                }
+                                : recipe;
+                    })
+                .OrderBy(
+                    recipe =>
+                        recipe.ModuleName)
+                .ThenBy(
+                    recipe =>
+                        recipe.BlueprintName)
+                .ThenBy(
+                    recipe =>
+                        recipe.Grade)
+                .ToArray();
     }
 
+    internal void SetRecipesForTests(
+        IReadOnlyList<BlueprintRecipe> value)
+    {
+        SetRecipes(
+            value);
+    }
     private bool TryLoadFiles(string blueprintPath, string experimentalPath, string engineerRecipePath)
     {
         try
@@ -175,36 +219,317 @@ public sealed class BlueprintCatalogService
         }
     }
 
-    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> ParseEngineerMap(string? source)
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> ParseEngineerMap(
+        string? source) =>
+        ParseEngineeringAssignments(
+            source)
+            .RecipeEngineers;
+
+    private sealed record EngineeringCatalogAssignments(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> RecipeEngineers,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> ModuleEngineers,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> ExperimentalModules,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> ExperimentalModulesByName);
+
+    private static EngineeringCatalogAssignments ParseEngineeringAssignments(
+        string? source)
     {
-        if (string.IsNullOrWhiteSpace(source))
+        if (string.IsNullOrWhiteSpace(
+                source))
         {
-            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+            return
+                new EngineeringCatalogAssignments(
+                    new Dictionary<string, IReadOnlyList<string>>(
+                        StringComparer.OrdinalIgnoreCase),
+                    new Dictionary<string, IReadOnlyList<string>>(
+                        StringComparer.OrdinalIgnoreCase),
+                    new Dictionary<string, IReadOnlyList<string>>(
+                        StringComparer.OrdinalIgnoreCase),
+                    new Dictionary<string, IReadOnlyList<string>>(
+                        StringComparer.OrdinalIgnoreCase));
         }
 
-        // EDDiscovery keeps the exact engineer list on each ship recipe. Its fdname and
-        // level correspond to Coriolis' blueprint fdname/Gn key, so the catalogs can be joined.
-        const string pattern = "new\\s+EngineeringRecipe\\(\\s*\"[^\"]*\"\\s*,\\s*\"(?<fd>[^\"]+)\"\\s*,\\s*\"[^\"]*\"\\s*,\\s*[^,\\r\\n]+\\s*,\\s*(?<grade>[1-5])\\s*,\\s*\"(?<engineers>[^\"]*)\"";
-        Dictionary<string, HashSet<string>> builders = new(StringComparer.OrdinalIgnoreCase);
-        foreach (Match match in Regex.Matches(source, pattern, RegexOptions.CultureInvariant))
+        Dictionary<string, HashSet<string>> recipeBuilders =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+        Dictionary<string, HashSet<string>> moduleBuilders =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+        Dictionary<string, HashSet<string>> experimentalModuleBuilders =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+        Dictionary<string, HashSet<string>> experimentalNameBuilders =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+        const string normalPattern =
+            "new\\s+EngineeringRecipe\\(\\s*\\\"[^\\\"]*\\\"\\s*,\\s*\\\"(?<fd>[^\\\"]+)\\\"\\s*,\\s*\\\"[^\\\"]*\\\"\\s*,\\s*ItemData\\.ShipModule\\.ModuleTypes\\.(?<module>[A-Za-z0-9_]+)\\s*,\\s*(?<grade>[1-5])\\s*,\\s*\\\"(?<engineers>[^\\\"]*)\\\"";
+
+        foreach (Match match
+                 in Regex.Matches(
+                     source,
+                     normalPattern,
+                     RegexOptions.CultureInvariant))
         {
-            string key = $"{match.Groups["fd"].Value}:G{match.Groups["grade"].Value}";
-            if (!builders.TryGetValue(key, out HashSet<string>? names))
-            {
-                names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                builders[key] = names;
-            }
-            foreach (string name in match.Groups["engineers"].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                names.Add(name);
-            }
+            string recipeKey =
+                $"{match.Groups["fd"].Value}:G{match.Groups["grade"].Value}";
+
+            string module =
+                NormalizeModuleType(
+                    match.Groups["module"].Value);
+
+            string[] engineerNames =
+                match.Groups["engineers"].Value
+                    .Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries
+                        | StringSplitOptions.TrimEntries);
+
+            AddRange(
+                recipeBuilders,
+                recipeKey,
+                engineerNames);
+
+            AddRange(
+                moduleBuilders,
+                module,
+                engineerNames);
         }
-        return builders.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<string>)pair.Value.OrderBy(name => name).ToArray(),
-            StringComparer.OrdinalIgnoreCase);
+
+        const string multiModuleSpecialPattern =
+            "new\\s+EngineeringRecipe\\(\\s*\\\"(?<name>[^\\\"]+)\\\"\\s*,\\s*\\\"(?<fd>special_[^\\\"]+)\\\"\\s*,\\s*\\\"(?<modules>[^\\\"]+)\\\"\\s*,\\s*\\\"[^\\\"]*\\\"\\s*\\)";
+
+        foreach (Match match
+                 in Regex.Matches(
+                     source,
+                     multiModuleSpecialPattern,
+                     RegexOptions.CultureInvariant))
+        {
+            string[] modules =
+                match.Groups["modules"].Value
+                    .Split(
+                        ',',
+                        StringSplitOptions.RemoveEmptyEntries
+                        | StringSplitOptions.TrimEntries)
+                    .Select(
+                        NormalizeModuleType)
+                    .Where(
+                        item =>
+                            !string.IsNullOrWhiteSpace(
+                                item))
+                    .ToArray();
+
+            AddRange(
+                experimentalModuleBuilders,
+                match.Groups["fd"].Value,
+                modules);
+
+            AddRange(
+                experimentalNameBuilders,
+                MaterialName.Normalize(
+                    match.Groups["name"].Value),
+                modules);
+        }
+
+        const string singleModuleSpecialPattern =
+            "new\\s+EngineeringRecipe\\(\\s*\\\"(?<name>[^\\\"]+)\\\"\\s*,\\s*\\\"(?<fd>special_[^\\\"]+)\\\"\\s*,\\s*ItemData\\.ShipModule\\.ModuleTypes\\.(?<module>[A-Za-z0-9_]+)\\s*,\\s*\\\"[^\\\"]*\\\"\\s*\\)";
+
+        foreach (Match match
+                 in Regex.Matches(
+                     source,
+                     singleModuleSpecialPattern,
+                     RegexOptions.CultureInvariant))
+        {
+            string module =
+                NormalizeModuleType(
+                    match.Groups["module"].Value);
+
+            AddRange(
+                experimentalModuleBuilders,
+                match.Groups["fd"].Value,
+                [module]);
+
+            AddRange(
+                experimentalNameBuilders,
+                MaterialName.Normalize(
+                    match.Groups["name"].Value),
+                [module]);
+        }
+
+        return
+            new EngineeringCatalogAssignments(
+                Freeze(
+                    recipeBuilders),
+                Freeze(
+                    moduleBuilders),
+                Freeze(
+                    experimentalModuleBuilders),
+                Freeze(
+                    experimentalNameBuilders));
     }
 
+    private static IReadOnlyList<string> ResolveExperimentalEngineers(
+        BlueprintRecipe recipe,
+        EngineeringCatalogAssignments assignments)
+    {
+        string fdName =
+            recipe.Id.StartsWith(
+                    "experimental:",
+                    StringComparison.OrdinalIgnoreCase)
+                ? recipe.Id[
+                    "experimental:".Length..]
+                : recipe.Id;
+
+        IReadOnlyList<string>? modules =
+            assignments.ExperimentalModules.TryGetValue(
+                fdName,
+                out IReadOnlyList<string>? exact)
+                ? exact
+                : null;
+
+        if (modules is null)
+        {
+            assignments.ExperimentalModulesByName.TryGetValue(
+                MaterialName.Normalize(
+                    recipe.BlueprintName),
+                out modules);
+        }
+
+        if (modules is null
+            || modules.Count == 0)
+        {
+            return
+                Array.Empty<string>();
+        }
+
+        HashSet<string> engineers =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+        foreach (string module
+                 in ExpandModuleAliases(
+                     modules))
+        {
+            if (!assignments.ModuleEngineers.TryGetValue(
+                    module,
+                    out IReadOnlyList<string>? moduleEngineers))
+            {
+                continue;
+            }
+
+            foreach (string engineer
+                     in moduleEngineers)
+            {
+                engineers.Add(
+                    engineer);
+            }
+        }
+
+        return
+            engineers
+                .OrderBy(
+                    name =>
+                        name)
+                .ToArray();
+    }
+
+    private static IEnumerable<string> ExpandModuleAliases(
+        IReadOnlyList<string> modules)
+    {
+        foreach (string module
+                 in modules)
+        {
+            if (module.Equals(
+                    "weapon",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                yield return "beamlaser";
+                yield return "burstlaser";
+                yield return "cannon";
+                yield return "fragmentcannon";
+                yield return "minelauncher";
+                yield return "missilerack";
+                yield return "multicannon";
+                yield return "plasmaaccelerator";
+                yield return "pulselaser";
+                yield return "railgun";
+                yield return "seekermissilerack";
+                yield return "torpedopylon";
+                continue;
+            }
+
+            yield return module;
+
+            if (module.Equals(
+                    "seekermissilerack",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                yield return "missilerack";
+            }
+        }
+    }
+
+    private static string NormalizeModuleType(
+        string value) =>
+        new(
+            value
+                .Where(
+                    char.IsLetterOrDigit)
+                .Select(
+                    char.ToLowerInvariant)
+                .ToArray());
+
+    private static void AddRange(
+        Dictionary<string, HashSet<string>> destination,
+        string key,
+        IEnumerable<string> values)
+    {
+        if (string.IsNullOrWhiteSpace(
+                key))
+        {
+            return;
+        }
+
+        if (!destination.TryGetValue(
+                key,
+                out HashSet<string>? set))
+        {
+            set =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            destination[key] =
+                set;
+        }
+
+        foreach (string value
+                 in values)
+        {
+            if (!string.IsNullOrWhiteSpace(
+                    value))
+            {
+                set.Add(
+                    value);
+            }
+        }
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> Freeze(
+        Dictionary<string, HashSet<string>> source) =>
+        source.ToDictionary(
+            pair =>
+                pair.Key,
+            pair =>
+                (IReadOnlyList<string>)
+                pair.Value
+                    .OrderBy(
+                        name =>
+                            name)
+                    .ToArray(),
+            StringComparer.OrdinalIgnoreCase);
     private void SetRecipes(IReadOnlyList<BlueprintRecipe> value)
     {
         lock (sync)

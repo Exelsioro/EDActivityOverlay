@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Engineering;
 using EDActivityOverlay.Services;
+using EDActivityOverlay.Services.Navigation;
 using EDActivityOverlay.Utils;
 
 namespace EDActivityOverlay.Windows;
@@ -23,6 +24,8 @@ public partial class EngineeringWindow : Window
     private string? widgetHelpMaterialId;
     private EngineerRow? selectedEngineer;
     private EngineerBlueprintRow? selectedEngineerBlueprint;
+    private BlueprintRecipe? selectedEngineerExperimental;
+    private CancellationTokenSource? engineerNavigationCancellation;
 
     public bool IsOverlayMode => overlayMode;
 
@@ -80,6 +83,11 @@ public partial class EngineeringWindow : Window
         }
         service.StateChanged -= OnStateChanged;
         service.Catalog.CatalogChanged -= OnCatalogChanged;
+
+        engineerNavigationCancellation?.Cancel();
+        engineerNavigationCancellation?.Dispose();
+        engineerNavigationCancellation = null;
+
         parentWindow?.OnEngineeringOverlayClosed();
     }
 
@@ -572,6 +580,8 @@ public partial class EngineeringWindow : Window
         EngineerMeetingText.Text = row.Definition.Meeting;
         EngineerUnlockText.Text = row.Definition.Unlock;
         PopulateEngineerBlueprints(row);
+        PopulateEngineerExperimentals(row);
+        EngineerNavigationStatusText.Text = string.Empty;
     }
 
     private void PopulateEngineerBlueprints(EngineerRow engineer)
@@ -618,8 +628,13 @@ public partial class EngineeringWindow : Window
             return;
         }
         EngineerGradeMaterialsGrid.ItemsSource = BuildIngredientRows([selected.Recipe]);
-        EngineerPathMaterialsGrid.ItemsSource = BuildIngredientRows(
-            selectedEngineerBlueprint.Recipes.Where(recipe => recipe.Grade <= selected.Recipe.Grade));
+        EngineerPathMaterialsGrid.ItemsSource =
+            BuildGradePathIngredientRows(
+                selectedEngineerBlueprint.Recipes
+                    .Where(
+                        recipe =>
+                            recipe.Grade
+                            <= selected.Recipe.Grade));
     }
 
     private void PinEngineerGrade_Click(object sender, RoutedEventArgs e)
@@ -639,13 +654,60 @@ public partial class EngineeringWindow : Window
         }
     }
 
-    private static MaterialCountRow[] BuildIngredientRows(IEnumerable<BlueprintRecipe> recipes) =>
-        recipes.SelectMany(recipe => recipe.Ingredients)
-            .GroupBy(ingredient => ingredient.MaterialId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new MaterialCountRow(
-                EngineeringLocalization.MaterialName(group.Key, group.First().Name),
-                group.Sum(ingredient => ingredient.Count)))
-            .OrderBy(row => row.Name)
+    private static MaterialCountRow[] BuildIngredientRows(
+        IEnumerable<BlueprintRecipe> recipes) =>
+        recipes
+            .SelectMany(
+                recipe =>
+                    recipe.Ingredients)
+            .GroupBy(
+                ingredient =>
+                    ingredient.MaterialId,
+                StringComparer.OrdinalIgnoreCase)
+            .Select(
+                group =>
+                    new MaterialCountRow(
+                        EngineeringLocalization.MaterialName(
+                            group.Key,
+                            group.First().Name),
+                        group.Sum(
+                            ingredient =>
+                                ingredient.Count)))
+            .OrderBy(
+                row =>
+                    row.Name)
+            .ToArray();
+
+    private static MaterialCountRow[] BuildGradePathIngredientRows(
+        IEnumerable<BlueprintRecipe> recipes) =>
+        recipes
+            .SelectMany(
+                recipe =>
+                    recipe.Ingredients.Select(
+                        ingredient =>
+                            (
+                                Ingredient: ingredient,
+                                Multiplier:
+                                    Math.Max(
+                                        1,
+                                        recipe.Grade))))
+            .GroupBy(
+                item =>
+                    item.Ingredient.MaterialId,
+                StringComparer.OrdinalIgnoreCase)
+            .Select(
+                group =>
+                    new MaterialCountRow(
+                        EngineeringLocalization.MaterialName(
+                            group.Key,
+                            group.First().Ingredient.Name),
+                        group.Sum(
+                            item =>
+                                item.Ingredient.Count
+                                * item.Multiplier)))
+            .OrderBy(
+                row =>
+                    row.Name)
             .ToArray();
 
     private static string RecipeFamilyKey(BlueprintRecipe recipe)
@@ -665,8 +727,92 @@ public partial class EngineeringWindow : Window
             || right.EndsWith(left, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void CopyEngineerSystem_Click(object sender, RoutedEventArgs e) =>
-        CopySystem(selectedEngineer?.SystemName);
+    private void CopyEngineerSystem_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        CopySystem(
+            selectedEngineer?.SystemName);
+
+    private async void NavigateEngineerSystem_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        string target =
+            selectedEngineer?.SystemName
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(
+                target)
+            || targetWindow == IntPtr.Zero)
+        {
+            return;
+        }
+
+        engineerNavigationCancellation?.Cancel();
+        engineerNavigationCancellation?.Dispose();
+
+        engineerNavigationCancellation =
+            new CancellationTokenSource();
+
+        try
+        {
+            Clipboard.SetText(
+                target);
+        }
+        catch (Exception ex)
+        {
+            Logger.Logger.Warning(
+                $"Unable to copy engineer system before navigation: {ex.Message}");
+        }
+
+        bool automatic =
+            SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
+
+        EngineerNavigationStatusText.Text =
+            Loc.Format(
+                "Loc_NAVIGATION_PREPARING",
+                target);
+
+        if (overlayMode)
+        {
+            WindowsAPI.SetClickThrough(
+                this,
+                true);
+        }
+
+        try
+        {
+            await Task.Yield();
+
+            EliteNavigationResult result =
+                await EliteRouteNavigationService.Instance.PrepareAsync(
+                    target,
+                    targetWindow,
+                    automatic,
+                    engineerNavigationCancellation.Token);
+
+            EngineerNavigationStatusText.Text =
+                string.IsNullOrWhiteSpace(
+                    result.Detail)
+                    ? Loc.Format(
+                        result.MessageKey,
+                        result.TargetSystem)
+                    : Loc.Format(
+                        result.MessageKey,
+                        result.TargetSystem,
+                        result.Detail);
+        }
+        finally
+        {
+            if (overlayMode
+                && IsLoaded)
+            {
+                ApplyInteractionMode(
+                    canInteract: true,
+                    showCursor: true);
+            }
+        }
+    }
 
     private void OpenEngineerWiki_Click(object sender, RoutedEventArgs e)
     {
@@ -761,6 +907,80 @@ public partial class EngineeringWindow : Window
                 ? Loc.Format("Loc_Engineer_progress_rank_format", status, progress.Rank, progress.RankProgress)
                 : status;
             return new EngineerRow(definition, status, current);
+        }
+    }
+
+    private void PopulateEngineerExperimentals(
+        EngineerRow engineer)
+    {
+        string? previousId =
+            selectedEngineerExperimental?.Id;
+
+        BlueprintRecipe[] rows =
+            service.Catalog.Recipes
+                .Where(
+                    recipe =>
+                        recipe.IsExperimental
+                        && recipe.Engineers.Any(
+                            name =>
+                                EngineerNameMatches(
+                                    name,
+                                    engineer.Name)))
+                .OrderBy(
+                    recipe =>
+                        recipe.DisplayName)
+                .ToArray();
+
+        EngineerExperimentalCombo.ItemsSource =
+            rows;
+
+        selectedEngineerExperimental =
+            rows.FirstOrDefault(
+                recipe =>
+                    recipe.Id
+                    == previousId)
+            ?? rows.FirstOrDefault();
+
+        EngineerExperimentalCombo.SelectedItem =
+            selectedEngineerExperimental;
+
+        EngineerExperimentalUnavailableText.Visibility =
+            rows.Length == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        PopulateEngineerExperimentalMaterials();
+    }
+
+    private void EngineerExperimental_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        selectedEngineerExperimental =
+            EngineerExperimentalCombo.SelectedItem
+            as BlueprintRecipe;
+
+        PopulateEngineerExperimentalMaterials();
+    }
+
+    private void PopulateEngineerExperimentalMaterials()
+    {
+        EngineerExperimentalMaterialsGrid.ItemsSource =
+            selectedEngineerExperimental is null
+                ? Array.Empty<MaterialCountRow>()
+                : BuildIngredientRows(
+                    [selectedEngineerExperimental]);
+    }
+
+    private void PinEngineerExperimental_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (selectedEngineerExperimental is not null)
+        {
+            service.AddOrIncreaseWishlist(
+                selectedEngineerExperimental,
+                1);
         }
     }
 

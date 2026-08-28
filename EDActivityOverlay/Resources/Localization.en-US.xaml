@@ -14,16 +14,16 @@
     <sys:String x:Key="Loc_JOURNAL_BLUEPRINT_LIST_ACQUISITION_ADVISOR">JOURNAL  •  BLUEPRINT LIST  •  ACQUISITION ADVISOR</sys:String>
     <sys:String x:Key="Loc_Waiting_for_journal_data">Waiting for journal data</sys:String>
     <sys:String x:Key="Loc_CLOSE">CLOSE</sys:String>
-    <sys:String x:Key="Loc_Quantities_are_read_from_Materials_json_Backpack_json_and_ShipLocker_json_The_plan_shows_e">Quantities are read from Materials.json, Backpack.json and ShipLocker.json. The plan shows exact modification applications, not guaranteed grade completion.</sys:String>
+    <sys:String x:Key="Loc_Quantities_are_read_from_Materials_json_Backpack_json_and_ShipLocker_json_The_plan_shows_e">Material quantities update from the live Elite journal. A full grade path plans G1×1, G2×2, G3×3, G4×4 and G5×5 applications. Experimental effects use one application.</sys:String>
     <sys:String x:Key="Loc_MATERIALS">MATERIALS</sys:String>
     <sys:String x:Key="Loc_Search_materials">Search materials</sys:String>
     <sys:String x:Key="Loc_MATERIAL">MATERIAL</sys:String>
     <sys:String x:Key="Loc_CATEGORY">CATEGORY</sys:String>
     <sys:String x:Key="Loc_AVAILABLE">AVAILABLE</sys:String>
     <sys:String x:Key="Loc_UPDATED">UPDATED</sys:String>
-    <sys:String x:Key="Loc_BLUEPRINTS_AND_PLAN">BLUEPRINTS AND PLAN</sys:String>
-    <sys:String x:Key="Loc_ADD_BLUEPRINT">ADD BLUEPRINT</sys:String>
-    <sys:String x:Key="Loc_Filter_by_module_or_modification">Filter by module or modification</sys:String>
+    <sys:String x:Key="Loc_BLUEPRINTS_AND_PLAN">BLUEPRINTS, EFFECTS AND PLAN</sys:String>
+    <sys:String x:Key="Loc_ADD_BLUEPRINT">ADD MODIFICATION / EFFECT</sys:String>
+    <sys:String x:Key="Loc_Filter_by_module_or_modification">Filter by module, modification or experimental effect</sys:String>
     <sys:String x:Key="Loc_PLANNED">PLANNED</sys:String>
     <sys:String x:Key="Loc_APPLICATIONS">APPLICATIONS</sys:String>
     <sys:String x:Key="Loc_QTY">QTY</sys:String>
@@ -919,6 +919,9 @@
     <sys:String x:Key="Loc_DSS_SELECT_LOG_DIRECTORY">Select DSS log directory</sys:String>
     <sys:String x:Key="Loc_CONTROLS">Controls</sys:String>
     <sys:String x:Key="Loc_EXPERIMENTAL">Experimental</sys:String>
-    <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">CURRENT · {0} · {1}</sys:String></ResourceDictionary>
+    <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">CURRENT · {0} · {1}</sys:String>    <sys:String x:Key="Loc_AVAILABLE_EXPERIMENTAL_EFFECTS">AVAILABLE EXPERIMENTAL EFFECTS</sys:String>
+    <sys:String x:Key="Loc_PIN_EXPERIMENTAL_EFFECT">PIN EXPERIMENTAL EFFECT</sys:String>
+    <sys:String x:Key="Loc_ENGINEER_EXPERIMENTALS_UNAVAILABLE">Experimental-effect assignments are unavailable for this engineer.</sys:String>
+    <sys:String x:Key="Loc_ROUTE_TO_ENGINEER">ROUTE TO ENGINEER</sys:String></ResourceDictionary>
 
 
