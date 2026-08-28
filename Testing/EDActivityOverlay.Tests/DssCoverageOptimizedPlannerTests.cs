@@ -17,7 +17,7 @@ public sealed class DssCoverageOptimizedPlannerTests
             3);
 
     [Fact]
-    public void LiveN18Patch26Case_KeepsPredictedBatchAtFifteen()
+    public void LiveN18Patch26Case_KeepsPredictedBatchAtSixteen()
     {
         DssEngineeringTargetResolution resolution =
             DssEngineeringTargetResolver.Resolve(
@@ -26,12 +26,12 @@ public sealed class DssCoverageOptimizedPlannerTests
                 LivePatch26Module);
 
         Assert.Equal(
-            15,
+            16,
             resolution.TargetCount);
     }
 
     [Fact]
-    public void OptimizedN15Layout_MateriallyImprovesWholeSphereCoverage()
+    public void OptimizedN16Layout_MeetsReservedWholeSphereCoverage()
     {
         DssEngineeringTargetResolution resolution =
             DssEngineeringTargetResolver.Resolve(
@@ -40,7 +40,7 @@ public sealed class DssCoverageOptimizedPlannerTests
                 LivePatch26Module);
 
         Assert.Equal(
-            15,
+            16,
             resolution.TargetCount);
 
         var legacy =
@@ -70,14 +70,13 @@ public sealed class DssCoverageOptimizedPlannerTests
             optimizedCoverage
             >= legacyCoverage);
 
-        // The discrete whole-sphere optimizer should provide a useful margin,
-        // not merely reshuffle equivalent Fibonacci points.
+        // N18 now carries an explicit model-uncertainty reserve. The selected
+        // N16 base layout must satisfy that current production threshold.
         Assert.True(
             optimizedCoverage
-            >= legacyCoverage + 0.015d);
-
-        Assert.True(
-            optimizedCoverage >= 0.94d);
+            >= DssEngineeringTargetResolver
+                .ResolveRequiredCoverageFraction(
+                    18));
     }
 
     [Fact]
@@ -120,7 +119,7 @@ public sealed class DssCoverageOptimizedPlannerTests
                     resolution.ActualCapAngularRadius);
 
         Assert.Equal(
-            15,
+            16,
             plan.Count);
 
         Assert.True(

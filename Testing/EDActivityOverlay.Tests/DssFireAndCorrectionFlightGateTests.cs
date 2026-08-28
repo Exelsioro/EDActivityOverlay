@@ -5,8 +5,21 @@ using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
 
-public sealed class DssFireAndCorrectionFlightGateTests
+[Collection("DssNativeEfficiencyTargetRuntime")]
+public sealed class DssFireAndCorrectionFlightGateTests : IDisposable
 {
+    public DssFireAndCorrectionFlightGateTests()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
+    public void Dispose()
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.ResetForTests();
+    }
+
     [Fact]
     public void NonCenterVisualTarget_IsNotHeldAcrossSolverDropout()
     {

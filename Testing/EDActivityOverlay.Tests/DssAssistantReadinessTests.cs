@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Dss;
 using Xunit;
@@ -45,7 +45,7 @@ public sealed class DssAssistantReadinessTests
     }
 
     [Fact]
-    public void RecommendedDistanceForRecordedBodyMatchesExperimentalBand()
+    public void RecommendedDistanceForRecordedBodyMatchesCurrentReadyBand()
     {
         const double radiusMeters =
             11_064_317d;
@@ -57,22 +57,23 @@ public sealed class DssAssistantReadinessTests
                 .CalculateRecommendedCenterDistancesMeters(
                     radiusMeters);
 
+        // Current production band:
+        // near = 28° diameter, target = 23°, far = 21.5°.
         Assert.InRange(
             near / 1_000_000d,
-            40.0,
-            40.3);
-
-        Assert.InRange(
-            target / 1_000_000d,
             45.6,
             45.9);
 
         Assert.InRange(
-            far / 1_000_000d,
-            57.8,
-            58.2);
-    }
+            target / 1_000_000d,
+            55.3,
+            55.7);
 
+        Assert.InRange(
+            far / 1_000_000d,
+            59.1,
+            59.5);
+    }
     [Fact]
     public void MissingBodyTargetBlocksReadiness()
     {

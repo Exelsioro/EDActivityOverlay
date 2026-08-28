@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
@@ -89,7 +89,7 @@ public sealed class NavigationStatusAndMainOverlayTests
     }
 
     [Fact]
-    public void MainOverlayLifecycleUsesProcessFocusAndCornerPosition()
+    public void MainOverlayLifecycleUsesProcessFocusAndPhysicalCornerPosition()
     {
         string code =
             File.ReadAllText(
@@ -97,6 +97,13 @@ public sealed class NavigationStatusAndMainOverlayTests
                     "EDActivityOverlay",
                     "Windows",
                     "MainWindow.xaml.cs"));
+
+        string compact =
+            File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
+                    "Windows",
+                    "MainWindow.CompactControl.cs"));
 
         string xaml =
             File.ReadAllText(
@@ -111,12 +118,22 @@ public sealed class NavigationStatusAndMainOverlayTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "PositionMainOverlayInCorner",
+            "PositionMainOverlayInPhysicalCorner",
+            compact,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "GetMonitorBounds",
+            compact,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "WindowsAPI.SetTopmost(",
             code,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "WindowsAPI.SetTopmost(this, shouldBeTopmost);",
+            "shouldBeTopmost",
             code,
             StringComparison.Ordinal);
 
@@ -125,7 +142,6 @@ public sealed class NavigationStatusAndMainOverlayTests
             xaml,
             StringComparison.Ordinal);
     }
-
     [Fact]
     public void ShipStatusWidgetHasLocalizedCurrentStarCaption()
     {
