@@ -24,16 +24,29 @@ public sealed class DssEngineeringTargetResolverTests
                 "BODY",
                 module);
 
-        Assert.Equal(6, result.TargetCount);
-        Assert.False(result.Reduced);
+        Assert.Equal(
+            6,
+            result.TargetCount);
+
+        Assert.False(
+            result.Reduced);
+
         Assert.InRange(
             result.ScannerRadiusMultiplier,
             0.9999d,
             1.0001d);
+
+        Assert.True(
+            result.StockCapAngularRadius > 0d);
+
+        Assert.InRange(
+            result.ActualCapAngularRadius,
+            result.StockCapAngularRadius - 1e-9d,
+            result.StockCapAngularRadius + 1e-9d);
     }
 
     [Fact]
-    public void FiftyPercentExpandedScanner_ReducesSixProbeBodyToTetrahedron()
+    public void FiftyPercentExpandedScanner_UsesAreaScaling()
     {
         var module =
             new DssModuleSnapshot(
@@ -50,14 +63,66 @@ public sealed class DssEngineeringTargetResolverTests
                 "BODY",
                 module);
 
-        Assert.Equal(4, result.TargetCount);
-        Assert.True(result.Reduced);
+        double stockArea =
+            DssSphericalCapCoverage
+                .SingleCapAreaFraction(
+                    result.StockCapAngularRadius);
+
+        double actualArea =
+            DssSphericalCapCoverage
+                .SingleCapAreaFraction(
+                    result.ActualCapAngularRadius);
+
+        Assert.InRange(
+            actualArea / stockArea,
+            1.499d,
+            1.501d);
+
+        // With the current deterministic N=5 layout, +50% area is sufficient
+        // for 90%, while N=4 is not. Old angular-radius multiplication
+        // incorrectly collapsed this BODY to four probes.
+        Assert.Equal(
+            5,
+            result.TargetCount);
+
+        Assert.True(
+            result.Reduced);
+
         Assert.True(
             result.PredictedCoverage >= 0.90d);
     }
 
     [Fact]
-    public void SettingsTarget_IsNeverReducedByEngineeringModel()
+    public void PreEngineeredDoubleAreaScanner_ReducesSixProbeBodyToFour()
+    {
+        var module =
+            new DssModuleSnapshot(
+                "dss",
+                "DSS",
+                40d,
+                20d,
+                "preengineered",
+                5);
+
+        DssEngineeringTargetResolution result =
+            DssEngineeringTargetResolver.Resolve(
+                6,
+                "BODY",
+                module);
+
+        Assert.Equal(
+            4,
+            result.TargetCount);
+
+        Assert.True(
+            result.Reduced);
+
+        Assert.True(
+            result.PredictedCoverage >= 0.90d);
+    }
+
+    [Fact]
+    public void SettingsTarget_IsNeverReducedButKeepsActualFootprint()
     {
         var module =
             new DssModuleSnapshot(
@@ -74,8 +139,16 @@ public sealed class DssEngineeringTargetResolverTests
                 "SETTINGS",
                 module);
 
-        Assert.Equal(6, result.TargetCount);
-        Assert.False(result.Reduced);
+        Assert.Equal(
+            6,
+            result.TargetCount);
+
+        Assert.False(
+            result.Reduced);
+
+        Assert.True(
+            result.ActualCapAngularRadius
+            > result.StockCapAngularRadius);
     }
 
     [Theory]

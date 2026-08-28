@@ -16,7 +16,7 @@ public sealed class DssSphericalPlacementPlannerTests
     [Fact]
     public void SphericalPoint_CartesianConversion_PreservesUnitNormAndAngles()
     {
-        SphericalPoint p = new(Math.PI / 3d, Math.PI / 4d); // theta = 60 deg, phi = 45 deg
+        SphericalPoint p = new(Math.PI / 3d, Math.PI / 4d); // theta = 60 deg, phi = 45 deg1
 
         double norm = Math.Sqrt(p.X * p.X + p.Y * p.Y + p.Z * p.Z);
         Assert.InRange(norm, 0.999999, 1.000001);

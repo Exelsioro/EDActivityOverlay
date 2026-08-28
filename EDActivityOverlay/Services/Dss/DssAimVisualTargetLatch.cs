@@ -8,12 +8,18 @@ namespace EDActivityOverlay.Services.Dss;
 /// CENTER is special: the native white reticle can hide the CV centre for
 /// several seconds while the user is doing exactly the correct thing. A centre
 /// target therefore remains visible until the targeting step changes or the
-/// scan completes. Other targets retain only a short dropout grace.
+/// scan completes.
+///
+/// Non-center targets are not held across a solver dropout. A visible
+/// non-center target must be actionable by the fire-owned sequence state in
+/// the same frame. The old presentation-only 2 s grace could show a stale
+/// marker after fire telemetry had already marked the target unavailable,
+/// causing the same numbered probe to be fired twice.
 /// </summary>
 internal sealed class DssAimVisualTargetLatch
 {
     internal static readonly TimeSpan NonCenterHoldDuration =
-        TimeSpan.FromSeconds(2);
+        TimeSpan.Zero;
 
     private int step;
     private DateTimeOffset lastValidUtc =

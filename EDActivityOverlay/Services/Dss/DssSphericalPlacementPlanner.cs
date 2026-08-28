@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using EDActivityOverlay.Models;
 
@@ -12,8 +13,8 @@ internal enum DssPlannerStrategy
 }
 
 /// <summary>
-/// Planned spherical aim point combining unit-sphere impact coordinates (theta, phi)
-/// and projected screen aim offsets (Nx, Ny, K).
+/// Planned spherical aim point combining unit-sphere impact coordinates
+/// (theta, phi) and projected screen aim offsets (Nx, Ny, K).
 /// </summary>
 internal sealed record DssSphericalAimTarget(
     bool Available,
@@ -28,7 +29,8 @@ internal sealed record DssSphericalAimTarget(
     int CandidateId = 0,
     double CoverageScore = 0d)
 {
-    public static DssSphericalAimTarget Empty(int totalPlanCount) =>
+    public static DssSphericalAimTarget Empty(
+        int totalPlanCount) =>
         new(
             false,
             0,
@@ -42,26 +44,85 @@ internal sealed record DssSphericalAimTarget(
 }
 
 /// <summary>
-/// Spherical DSS Placement Planner (Requirements 1–14).
+/// Predictive spherical DSS placement planner.
 ///
-/// Features:
-/// 1. Unit-sphere representation of probe impacts S^2.
-/// 2. Rotational symmetry preservation (phi_screen == phi_sphere).
-/// 3. Calibrated curved trajectory projection against live Elite.
-/// 4. Hard feasibility constraint: native MISS boundary K < K_miss(theta) - margin.
-/// 5. DSS PatchRadius and engineering incorporated into spherical cap model.
-/// 6. Polyhedral validation ground truth (N=4, 6, 8, 12).
-/// 7. Layout generation and union surface coverage scoring for arbitrary N in [2, 18].
-/// 8. Shot ordering optimization (deep far probes launched first for flight-time concurrency).
-/// 9. Instant sequential advance on fire (never wait for impact).
-/// 10. Coverage CV as correction feedback only.
-/// 11. Empirical v30/v31 pattern available as fallback.
+/// Base batch:
+/// - generated completely before the first shot;
+/// - optimized directly for maximum whole-sphere union coverage using the
+///   actual engineered cap footprint;
+/// - covers both hemispheres;
+/// - far/deep shots are launched first for flight-time concurrency;
+/// - sequential advance remains fire-owned and never waits for impacts.
+///
+/// Correction tail:
+/// - is hidden until Elite's native "Ударов" counter confirms every required
+///   hit and native DSS coverage has settled below 100%;
+/// - each correction waits for the preceding correction to appear in the
+///   native hit counter and for coverage to settle again;
+/// - whole-sphere incremental coverage chooses the global missing region;
+/// - visible-side coverage CV may refine a nearby same-hemisphere correction,
+///   but cannot replace a globally better rear-side correction.
+///
+/// Projection keeps the empirically established DSS geometry:
+/// K=1 is the visible horizon and the rear antipode is halfway from horizon to
+/// native MISS. v56 treats inner/outer rear trajectories as two empirical
+/// trajectory families and distributes them across the batch globally instead
+/// of selecting outer independently for every safe rear point.
 /// </summary>
 internal static class DssSphericalPlacementPlanner
 {
     public const int MinimumTargetCount = 2;
-    public const int MaximumTargetCount = 18;
+    // Native Elite HUD research now includes N=21. The optimizer and
+    // engineering resolver are generic in N, so keep a practical two-digit
+    // ceiling rather than the old research-only N18 cap.
+    public const int MaximumTargetCount = 32;
     public const int MaximumCorrectionShots = 8;
+
+    private const double MinimumCoverageFeedbackConfidence = 0.45d;
+    private const double MinimumCoverageFeedbackUncoveredScore = 0.24d;
+
+    // CV observes only the projected visible hemisphere. It may refine the
+    // model target only when it points into the same broad missing region.
+    // Same-hemisphere CV may point at a different visible hole than the
+    // theoretical optimum. Keep this broad enough to accept that correction,
+    // while hemisphere gating still prevents any near-side observation from
+    // replacing a rear-side global target.
+    private const double MaximumCoverageOverrideAngularDistance = 1.35d;
+    private const double MinimumCoverageOverrideGainRatio = 0.30d;
+    private const double MinimumCoverageOverrideAbsoluteGain = 0.0005d;
+
+    // Rear-trajectory assignment is an empirical projection problem, not an
+    // S^2 union-coverage problem. The old per-point "outer whenever safe"
+    // rule created a large discontinuity between the last inner K and the
+    // first outer K. v56 balances the two trajectory families globally.
+    private const double RearBranchScoreEpsilon = 1e-9d;
+
+    private static readonly object CorrectionPlanCacheGate =
+        new();
+
+    private static readonly Dictionary<
+        string,
+        IReadOnlyList<DssCoverageCorrectionPoint>>
+        CorrectionPlanCache =
+            new(StringComparer.Ordinal);
+
+    private static readonly object BasePlanCacheGate =
+        new();
+
+    private static readonly Dictionary<
+        string,
+        IReadOnlyList<SphericalPoint>>
+        BasePlanCache =
+            new(StringComparer.Ordinal);
+
+    private static readonly object RearBranchPlanCacheGate =
+        new();
+
+    private static readonly Dictionary<
+        string,
+        IReadOnlyList<bool>>
+        RearBranchPlanCache =
+            new(StringComparer.Ordinal);
 
     public static DssPlannerStrategy ActiveStrategy { get; set; } =
         DssPlannerStrategy.SphericalCalibrated;
@@ -80,7 +141,35 @@ internal static class DssSphericalPlacementPlanner
         DssCoverageObservation? coverageObservation,
         long usedCoverageCandidates)
     {
-        if (ActiveStrategy == DssPlannerStrategy.EmpiricalV30Fallback)
+        // Production source priority:
+        // 1. Native Elite HUD efficiency target read by CV.
+        // 2. Journal BODY target if already known.
+        // 3. Never build a spherical batch from SETTINGS fallback.
+        //
+        // This prevents the old N13-style failure where an arbitrary fallback
+        // count was treated as the real body efficiency target.
+        if (DssNativeEfficiencyTargetRuntime.TryGetFresh(
+                out DssNativeEfficiencyTargetSnapshot nativeTarget))
+        {
+            requestedTarget =
+                nativeTarget.Target;
+
+            targetSource =
+                "HUD_CV";
+        }
+        else if (targetSource.Equals(
+                     "SETTINGS",
+                     StringComparison.OrdinalIgnoreCase))
+        {
+            // SETTINGS is not a body-specific native target. Until HUD CV
+            // locks, do not build a fictitious base batch.
+            return
+                DssSphericalAimTarget.Empty(
+                    0);
+        }
+
+        if (ActiveStrategy
+            == DssPlannerStrategy.EmpiricalV30Fallback)
         {
             return ResolveEmpiricalFallback(
                 sequentialStep,
@@ -108,32 +197,98 @@ internal static class DssSphericalPlacementPlanner
 
         if (sequentialStep < 1)
         {
-            return DssSphericalAimTarget.Empty(targetN);
+            return
+                DssSphericalAimTarget.Empty(
+                    targetN);
         }
 
-        // Base batch: steps 1..N
+        // Predictive base batch: steps 1..N. It is deliberately independent of
+        // impact count so the commander can fire the full efficient pattern
+        // without waiting for long rear-side flight times.
         if (sequentialStep <= targetN)
         {
-            IReadOnlyList<DssSphericalAimTarget> fullPlan = GenerateOrderedSphericalPlan(
-                targetN,
-                angularDiameterDegrees,
-                dssModule,
-                bodyRadiusMeters);
+            IReadOnlyList<DssSphericalAimTarget> fullPlan =
+                GenerateOrderedSphericalPlan(
+                    targetN,
+                    angularDiameterDegrees,
+                    dssModule,
+                    bodyRadiusMeters,
+                    targetResolution.ActualCapAngularRadius);
 
-            int index = sequentialStep - 1;
-            if (index >= 0 && index < fullPlan.Count)
+            int index =
+                sequentialStep - 1;
+
+            if (index >= 0
+                && index < fullPlan.Count)
             {
-                return fullPlan[index];
+                return
+                    fullPlan[index];
             }
 
-            return DssSphericalAimTarget.Empty(targetN);
+            return
+                DssSphericalAimTarget.Empty(
+                    targetN);
         }
 
-        // Correction tail: step > N
-        int correctionIndex = sequentialStep - targetN;
-        if (correctionIndex < 1 || correctionIndex > MaximumCorrectionShots)
+        int correctionIndex =
+            sequentialStep - targetN;
+
+        DssNativeScanProgressRuntime.ObserveTargetingStep(
+            targetN,
+            sequentialStep);
+
+        if (correctionIndex < 1
+            || correctionIndex
+               > MaximumCorrectionShots)
         {
-            return DssSphericalAimTarget.Empty(targetN);
+            return
+                DssSphericalAimTarget.Empty(
+                    targetN);
+        }
+
+        // Correction gating is authoritative native-HUD telemetry now.
+        //
+        // The old confirmedImpactCount is produced by the experimental visual
+        // impact detector. Live v52 research showed it can reach N while
+        // Elite's own "Ударов" counter is still N-1, which made a false
+        // correction target appear before the final probe had actually landed.
+        //
+        // Require BOTH:
+        //   1. native hit count >= every shot that must have landed;
+        //   2. native DSS coverage < 100% and unchanged long enough to settle.
+        //
+        // 100% immediately suppresses corrections while SAAScanComplete is
+        // still travelling through the Journal pipeline.
+        int requiredNativeHits =
+            targetN
+            + correctionIndex
+            - 1;
+
+        if (!DssNativeScanProgressRuntime.CanOfferCorrection(
+                requiredNativeHits,
+                correctionIndex,
+                out _))
+        {
+            return
+                DssSphericalAimTarget.Empty(
+                    targetN);
+        }
+
+        double capAlpha =
+            targetResolution.ActualCapAngularRadius;
+
+        if (!double.IsFinite(capAlpha)
+            || capAlpha <= 0d)
+        {
+            IReadOnlyList<SphericalPoint> basePoints =
+                GenerateOptimalSphericalPoints(
+                    targetN);
+
+            capAlpha =
+                DssSphericalCapCoverage
+                    .SolveCapAngularRadiusForCoverage(
+                        basePoints,
+                        0.90d);
         }
 
         return ResolveCorrectionTarget(
@@ -141,6 +296,7 @@ internal static class DssSphericalPlacementPlanner
             sequentialStep,
             targetN,
             angularDiameterDegrees,
+            capAlpha,
             coverageObservation,
             usedCoverageCandidates);
     }
@@ -148,214 +304,79 @@ internal static class DssSphericalPlacementPlanner
     /// <summary>
     /// Generates the complete ordered spherical plan for target count N.
     /// </summary>
-    public static IReadOnlyList<DssSphericalAimTarget> GenerateOrderedSphericalPlan(
-        int targetN,
-        double angularDiameterDegrees,
-        DssModuleSnapshot dssModule,
-        double bodyRadiusMeters)
+    public static IReadOnlyList<DssSphericalAimTarget>
+        GenerateOrderedSphericalPlan(
+            int targetN,
+            double angularDiameterDegrees,
+            DssModuleSnapshot dssModule,
+            double bodyRadiusMeters)
     {
-        int clampedN = Math.Clamp(targetN, MinimumTargetCount, MaximumTargetCount);
-        IReadOnlyList<SphericalPoint> surfacePoints = GenerateOptimalSphericalPoints(clampedN);
+        double capAngularRadius =
+            DssSphericalCapCoverage
+                .CalculateCapAngularRadius(
+                    dssModule,
+                    bodyRadiusMeters,
+                    targetN);
 
-        // Optimize shot ordering (Req 11): far probes first, minimal slew path
-        IReadOnlyList<SphericalPoint> orderedPoints = OptimizeShotOrdering(surfacePoints);
-
-        var plan = new List<DssSphericalAimTarget>(orderedPoints.Count);
-
-        for (int i = 0; i < orderedPoints.Count; i++)
-        {
-            SphericalPoint p = orderedPoints[i];
-            (double nx, double ny, double k) = DssSphericalProjection.ProjectSphericalToScreenAim(
-                p,
-                angularDiameterDegrees);
-
-            DssAimZone zone = k > 1.0d
-                ? DssAimZone.FarSide
-                : (k >= 0.80d ? DssAimZone.Limb : DssAimZone.Disc);
-
-            string role = p.Theta >= 2.35d // > 135 deg
-                ? "BATCH_FAR_DEEP"
-                : (p.Theta > Math.PI / 2d
-                    ? "BATCH_FAR"
-                    : (p.Theta < 0.15d ? "BATCH_CENTER" : "BATCH_NEAR"));
-
-            plan.Add(new DssSphericalAimTarget(
-                true,
-                i + 1,
-                p,
-                nx,
-                ny,
-                k,
-                zone,
-                role,
-                clampedN));
-        }
-
-        return plan;
-    }
-
-    /// <summary>
-    /// Generates optimal unit-sphere impact coordinates for target count N.
-    /// </summary>
-    public static IReadOnlyList<SphericalPoint> GenerateOptimalSphericalPoints(int n)
-    {
-        n = Math.Clamp(n, MinimumTargetCount, MaximumTargetCount);
-
-        return n switch
-        {
-            2 => new[]
-            {
-                new SphericalPoint(Math.PI, 0),       // Rear antipode
-                new SphericalPoint(0, 0)              // Front center
-            },
-
-            3 => new[]
-            {
-                new SphericalPoint(2.35d, Math.PI / 2d),   // Far (+90 deg)
-                new SphericalPoint(2.35d, -Math.PI / 2d),  // Far (-90 deg)
-                new SphericalPoint(0, 0)                   // Front center
-            },
-
-            4 => PolyhedralValidationCatalog.GetTetrahedron(),
-
-            5 => new[]
-            {
-                new SphericalPoint(Math.PI * 0.95d, 0),                      // Deep rear
-                new SphericalPoint(1.85d, 0),                                // Far (+0 deg)
-                new SphericalPoint(1.85d, 2d * Math.PI / 3d),                // Far (+120 deg)
-                new SphericalPoint(1.85d, -2d * Math.PI / 3d),               // Far (-120 deg)
-                new SphericalPoint(0, 0)                                     // Front center
-            },
-
-            6 => PolyhedralValidationCatalog.GetOctahedron(),
-
-            7 => new[]
-            {
-                new SphericalPoint(Math.PI * 0.95d, Math.PI / 4d),           // Deep rear 1
-                new SphericalPoint(Math.PI * 0.95d, -3d * Math.PI / 4d),     // Deep rear 2
-                new SphericalPoint(1.45d, 0),                                // Near limb 1
-                new SphericalPoint(1.45d, Math.PI / 2d),                     // Near limb 2
-                new SphericalPoint(1.45d, Math.PI),                          // Near limb 3
-                new SphericalPoint(1.45d, -Math.PI / 2d),                    // Near limb 4
-                new SphericalPoint(0, 0)                                     // Front center
-            },
-
-            8 => PolyhedralValidationCatalog.GetCube(),
-
-            12 => PolyhedralValidationCatalog.GetIcosahedron(),
-
-            _ => GenerateFibonacciZonalPoints(n)
-        };
-    }
-
-    /// <summary>
-    /// Generates a balanced zonal Fibonacci distribution on S^2 for arbitrary N.
-    /// </summary>
-    public static IReadOnlyList<SphericalPoint> GenerateFibonacciZonalPoints(int n)
-    {
-        var points = new List<SphericalPoint>(n);
-        double goldenAngle = Math.PI * (3d - Math.Sqrt(5d));
-
-        for (int i = 0; i < n; i++)
-        {
-            double z = 1d - (2d * i + 1d) / n; // [-1, 1]
-            double theta = Math.Acos(Math.Clamp(z, -1d, 1d));
-            double phi = i * goldenAngle;
-            points.Add(new SphericalPoint(theta, phi));
-        }
-
-        return points;
-    }
-
-    /// <summary>
-    /// Optimizes shot ordering (Req 11):
-    /// 1. Deep far probes (theta >= 125 deg, flight time 8-12s) fired first.
-    /// 2. Mid far probes (90 deg < theta < 125 deg).
-    /// 3. Near limb and inner probes (theta < 90 deg).
-    /// 4. Center probe (theta ~ 0) fired last.
-    /// 5. Within each zone, ordered by azimuth phi to ensure smooth camera panning.
-    /// </summary>
-    public static IReadOnlyList<SphericalPoint> OptimizeShotOrdering(IReadOnlyList<SphericalPoint> points)
-    {
-        if (points.Count <= 1) return points;
-
-        var farDeep = points.Where(p => p.Theta >= 2.18d).OrderBy(p => p.Phi).ToList(); // >= 125 deg
-        var farMid = points.Where(p => p.Theta > Math.PI / 2d && p.Theta < 2.18d).OrderBy(p => p.Phi).ToList();
-        var near = points.Where(p => p.Theta <= Math.PI / 2d && p.Theta > 0.18d).OrderBy(p => p.Phi).ToList();
-        var center = points.Where(p => p.Theta <= 0.18d).ToList();
-
-        var ordered = new List<SphericalPoint>(points.Count);
-        ordered.AddRange(farDeep);
-        ordered.AddRange(farMid);
-        ordered.AddRange(near);
-        ordered.AddRange(center);
-
-        return ordered;
-    }
-
-    private static DssSphericalAimTarget ResolveCorrectionTarget(
-        int correctionIndex,
-        int sequentialStep,
-        int targetN,
-        double angularDiameterDegrees,
-        DssCoverageObservation? coverageObservation,
-        long usedCoverageCandidates)
-    {
-        // CoverageObserver sees only the projected near hemisphere. It cannot
-        // measure missing area on the rear hemisphere and therefore must never
-        // arbitrate every correction shot.
-        //
-        // v47 live validation demonstrated the failure mode very clearly:
-        // after the N13 base batch, corrections 14..18 all became r=0.68
-        // near-side holes, while the scan completed only after the commander
-        // manually sent the last three launches behind the horizon.
-        //
-        // Correction ownership is therefore explicit:
-        //   1,3,5,7 -> rear hemisphere (geometry-driven, stable for the step)
-        //   2,4,6,8 -> near hemisphere (coverage CV when trustworthy)
-        //
-        // This also removes the old "far point flashes, then snaps near"
-        // behaviour. That happened because CoverageObserver temporarily returns
-        // Empty while settling after an impact; the old planner showed the far
-        // fallback during that gap and replaced it with a near CV target later.
-        bool rearHemisphereSlot =
-            (correctionIndex & 1) == 1;
-
-        if (rearHemisphereSlot)
-        {
-            int rearOrdinal =
-                (correctionIndex + 1) / 2;
-
-            return ResolveRearHemisphereCorrection(
-                rearOrdinal,
-                sequentialStep,
+        return
+            GenerateOrderedSphericalPlan(
                 targetN,
+                angularDiameterDegrees,
+                dssModule,
+                bodyRadiusMeters,
+                capAngularRadius);
+    }
+
+    internal static IReadOnlyList<DssSphericalAimTarget>
+        GenerateOrderedSphericalPlan(
+            int targetN,
+            double angularDiameterDegrees,
+            DssModuleSnapshot dssModule,
+            double bodyRadiusMeters,
+            double capAngularRadius)
+    {
+        _ = dssModule;
+        _ = bodyRadiusMeters;
+
+        int clampedN =
+            Math.Clamp(
+                targetN,
+                MinimumTargetCount,
+                MaximumTargetCount);
+
+        IReadOnlyList<SphericalPoint> surfacePoints =
+            GetCoverageOptimizedBasePoints(
+                clampedN,
+                capAngularRadius);
+
+        IReadOnlyList<SphericalPoint> orderedPoints =
+            OptimizeShotOrdering(
+                surfacePoints);
+
+        IReadOnlyList<bool> useOuterRearBranch =
+            GetBalancedRearBranchAssignments(
+                clampedN,
+                capAngularRadius,
+                orderedPoints,
                 angularDiameterDegrees);
-        }
 
-        DssCoverageObservation coverage =
-            coverageObservation
-            ?? DssCoverageObservation.Empty;
+        var plan =
+            new List<DssSphericalAimTarget>(
+                orderedPoints.Count);
 
-        if (coverage.Available
-            && !coverage.Settling
-            && coverage.Confidence >= 0.45d
-            && coverage.SuggestedCandidateId > 0
-            && coverage.SuggestedUncoveredScore >= 0.24d
-            && !DssProbeAimSolver.IsCoverageCandidateUsed(
-                usedCoverageCandidates,
-                coverage.SuggestedCandidateId))
+        for (int i = 0;
+             i < orderedPoints.Count;
+             i++)
         {
             SphericalPoint p =
-                DssSphericalProjection.ProjectScreenAimToSpherical(
-                    coverage.SuggestedNormalizedX,
-                    coverage.SuggestedNormalizedY,
-                    angularDiameterDegrees);
+                orderedPoints[i];
 
             (double nx, double ny, double k) =
-                DssSphericalProjection.ProjectSphericalToScreenAim(
-                    p,
-                    angularDiameterDegrees);
+                DssSphericalProjection
+                    .ProjectSphericalToScreenAim(
+                        p,
+                        angularDiameterDegrees,
+                        useOuterRearBranch[i]);
 
             DssAimZone zone =
                 k > 1.0d
@@ -364,279 +385,1173 @@ internal static class DssSphericalPlacementPlanner
                         ? DssAimZone.Limb
                         : DssAimZone.Disc);
 
-            return new DssSphericalAimTarget(
+            string role =
+                p.Theta >= 2.35d
+                    ? "BATCH_FAR_DEEP"
+                    : (p.Theta
+                       > Math.PI / 2d
+                        ? "BATCH_FAR"
+                        : (p.Theta < 0.15d
+                            ? "BATCH_CENTER"
+                            : "BATCH_NEAR"));
+
+            plan.Add(
+                new DssSphericalAimTarget(
+                    true,
+                    i + 1,
+                    p,
+                    nx,
+                    ny,
+                    k,
+                    zone,
+                    role,
+                    clampedN));
+        }
+
+        return plan;
+    }
+
+    /// <summary>
+    /// Generates unit-sphere impact coordinates for target count N.
+    /// </summary>
+    public static IReadOnlyList<SphericalPoint>
+        GenerateOptimalSphericalPoints(
+            int n)
+    {
+        n =
+            Math.Clamp(
+                n,
+                MinimumTargetCount,
+                MaximumTargetCount);
+
+        return n switch
+        {
+            2 => new[]
+            {
+                new SphericalPoint(
+                    Math.PI,
+                    0),
+                new SphericalPoint(
+                    0,
+                    0)
+            },
+
+            3 => new[]
+            {
+                new SphericalPoint(
+                    2.35d,
+                    Math.PI / 2d),
+                new SphericalPoint(
+                    2.35d,
+                    -Math.PI / 2d),
+                new SphericalPoint(
+                    0,
+                    0)
+            },
+
+            4 =>
+                PolyhedralValidationCatalog
+                    .GetTetrahedron(),
+
+            5 => new[]
+            {
+                new SphericalPoint(
+                    Math.PI * 0.95d,
+                    0),
+                new SphericalPoint(
+                    1.85d,
+                    0),
+                new SphericalPoint(
+                    1.85d,
+                    2d * Math.PI / 3d),
+                new SphericalPoint(
+                    1.85d,
+                    -2d * Math.PI / 3d),
+                new SphericalPoint(
+                    0,
+                    0)
+            },
+
+            6 =>
+                PolyhedralValidationCatalog
+                    .GetOctahedron(),
+
+            7 => new[]
+            {
+                new SphericalPoint(
+                    Math.PI * 0.95d,
+                    Math.PI / 4d),
+                new SphericalPoint(
+                    Math.PI * 0.95d,
+                    -3d * Math.PI / 4d),
+                new SphericalPoint(
+                    1.45d,
+                    0),
+                new SphericalPoint(
+                    1.45d,
+                    Math.PI / 2d),
+                new SphericalPoint(
+                    1.45d,
+                    Math.PI),
+                new SphericalPoint(
+                    1.45d,
+                    -Math.PI / 2d),
+                new SphericalPoint(
+                    0,
+                    0)
+            },
+
+            8 =>
+                PolyhedralValidationCatalog
+                    .GetCube(),
+
+            12 =>
+                PolyhedralValidationCatalog
+                    .GetIcosahedron(),
+
+            _ =>
+                GenerateFibonacciZonalPoints(
+                    n)
+        };
+    }
+
+    /// <summary>
+    /// Generates a balanced zonal Fibonacci distribution on S^2 for arbitrary
+    /// N not covered by an exact polyhedral catalog entry.
+    /// </summary>
+    public static IReadOnlyList<SphericalPoint>
+        GenerateFibonacciZonalPoints(
+            int n)
+    {
+        var points =
+            new List<SphericalPoint>(
+                n);
+
+        double goldenAngle =
+            Math.PI
+            * (3d - Math.Sqrt(5d));
+
+        for (int i = 0;
+             i < n;
+             i++)
+        {
+            double z =
+                1d
+                - (2d * i + 1d)
+                  / n;
+
+            double theta =
+                Math.Acos(
+                    Math.Clamp(
+                        z,
+                        -1d,
+                        1d));
+
+            double phi =
+                i * goldenAngle;
+
+            points.Add(
+                new SphericalPoint(
+                    theta,
+                    phi));
+        }
+
+        return points;
+    }
+
+    /// <summary>
+    /// Strict far-to-near surface ordering.
+    ///
+    /// Theta is the spherical distance from the visible/front pole:
+    /// 0 = exact front centre, pi/2 = horizon, pi = rear antipode.
+    ///
+    /// Earlier versions only grouped points into FAR_DEEP/FAR/NEAR and then
+    /// sorted each group by azimuth. That allowed a shallower rear probe to be
+    /// launched before a deeper one. v57 orders the complete base batch by
+    /// descending Theta, so the longest/deepest trajectories are dispatched
+    /// first and can fly while the commander fires the shorter probes.
+    /// </summary>
+    public static IReadOnlyList<SphericalPoint>
+        OptimizeShotOrdering(
+            IReadOnlyList<SphericalPoint> points)
+    {
+        if (points.Count <= 1)
+        {
+            return points;
+        }
+
+        return
+            points
+                .OrderByDescending(
+                    p => p.Theta)
+                .ThenBy(
+                    p => p.Phi)
+                .ToList();
+    }
+
+    /// <summary>
+    /// Selects explicit rear trajectory branches for a whole ordered batch.
+    ///
+    /// The surface optimizer operates on S^2, where the two projected rear
+    /// trajectories were assumed to represent the same nominal surface point.
+    /// Live N21 runs show that using outer for almost every eligible rear point
+    /// creates a real coverage hole around K~1.15..1.30. Branch selection is
+    /// therefore solved as a separate screen-trajectory dispersion problem.
+    ///
+    /// Constraints:
+    /// - front points and unsafe outer points always use inner;
+    /// - when at least two safe dual-branch rear points exist, both families
+    ///   must be represented;
+    /// - the number of outer branches is kept close to half of safe candidates;
+    /// - among assignments with that count, minimize the largest radial gap,
+    ///   then the sum of squared radial gaps, then maximize minimum 2D aim
+    ///   spacing.
+    ///
+    /// The radial score includes K=1 and safe native MISS as boundaries, which
+    /// directly penalizes the v52 discontinuity without hard-coding N17 or any
+    /// specific body.
+    /// </summary>
+    internal static IReadOnlyList<bool>
+        SelectBalancedRearBranches(
+            IReadOnlyList<SphericalPoint> orderedPoints,
+            double angularDiameterDegrees)
+    {
+        var result =
+            new bool[
+                orderedPoints.Count];
+
+        if (orderedPoints.Count == 0)
+        {
+            return result;
+        }
+
+        var dualIndices =
+            new List<int>();
+
+        for (int i = 0;
+             i < orderedPoints.Count;
+             i++)
+        {
+            SphericalPoint point =
+                orderedPoints[i];
+
+            if (point.Theta
+                    <= Math.PI / 2d
+                || !DssSphericalProjection
+                    .ShouldUseOuterFarBranch(
+                        point.Theta,
+                        angularDiameterDegrees))
+            {
+                continue;
+            }
+
+            dualIndices.Add(i);
+        }
+
+        if (dualIndices.Count == 0)
+        {
+            return result;
+        }
+
+        // Preserve v52 behavior when there is only one meaningful dual-branch
+        // point. With two or more, force representation of both trajectory
+        // families and optimize the assignment globally.
+        if (dualIndices.Count == 1)
+        {
+            result[
+                dualIndices[0]] =
+                true;
+
+            return result;
+        }
+
+        int desiredOuterCount =
+            Math.Clamp(
+                (dualIndices.Count + 1) / 2,
+                1,
+                dualIndices.Count - 1);
+
+        // Start all-inner, then greedily add exactly desiredOuterCount outer
+        // assignments using the whole-set dispersion score.
+        for (int outer = 0;
+             outer < desiredOuterCount;
+             outer++)
+        {
+            int bestIndex = -1;
+            RearBranchDispersionScore bestScore =
+                RearBranchDispersionScore.Worst;
+
+            foreach (int candidateIndex
+                     in dualIndices)
+            {
+                if (result[
+                        candidateIndex])
+                {
+                    continue;
+                }
+
+                result[
+                    candidateIndex] =
+                    true;
+
+                RearBranchDispersionScore score =
+                    EvaluateRearBranchDispersion(
+                        orderedPoints,
+                        result,
+                        angularDiameterDegrees);
+
+                result[
+                    candidateIndex] =
+                    false;
+
+                if (bestIndex < 0
+                    || IsBetterRearBranchScore(
+                        score,
+                        bestScore))
+                {
+                    bestIndex =
+                        candidateIndex;
+
+                    bestScore =
+                        score;
+                }
+            }
+
+            if (bestIndex < 0)
+            {
+                break;
+            }
+
+            result[
+                bestIndex] =
+                true;
+        }
+
+        // Pairwise swap refinement preserves branch count while escaping
+        // greedy-order artifacts. Rear count is <= 32, so this is cheap and is
+        // cached by (N, cap radius, angular-diameter bucket) on the live path.
+        bool improved = true;
+
+        while (improved)
+        {
+            improved = false;
+
+            RearBranchDispersionScore currentScore =
+                EvaluateRearBranchDispersion(
+                    orderedPoints,
+                    result,
+                    angularDiameterDegrees);
+
+            int bestOuter = -1;
+            int bestInner = -1;
+            RearBranchDispersionScore bestSwapScore =
+                currentScore;
+
+            foreach (int outerIndex
+                     in dualIndices)
+            {
+                if (!result[
+                        outerIndex])
+                {
+                    continue;
+                }
+
+                foreach (int innerIndex
+                         in dualIndices)
+                {
+                    if (result[
+                            innerIndex])
+                    {
+                        continue;
+                    }
+
+                    result[
+                        outerIndex] =
+                        false;
+
+                    result[
+                        innerIndex] =
+                        true;
+
+                    RearBranchDispersionScore score =
+                        EvaluateRearBranchDispersion(
+                            orderedPoints,
+                            result,
+                            angularDiameterDegrees);
+
+                    result[
+                        innerIndex] =
+                        false;
+
+                    result[
+                        outerIndex] =
+                        true;
+
+                    if (IsBetterRearBranchScore(
+                            score,
+                            bestSwapScore))
+                    {
+                        bestOuter =
+                            outerIndex;
+
+                        bestInner =
+                            innerIndex;
+
+                        bestSwapScore =
+                            score;
+                    }
+                }
+            }
+
+            if (bestOuter >= 0
+                && bestInner >= 0)
+            {
+                result[
+                    bestOuter] =
+                    false;
+
+                result[
+                    bestInner] =
+                    true;
+
+                improved =
+                    true;
+            }
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<bool>
+        GetBalancedRearBranchAssignments(
+            int targetN,
+            double capAngularRadius,
+            IReadOnlyList<SphericalPoint> orderedPoints,
+            double angularDiameterDegrees)
+    {
+        double diameterBucket =
+            Math.Round(
+                angularDiameterDegrees * 4d)
+            / 4d;
+
+        string key =
+            targetN.ToString(
+                CultureInfo.InvariantCulture)
+            + "|"
+            + Math.Round(
+                    capAngularRadius,
+                    6)
+                .ToString(
+                    "R",
+                    CultureInfo.InvariantCulture)
+            + "|"
+            + diameterBucket.ToString(
+                "0.00",
+                CultureInfo.InvariantCulture);
+
+        lock (RearBranchPlanCacheGate)
+        {
+            if (RearBranchPlanCache.TryGetValue(
+                    key,
+                    out IReadOnlyList<bool>? cached))
+            {
+                return cached;
+            }
+        }
+
+        IReadOnlyList<bool> generated =
+            SelectBalancedRearBranches(
+                orderedPoints,
+                diameterBucket);
+
+        int rearCount = 0;
+        int outerCount = 0;
+        double minimumInnerK =
+            double.PositiveInfinity;
+        double maximumInnerK =
+            double.NegativeInfinity;
+        double minimumOuterK =
+            double.PositiveInfinity;
+        double maximumOuterK =
+            double.NegativeInfinity;
+
+        for (int i = 0;
+             i < orderedPoints.Count;
+             i++)
+        {
+            SphericalPoint point =
+                orderedPoints[i];
+
+            if (point.Theta
+                <= Math.PI / 2d)
+            {
+                continue;
+            }
+
+            rearCount++;
+
+            (_, _, double k) =
+                DssSphericalProjection
+                    .ProjectSphericalToScreenAim(
+                        point,
+                        diameterBucket,
+                        generated[i]);
+
+            if (generated[i])
+            {
+                outerCount++;
+
+                minimumOuterK =
+                    Math.Min(
+                        minimumOuterK,
+                        k);
+
+                maximumOuterK =
+                    Math.Max(
+                        maximumOuterK,
+                        k);
+            }
+            else
+            {
+                minimumInnerK =
+                    Math.Min(
+                        minimumInnerK,
+                        k);
+
+                maximumInnerK =
+                    Math.Max(
+                        maximumInnerK,
+                        k);
+            }
+        }
+
+        lock (RearBranchPlanCacheGate)
+        {
+            RearBranchPlanCache[
+                key] =
+                generated;
+        }
+
+        Logger.Logger.Info(
+            $"DSS PLAN rear branches: N={targetN}; " +
+            $"rear={rearCount}; outer={outerCount}; inner={rearCount - outerCount}; " +
+            $"innerK={FormatRange(minimumInnerK, maximumInnerK)}; " +
+            $"outerK={FormatRange(minimumOuterK, maximumOuterK)}; " +
+            $"diam={diameterBucket:0.00}deg.");
+
+        return generated;
+    }
+
+    private static RearBranchDispersionScore
+        EvaluateRearBranchDispersion(
+            IReadOnlyList<SphericalPoint> orderedPoints,
+            IReadOnlyList<bool> useOuterRearBranch,
+            double angularDiameterDegrees)
+    {
+        var radii =
+            new List<double>();
+
+        var projected =
+            new List<(
+                double X,
+                double Y)>();
+
+        for (int i = 0;
+             i < orderedPoints.Count;
+             i++)
+        {
+            SphericalPoint point =
+                orderedPoints[i];
+
+            if (point.Theta
+                <= Math.PI / 2d)
+            {
+                continue;
+            }
+
+            (double x, double y, double k) =
+                DssSphericalProjection
+                    .ProjectSphericalToScreenAim(
+                        point,
+                        angularDiameterDegrees,
+                        useOuterRearBranch[i]);
+
+            radii.Add(k);
+
+            projected.Add(
+                (x, y));
+        }
+
+        if (radii.Count == 0)
+        {
+            return
+                new RearBranchDispersionScore(
+                    0d,
+                    0d,
+                    Math.PI);
+        }
+
+        radii.Sort();
+
+        double safeK =
+            DssSphericalProjection
+                .EstimateSafeNormalizedRadius(
+                    angularDiameterDegrees);
+
+        double previous =
+            1d;
+
+        double maximumGap =
+            0d;
+
+        double squaredGapSum =
+            0d;
+
+        for (int i = 0;
+             i < radii.Count;
+             i++)
+        {
+            double gap =
+                Math.Max(
+                    0d,
+                    radii[i]
+                    - previous);
+
+            maximumGap =
+                Math.Max(
+                    maximumGap,
+                    gap);
+
+            squaredGapSum +=
+                gap * gap;
+
+            previous =
+                radii[i];
+        }
+
+        double tailGap =
+            Math.Max(
+                0d,
+                safeK - previous);
+
+        maximumGap =
+            Math.Max(
+                maximumGap,
+                tailGap);
+
+        squaredGapSum +=
+            tailGap
+            * tailGap;
+
+        double minimumScreenSpacing =
+            double.PositiveInfinity;
+
+        for (int i = 0;
+             i < projected.Count;
+             i++)
+        {
+            for (int j = i + 1;
+                 j < projected.Count;
+                 j++)
+            {
+                double dx =
+                    projected[i].X
+                    - projected[j].X;
+
+                double dy =
+                    projected[i].Y
+                    - projected[j].Y;
+
+                double distance =
+                    Math.Sqrt(
+                        dx * dx
+                        + dy * dy);
+
+                minimumScreenSpacing =
+                    Math.Min(
+                        minimumScreenSpacing,
+                        distance);
+            }
+        }
+
+        if (!double.IsFinite(
+                minimumScreenSpacing))
+        {
+            minimumScreenSpacing =
+                Math.PI;
+        }
+
+        return
+            new RearBranchDispersionScore(
+                maximumGap,
+                squaredGapSum,
+                minimumScreenSpacing);
+    }
+
+    private static bool IsBetterRearBranchScore(
+        RearBranchDispersionScore candidate,
+        RearBranchDispersionScore current)
+    {
+        if (candidate.MaximumRadialGap
+            < current.MaximumRadialGap
+              - RearBranchScoreEpsilon)
+        {
+            return true;
+        }
+
+        if (candidate.MaximumRadialGap
+            > current.MaximumRadialGap
+              + RearBranchScoreEpsilon)
+        {
+            return false;
+        }
+
+        if (candidate.RadialGapSquaredSum
+            < current.RadialGapSquaredSum
+              - RearBranchScoreEpsilon)
+        {
+            return true;
+        }
+
+        if (candidate.RadialGapSquaredSum
+            > current.RadialGapSquaredSum
+              + RearBranchScoreEpsilon)
+        {
+            return false;
+        }
+
+        return
+            candidate.MinimumScreenSpacing
+            > current.MinimumScreenSpacing
+              + RearBranchScoreEpsilon;
+    }
+
+    private static string FormatRange(
+        double minimum,
+        double maximum)
+    {
+        if (!double.IsFinite(minimum)
+            || !double.IsFinite(maximum))
+        {
+            return "-";
+        }
+
+        return
+            minimum.ToString(
+                "0.000",
+                CultureInfo.InvariantCulture)
+            + ".."
+            + maximum.ToString(
+                "0.000",
+                CultureInfo.InvariantCulture);
+    }
+
+    private readonly record struct RearBranchDispersionScore(
+        double MaximumRadialGap,
+        double RadialGapSquaredSum,
+        double MinimumScreenSpacing)
+    {
+        public static RearBranchDispersionScore Worst { get; } =
+            new(
+                double.PositiveInfinity,
+                double.PositiveInfinity,
+                double.NegativeInfinity);
+    }
+
+
+
+    internal static IReadOnlyList<SphericalPoint>
+        GetCoverageOptimizedBasePoints(
+            int targetN,
+            double capAngularRadius)
+    {
+        int clampedN =
+            Math.Clamp(
+                targetN,
+                MinimumTargetCount,
+                MaximumTargetCount);
+
+        if (!double.IsFinite(
+                capAngularRadius)
+            || capAngularRadius <= 0d)
+        {
+            return
+                GenerateOptimalSphericalPoints(
+                    clampedN);
+        }
+
+        string key =
+            clampedN.ToString(
+                CultureInfo.InvariantCulture)
+            + "|"
+            + Math.Round(
+                    capAngularRadius,
+                    6)
+                .ToString(
+                    "R",
+                    CultureInfo.InvariantCulture);
+
+        lock (BasePlanCacheGate)
+        {
+            if (BasePlanCache.TryGetValue(
+                    key,
+                    out IReadOnlyList<SphericalPoint>? cached))
+            {
+                return cached;
+            }
+        }
+
+        IReadOnlyList<SphericalPoint> generated =
+            DssSphericalCapCoverage
+                .GenerateCoverageOptimizedLayout(
+                    clampedN,
+                    capAngularRadius);
+
+        IReadOnlyList<SphericalPoint> legacy =
+            GenerateOptimalSphericalPoints(
+                clampedN);
+
+        double optimizedCoverage =
+            DssSphericalCapCoverage
+                .EvaluateUnionCoverage(
+                    generated,
+                    capAngularRadius);
+
+        double legacyCoverage =
+            DssSphericalCapCoverage
+                .EvaluateUnionCoverage(
+                    legacy,
+                    capAngularRadius);
+
+        lock (BasePlanCacheGate)
+        {
+            BasePlanCache[
+                key] =
+                generated;
+        }
+
+        Logger.Logger.Info(
+            $"DSS PLAN base optimized: N={clampedN}; " +
+            $"alpha={capAngularRadius * 180d / Math.PI:0.00}deg; " +
+            $"legacy={legacyCoverage:0.000}; " +
+            $"optimized={optimizedCoverage:0.000}; " +
+            $"gain={(optimizedCoverage - legacyCoverage) * 100d:+0.0;-0.0;0.0}pp.");
+
+        return generated;
+    }
+
+    private static DssSphericalAimTarget ResolveCorrectionTarget(
+        int correctionIndex,
+        int sequentialStep,
+        int targetN,
+        double angularDiameterDegrees,
+        double capAngularRadius,
+        DssCoverageObservation? coverageObservation,
+        long usedCoverageCandidates)
+    {
+        IReadOnlyList<SphericalPoint> basePoints =
+            GetCoverageOptimizedBasePoints(
+                targetN,
+                capAngularRadius);
+
+        IReadOnlyList<DssCoverageCorrectionPoint> corrections =
+            GetCorrectionPlan(
+                targetN,
+                basePoints,
+                capAngularRadius);
+
+        int correctionPlanIndex =
+            correctionIndex - 1;
+
+        if (correctionPlanIndex < 0
+            || correctionPlanIndex
+               >= corrections.Count)
+        {
+            return
+                DssSphericalAimTarget.Empty(
+                    targetN);
+        }
+
+        DssCoverageCorrectionPoint modelTarget =
+            corrections[
+                correctionPlanIndex];
+
+        DssCoverageObservation coverage =
+            coverageObservation
+            ?? DssCoverageObservation.Empty;
+
+        if (TryResolveCoverageOverride(
+                coverage,
+                usedCoverageCandidates,
+                angularDiameterDegrees,
+                capAngularRadius,
+                basePoints,
+                corrections,
+                correctionPlanIndex,
+                modelTarget,
+                out SphericalPoint coveragePoint,
+                out double coverageGain))
+        {
+            return BuildAimTarget(
+                sequentialStep,
+                targetN,
+                angularDiameterDegrees,
+                coveragePoint,
+                "CORRECTION_COVERAGE",
+                coverage.SuggestedCandidateId,
+                coverageGain);
+        }
+
+        string role =
+            modelTarget.Point.Theta
+                > Math.PI / 2d
+                ? "CORRECTION_MODEL_REAR"
+                : "CORRECTION_MODEL_NEAR";
+
+        bool? correctionOuterBranch =
+            modelTarget.Point.Theta
+                > Math.PI / 2d
+                ? ShouldUseOuterCorrectionBranch(
+                    correctionIndex,
+                    modelTarget.Point,
+                    angularDiameterDegrees)
+                : null;
+
+        return BuildAimTarget(
+            sequentialStep,
+            targetN,
+            angularDiameterDegrees,
+            modelTarget.Point,
+            role,
+            0,
+            modelTarget.IncrementalCoverage,
+            correctionOuterBranch);
+    }
+
+    /// <summary>
+    /// Correction tail alternates rear trajectory families, starting with
+    /// inner. Both recent N21 runs showed the first automatic outer correction
+    /// landing in an already well-covered region while manual inner-annulus
+    /// shots produced the useful gain.
+    /// </summary>
+    internal static bool ShouldUseOuterCorrectionBranch(
+        int correctionIndex,
+        SphericalPoint point,
+        double angularDiameterDegrees) =>
+        correctionIndex > 0
+        && correctionIndex % 2 == 0
+        && DssSphericalProjection
+            .ShouldUseOuterFarBranch(
+                point.Theta,
+                angularDiameterDegrees);
+
+    private static bool TryResolveCoverageOverride(
+        DssCoverageObservation coverage,
+        long usedCoverageCandidates,
+        double angularDiameterDegrees,
+        double capAngularRadius,
+        IReadOnlyList<SphericalPoint> basePoints,
+        IReadOnlyList<DssCoverageCorrectionPoint> corrections,
+        int correctionPlanIndex,
+        DssCoverageCorrectionPoint modelTarget,
+        out SphericalPoint coveragePoint,
+        out double coverageGain)
+    {
+        coveragePoint =
+            new SphericalPoint(
+                0d,
+                0d);
+
+        coverageGain = 0d;
+
+        if (!coverage.Available
+            || coverage.Settling
+            || coverage.Confidence
+               < MinimumCoverageFeedbackConfidence
+            || coverage.SuggestedCandidateId <= 0
+            || coverage.SuggestedUncoveredScore
+               < MinimumCoverageFeedbackUncoveredScore
+            || DssProbeAimSolver.IsCoverageCandidateUsed(
+                usedCoverageCandidates,
+                coverage.SuggestedCandidateId))
+        {
+            return false;
+        }
+
+        SphericalPoint observed =
+            DssSphericalProjection
+                .ProjectScreenAimToSpherical(
+                    coverage.SuggestedNormalizedX,
+                    coverage.SuggestedNormalizedY,
+                    angularDiameterDegrees);
+
+        bool modelRear =
+            modelTarget.Point.Theta
+            > Math.PI / 2d;
+
+        bool observedRear =
+            observed.Theta
+            > Math.PI / 2d;
+
+        if (modelRear != observedRear)
+        {
+            return false;
+        }
+
+        double angularDistance =
+            modelTarget.Point
+                .AngularDistanceTo(
+                    observed);
+
+        if (angularDistance
+            > MaximumCoverageOverrideAngularDistance)
+        {
+            return false;
+        }
+
+        var occupied =
+            new List<SphericalPoint>(
+                basePoints.Count
+                + correctionPlanIndex);
+
+        occupied.AddRange(
+            basePoints);
+
+        for (int i = 0;
+             i < correctionPlanIndex;
+             i++)
+        {
+            occupied.Add(
+                corrections[i].Point);
+        }
+
+        double observedGain =
+            DssSphericalCapCoverage
+                .EvaluateIncrementalCoverage(
+                    occupied,
+                    observed,
+                    capAngularRadius);
+
+        double minimumGain =
+            Math.Max(
+                MinimumCoverageOverrideAbsoluteGain,
+                modelTarget.IncrementalCoverage
+                * MinimumCoverageOverrideGainRatio);
+
+        if (observedGain
+            < minimumGain)
+        {
+            return false;
+        }
+
+        coveragePoint =
+            observed;
+
+        coverageGain =
+            observedGain;
+
+        return true;
+    }
+
+    private static DssSphericalAimTarget BuildAimTarget(
+        int sequentialStep,
+        int targetN,
+        double angularDiameterDegrees,
+        SphericalPoint point,
+        string role,
+        int candidateId,
+        double coverageScore,
+        bool? useOuterRearBranch = null)
+    {
+        (double nx, double ny, double k) =
+            useOuterRearBranch.HasValue
+                ? DssSphericalProjection
+                    .ProjectSphericalToScreenAim(
+                        point,
+                        angularDiameterDegrees,
+                        useOuterRearBranch.Value)
+                : DssSphericalProjection
+                    .ProjectSphericalToScreenAim(
+                        point,
+                        angularDiameterDegrees);
+
+        double safeK =
+            DssSphericalProjection
+                .EstimateSafeNormalizedRadius(
+                    angularDiameterDegrees);
+
+        if (!double.IsFinite(k)
+            || k < 0d
+            || k > safeK + 1e-6d)
+        {
+            return
+                DssSphericalAimTarget.Empty(
+                    targetN);
+        }
+
+        DssAimZone zone =
+            k > 1.0d
+                ? DssAimZone.FarSide
+                : (k >= 0.80d
+                    ? DssAimZone.Limb
+                    : DssAimZone.Disc);
+
+        return
+            new DssSphericalAimTarget(
                 true,
                 sequentialStep,
-                p,
+                point,
                 nx,
                 ny,
                 k,
                 zone,
-                "CORRECTION_COVERAGE_NEAR",
+                role,
                 targetN,
-                coverage.SuggestedCandidateId,
-                coverage.SuggestedUncoveredScore);
-        }
-
-        // During CV settle/unavailability keep this correction on the front
-        // hemisphere instead of temporarily showing a rear target that will be
-        // revoked one frame later. The deterministic fallback chooses a large
-        // geometric hole in the visible hemisphere.
-        int nearOrdinal =
-            correctionIndex / 2;
-
-        return ResolveNearHemisphereFallback(
-            nearOrdinal,
-            sequentialStep,
-            targetN,
-            angularDiameterDegrees);
+                candidateId,
+                coverageScore);
     }
 
-    private static DssSphericalAimTarget ResolveRearHemisphereCorrection(
-        int rearOrdinal,
-        int sequentialStep,
-        int targetN,
-        double angularDiameterDegrees)
+    private static IReadOnlyList<DssCoverageCorrectionPoint>
+        GetCorrectionPlan(
+            int targetN,
+            IReadOnlyList<SphericalPoint> basePoints,
+            double capAngularRadius)
     {
-        IReadOnlyList<SphericalPoint> basePoints =
-            GenerateOptimalSphericalPoints(
-                targetN);
+        string key =
+            targetN.ToString(
+                CultureInfo.InvariantCulture)
+            + "|"
+            + Math.Round(
+                    capAngularRadius,
+                    6)
+                .ToString(
+                    "R",
+                    CultureInfo.InvariantCulture);
 
-        var occupied =
-            new List<SphericalPoint>(
-                basePoints);
-
-        SphericalPoint selected =
-            new(
-                2.50d,
-                -Math.PI / 4d);
-
-        for (int ordinal = 1;
-             ordinal <= rearOrdinal;
-             ordinal++)
+        lock (CorrectionPlanCacheGate)
         {
-            selected =
-                SelectLargestSphericalGap(
-                    occupied,
-                    BuildRearCorrectionCandidates());
-
-            occupied.Add(
-                selected);
-        }
-
-        (double nx, double ny, double k) =
-            DssSphericalProjection.ProjectSphericalToScreenAim(
-                selected,
-                angularDiameterDegrees);
-
-        return new DssSphericalAimTarget(
-            true,
-            sequentialStep,
-            selected,
-            nx,
-            ny,
-            k,
-            DssAimZone.FarSide,
-            "CORRECTION_FAR_BALANCE",
-            targetN);
-    }
-
-    private static DssSphericalAimTarget ResolveNearHemisphereFallback(
-        int nearOrdinal,
-        int sequentialStep,
-        int targetN,
-        double angularDiameterDegrees)
-    {
-        IReadOnlyList<SphericalPoint> basePoints =
-            GenerateOptimalSphericalPoints(
-                targetN);
-
-        var occupied =
-            new List<SphericalPoint>(
-                basePoints);
-
-        SphericalPoint selected =
-            new(
-                Math.PI / 3d,
-                0d);
-
-        for (int ordinal = 1;
-             ordinal <= nearOrdinal;
-             ordinal++)
-        {
-            selected =
-                SelectLargestSphericalGap(
-                    occupied,
-                    BuildNearCorrectionCandidates());
-
-            occupied.Add(
-                selected);
-        }
-
-        (double nx, double ny, double k) =
-            DssSphericalProjection.ProjectSphericalToScreenAim(
-                selected,
-                angularDiameterDegrees);
-
-        DssAimZone zone =
-            k >= 0.80d
-                ? DssAimZone.Limb
-                : DssAimZone.Disc;
-
-        return new DssSphericalAimTarget(
-            true,
-            sequentialStep,
-            selected,
-            nx,
-            ny,
-            k,
-            zone,
-            "CORRECTION_NEAR_FALLBACK",
-            targetN);
-    }
-
-    private static IReadOnlyList<SphericalPoint>
-        BuildRearCorrectionCandidates()
-    {
-        var result =
-            new List<SphericalPoint>();
-
-        // Three rear latitudes. The deepest ring still projects inside the
-        // rear-antipode circle defined by the supplied DSS firing-pattern
-        // guide, so no correction needs the ambiguous outer antipode->MISS
-        // annulus.
-        foreach (double theta
-                 in new[]
-                 {
-                     2.18d, // ~125 deg
-                     2.50d, // ~143 deg
-                     2.82d  // ~162 deg
-                 })
-        {
-            double phase =
-                theta < 2.3d
-                    ? 0d
-                    : theta < 2.7d
-                        ? Math.PI / 8d
-                        : Math.PI / 4d;
-
-            for (int i = 0;
-                 i < 8;
-                 i++)
+            if (CorrectionPlanCache.TryGetValue(
+                    key,
+                    out IReadOnlyList<DssCoverageCorrectionPoint>? cached))
             {
-                result.Add(
-                    new SphericalPoint(
-                        theta,
-                        phase
-                        + i * Math.PI / 4d));
+                return cached;
             }
         }
 
-        // Exact antipode is a useful candidate when the base plan leaves the
-        // rear pole uncovered.
-        result.Add(
-            new SphericalPoint(
-                Math.PI,
-                0d));
+        IReadOnlyList<DssCoverageCorrectionPoint> generated =
+            DssSphericalCapCoverage
+                .GenerateGreedyCorrectionPlan(
+                    basePoints,
+                    capAngularRadius,
+                    MaximumCorrectionShots);
 
-        return result;
-    }
-
-    private static IReadOnlyList<SphericalPoint>
-        BuildNearCorrectionCandidates()
-    {
-        var result =
-            new List<SphericalPoint>();
-
-        foreach (double theta
-                 in new[]
-                 {
-                     0.45d,
-                     0.85d,
-                     1.25d
-                 })
+        lock (CorrectionPlanCacheGate)
         {
-            double phase =
-                theta < 0.7d
-                    ? Math.PI / 8d
-                    : 0d;
-
-            for (int i = 0;
-                 i < 8;
-                 i++)
-            {
-                result.Add(
-                    new SphericalPoint(
-                        theta,
-                        phase
-                        + i * Math.PI / 4d));
-            }
+            CorrectionPlanCache[key] =
+                generated;
         }
 
-        result.Add(
-            new SphericalPoint(
-                0d,
-                0d));
-
-        return result;
-    }
-
-    private static SphericalPoint SelectLargestSphericalGap(
-        IReadOnlyList<SphericalPoint> occupied,
-        IReadOnlyList<SphericalPoint> candidates)
-    {
-        if (candidates.Count == 0)
-        {
-            return new SphericalPoint(
-                Math.PI,
-                0d);
-        }
-
-        SphericalPoint best =
-            candidates[0];
-
-        double bestMinimumDistance =
-            double.NegativeInfinity;
-
-        foreach (SphericalPoint candidate
-                 in candidates)
-        {
-            double minimumDistance =
-                Math.PI;
-
-            foreach (SphericalPoint existing
-                     in occupied)
-            {
-                double dot =
-                    candidate.X * existing.X
-                    + candidate.Y * existing.Y
-                    + candidate.Z * existing.Z;
-
-                double distance =
-                    Math.Acos(
-                        Math.Clamp(
-                            dot,
-                            -1d,
-                            1d));
-
-                minimumDistance =
-                    Math.Min(
-                        minimumDistance,
-                        distance);
-            }
-
-            if (minimumDistance
-                > bestMinimumDistance)
-            {
-                bestMinimumDistance =
-                    minimumDistance;
-
-                best =
-                    candidate;
-            }
-        }
-
-        return best;
+        return generated;
     }
 
     private static DssSphericalAimTarget ResolveEmpiricalFallback(
@@ -648,41 +1563,74 @@ internal static class DssSphericalPlacementPlanner
         DssCoverageObservation? coverageObservation,
         long usedCoverageCandidates)
     {
-        DssPredictiveAimTarget empirical = DssPredictiveBatchPlanner.Resolve(
-            sequentialStep,
-            requestedTarget,
-            targetSource,
-            angularDiameterDegrees,
-            confirmedImpactCount,
-            coverageObservation,
-            usedCoverageCandidates);
+        DssPredictiveAimTarget empirical =
+            DssPredictiveBatchPlanner.Resolve(
+                sequentialStep,
+                requestedTarget,
+                targetSource,
+                angularDiameterDegrees,
+                confirmedImpactCount,
+                coverageObservation,
+                usedCoverageCandidates);
 
         if (!empirical.Available)
         {
-            return DssSphericalAimTarget.Empty(empirical.PredictedBatchCount);
+            return
+                DssSphericalAimTarget.Empty(
+                    empirical.PredictedBatchCount);
         }
 
-        SphericalPoint p = DssSphericalProjection.ProjectScreenAimToSpherical(
-            empirical.NormalizedX,
-            empirical.NormalizedY,
-            angularDiameterDegrees);
+        SphericalPoint p =
+            DssSphericalProjection
+                .ProjectScreenAimToSpherical(
+                    empirical.NormalizedX,
+                    empirical.NormalizedY,
+                    angularDiameterDegrees);
 
-        double k = Math.Sqrt(empirical.NormalizedX * empirical.NormalizedX + empirical.NormalizedY * empirical.NormalizedY);
+        double k =
+            Math.Sqrt(
+                empirical.NormalizedX
+                * empirical.NormalizedX
+                + empirical.NormalizedY
+                  * empirical.NormalizedY);
 
-        return new DssSphericalAimTarget(
-            true,
-            sequentialStep,
-            p,
-            empirical.NormalizedX,
-            empirical.NormalizedY,
-            k,
-            empirical.Zone,
-            empirical.Role,
-            empirical.PredictedBatchCount,
-            empirical.CandidateId,
-            empirical.CoverageScore);
+        return
+            new DssSphericalAimTarget(
+                true,
+                sequentialStep,
+                p,
+                empirical.NormalizedX,
+                empirical.NormalizedY,
+                k,
+                empirical.Zone,
+                empirical.Role,
+                empirical.PredictedBatchCount,
+                empirical.CandidateId,
+                empirical.CoverageScore);
     }
 
-    public static int ResolveTargetCount(int requestedTarget, string targetSource) =>
-        DssPredictiveBatchPlanner.ResolvePredictedBatchCount(requestedTarget, targetSource);
+    public static int ResolveTargetCount(
+        int requestedTarget,
+        string targetSource)
+    {
+        if (targetSource.Equals(
+                "BODY",
+                StringComparison.OrdinalIgnoreCase)
+            || targetSource.Equals(
+                "HUD_CV",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return
+                Math.Clamp(
+                    requestedTarget,
+                    MinimumTargetCount,
+                    MaximumTargetCount);
+        }
+
+        return
+            DssPredictiveBatchPlanner
+                .ResolvePredictedBatchCount(
+                    requestedTarget,
+                    targetSource);
+    }
 }

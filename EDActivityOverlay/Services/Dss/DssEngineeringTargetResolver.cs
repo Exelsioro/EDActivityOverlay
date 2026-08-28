@@ -14,17 +14,43 @@ internal sealed record DssEngineeringTargetResolution(
     bool Reduced);
 
 /// <summary>
-/// Reduces the official BODY EfficiencyTarget only when the Journal provides a
-/// trustworthy PatchRadius/OriginalPatchRadius ratio.
+/// Resolves the effective DSS batch size from an authoritative native
+/// efficiency target (HUD_CV first, BODY as fallback) and the actual Journal
+/// PatchRadius/OriginalPatchRadius ratio.
 ///
-/// The official count calibrates the unknown stock cap angle. Engineering then
-/// scales that angle. Every integer N from 2..official is evaluated, using the
-/// planner's exact polyhedral layouts where available and arbitrary-N layouts
-/// otherwise.
+/// The official count calibrates the unknown stock cap angle. Engineering is
+/// then applied to spherical-cap AREA, not directly to angular radius.
+/// Every integer N from 2..official is evaluated against the resulting actual
+/// footprint. Low-N cases keep the original 90% threshold; high-N cases add a
+/// small model-uncertainty reserve so a useful final rear probe is sent in the
+/// base batch instead of after the correction-settling delay.
+///
+/// SETTINGS/fallback targets are never silently reduced, because they are not
+/// an authoritative native calibration. Their cap angles are still calculated so the
+/// correction model has a usable footprint.
 /// </summary>
 internal static class DssEngineeringTargetResolver
 {
     private const double MinimumCoverageFraction = 0.90d;
+
+    // High-N layouts accumulate more overlap/projection uncertainty than the
+    // low-N polyhedral cases. Requiring the same bare 90% model threshold for
+    // N18/N21 repeatedly produced a "base complete -> wait -> one useful rear
+    // correction" sequence. That is slower than sending one additional base
+    // probe up front because correction mode must wait for native impacts and
+    // coverage settling.
+    //
+    // Keep the proven low-N behaviour unchanged. Starting above native N=9,
+    // raise the required model coverage by 0.4 percentage points per official
+    // probe, capped at +4 pp. Examples:
+    //   N7  -> 90.0%  (validated N7 -> base N6 remains possible)
+    //   N9  -> 90.0%
+    //   N18 -> 93.6%  (26/20 case moves N15 -> N16)
+    //   N21 -> 94.0%  (26/20 case moves N17 -> N18)
+    private const int CoverageReserveStartOfficialCount = 9;
+    private const double CoverageReservePerOfficialProbe = 0.004d;
+    private const double MaximumCoverageReserve = 0.04d;
+
 
     private static readonly object CacheGate =
         new();
@@ -33,6 +59,26 @@ internal static class DssEngineeringTargetResolver
         string,
         DssEngineeringTargetResolution> Cache =
         new(StringComparer.Ordinal);
+
+    internal static double ResolveRequiredCoverageFraction(
+        int officialTargetCount)
+    {
+        int excess =
+            Math.Max(
+                0,
+                officialTargetCount
+                - CoverageReserveStartOfficialCount);
+
+        double reserve =
+            Math.Min(
+                MaximumCoverageReserve,
+                excess
+                * CoverageReservePerOfficialProbe);
+
+        return
+            MinimumCoverageFraction
+            + reserve;
+    }
 
     public static DssEngineeringTargetResolution Resolve(
         int officialTargetCount,
@@ -50,28 +96,18 @@ internal static class DssEngineeringTargetResolver
                 .ResolveProbeRadiusMultiplier(
                     dssModule);
 
-        bool bodyTarget =
+        bool authoritativeTarget =
             targetSource.Equals(
                 "BODY",
+                StringComparison.OrdinalIgnoreCase)
+            || targetSource.Equals(
+                "HUD_CV",
                 StringComparison.OrdinalIgnoreCase);
-
-        if (!bodyTarget
-            || multiplier <= 1.0005d)
-        {
-            return
-                new DssEngineeringTargetResolution(
-                    official,
-                    official,
-                    multiplier,
-                    0d,
-                    0d,
-                    0d,
-                    false);
-        }
 
         string cacheKey =
             BuildCacheKey(
                 official,
+                authoritativeTarget,
                 dssModule,
                 multiplier);
 
@@ -97,10 +133,10 @@ internal static class DssEngineeringTargetResolver
                     MinimumCoverageFraction);
 
         double actualAlpha =
-            Math.Clamp(
-                stockAlpha * multiplier,
-                0d,
-                Math.PI / 2d);
+            DssSphericalCapCoverage
+                .ScaleCapAngularRadiusByArea(
+                    stockAlpha,
+                    multiplier);
 
         int selected =
             official;
@@ -111,31 +147,46 @@ internal static class DssEngineeringTargetResolver
                     stockLayout,
                     actualAlpha);
 
-        for (int candidate =
-                 DssSphericalPlacementPlanner.MinimumTargetCount;
-             candidate <= official;
-             candidate++)
+        bool mayReduce =
+            authoritativeTarget
+            && multiplier > 1.0005d;
+
+        if (mayReduce)
         {
-            IReadOnlyList<SphericalPoint> layout =
-                DssSphericalPlacementPlanner
-                    .GenerateOptimalSphericalPoints(
-                        candidate);
+            double requiredCoverage =
+                ResolveRequiredCoverageFraction(
+                    official);
 
-            double coverage =
-                DssSphericalCapCoverage
-                    .EvaluateUnionCoverage(
-                        layout,
-                        actualAlpha);
-
-            if (coverage
-                < MinimumCoverageFraction)
+            for (int candidate =
+                     DssSphericalPlacementPlanner.MinimumTargetCount;
+                 candidate <= official;
+                 candidate++)
             {
-                continue;
-            }
+                IReadOnlyList<SphericalPoint> layout =
+                    DssSphericalPlacementPlanner
+                        .GenerateOptimalSphericalPoints(
+                            candidate);
 
-            selected = candidate;
-            selectedCoverage = coverage;
-            break;
+                double coverage =
+                    DssSphericalCapCoverage
+                        .EvaluateUnionCoverage(
+                            layout,
+                            actualAlpha);
+
+                if (coverage
+                    < requiredCoverage)
+                {
+                    continue;
+                }
+
+                selected =
+                    candidate;
+
+                selectedCoverage =
+                    coverage;
+
+                break;
+            }
         }
 
         var result =
@@ -150,21 +201,34 @@ internal static class DssEngineeringTargetResolver
 
         lock (CacheGate)
         {
-            Cache[cacheKey] = result;
+            Cache[cacheKey] =
+                result;
         }
 
         if (result.Reduced)
         {
+            double stockArea =
+                DssSphericalCapCoverage
+                    .SingleCapAreaFraction(
+                        result.StockCapAngularRadius);
+
+            double actualArea =
+                DssSphericalCapCoverage
+                    .SingleCapAreaFraction(
+                        result.ActualCapAngularRadius);
+
             Logger.Logger.Info(
                 $"DSS PLAN engineering reduction: " +
-                $"official={result.OfficialTargetCount}/BODY; " +
+                $"official={result.OfficialTargetCount}/{targetSource}; " +
                 $"patch={dssModule.PatchRadius:0.###}; " +
                 $"original={dssModule.OriginalPatchRadius:0.###}; " +
-                $"multiplier={result.ScannerRadiusMultiplier:0.###}x; " +
+                $"areaMultiplier={result.ScannerRadiusMultiplier:0.###}x; " +
                 $"stockAlpha={result.StockCapAngularRadius * 180d / Math.PI:0.00}deg; " +
                 $"actualAlpha={result.ActualCapAngularRadius * 180d / Math.PI:0.00}deg; " +
+                $"areaRatio={(stockArea > 0d ? actualArea / stockArea : 1d):0.###}x; " +
                 $"optimal={result.TargetCount}; " +
-                $"coverage={result.PredictedCoverage:0.000}.");
+                $"coverage={result.PredictedCoverage:0.000}; " +
+                $"required={ResolveRequiredCoverageFraction(result.OfficialTargetCount):0.000}.");
         }
 
         return result;
@@ -172,9 +236,13 @@ internal static class DssEngineeringTargetResolver
 
     private static string BuildCacheKey(
         int official,
+        bool authoritativeTarget,
         DssModuleSnapshot dssModule,
         double multiplier) =>
-        official.ToString(
+        (authoritativeTarget
+            ? "A|"
+            : "S|")
+        + official.ToString(
             CultureInfo.InvariantCulture)
         + "|"
         + dssModule.PatchRadius.ToString(
