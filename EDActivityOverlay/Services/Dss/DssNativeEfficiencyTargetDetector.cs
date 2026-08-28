@@ -66,12 +66,29 @@ internal static class DssNativeEfficiencyTargetRuntime
     private static DateTimeOffset lastAttemptUtc =
         DateTimeOffset.MinValue;
 
+    // The same DssCapturedFrame may pass through both a frame-boundary hook and
+    // the explicit controller feed. Never count one physical image twice.
+    private static DateTimeOffset lastPhysicalFrameObservedUtc =
+        DateTimeOffset.MinValue;
+
     private static int pendingTarget;
     private static int pendingCount;
 
     internal static void Observe(
         DssCapturedFrame frame)
     {
+        lock (Gate)
+        {
+            if (frame.TimestampUtc
+                == lastPhysicalFrameObservedUtc)
+            {
+                return;
+            }
+
+            lastPhysicalFrameObservedUtc =
+                frame.TimestampUtc;
+        }
+
         // Native scan progress uses the same already-normalized capture frame.
         // It owns its own throttling and must continue to run even when the
         // efficiency-target detector skips this frame.
@@ -216,6 +233,8 @@ internal static class DssNativeEfficiencyTargetRuntime
                 DateTimeOffset.MinValue;
             lastAttemptUtc =
                 DateTimeOffset.MinValue;
+            lastPhysicalFrameObservedUtc =
+                DateTimeOffset.MinValue;
             pendingTarget = 0;
             pendingCount = 0;
         }
@@ -232,6 +251,8 @@ internal static class DssNativeEfficiencyTargetRuntime
             lastObservedUtc =
                 DateTimeOffset.UtcNow;
             lastAttemptUtc =
+                DateTimeOffset.MinValue;
+            lastPhysicalFrameObservedUtc =
                 DateTimeOffset.MinValue;
             pendingTarget = 0;
             pendingCount = 0;

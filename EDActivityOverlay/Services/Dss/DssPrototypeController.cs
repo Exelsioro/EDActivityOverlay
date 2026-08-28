@@ -686,6 +686,15 @@ internal sealed class DssPrototypeController : IDisposable
                         // from side-scale flicker.
                     }
 
+                    // DSS NATIVE HUD authoritative observation.
+                    //
+                    // Feed the native target/progress CV from the explicit live
+                    // DSS capture path. This point is after the three-miss
+                    // signature rejection above, so cockpit/menu frames are not
+                    // allowed to seed native DSS state.
+                    DssNativeEfficiencyTargetRuntime.Observe(
+                        frame);
+
                     Stopwatch detectWatch =
                         Stopwatch.StartNew();
 

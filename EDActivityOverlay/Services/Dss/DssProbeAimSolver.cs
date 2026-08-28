@@ -192,6 +192,34 @@ internal static class DssProbeAimSolver
             ResolveEfficiencyTarget(
                 state);
 
+        // SETTINGS fallback is never authoritative for DSS geometry. A wrong
+        // fallback N poisons both batch size and, more importantly, the
+        // calibrated spherical-cap radius used by rear corrections.
+        //
+        // The supplied 58 Eridani DE 1 run visibly showed native N=8 while
+        // shots.csv was planned as SETTINGS/N6. Do not allow that state again.
+        if (DssNativeEfficiencyTargetRuntime.TryGetFresh(
+                out DssNativeEfficiencyTargetSnapshot nativeTarget))
+        {
+            requestedTarget =
+                nativeTarget.Target;
+
+            source =
+                "HUD_CV";
+        }
+        else if (source.Equals(
+                     "SETTINGS",
+                     StringComparison.OrdinalIgnoreCase))
+        {
+            return
+                DssActionableTargetLeaseRuntime.Resolve(
+                    state,
+                    sequentialStep,
+                    scanComplete: false,
+                    geometry,
+                    DssProjectedAimPlan.Empty);
+        }
+
         DssSphericalAimTarget target =
             DssSphericalPlacementPlanner.Resolve(
                 sequentialStep,
