@@ -426,6 +426,110 @@
                 </Grid>
             </TabItem>
 
+            <TabItem Header="{DynamicResource Loc_MATERIAL_TRADERS}" Style="{DynamicResource EliteTabItemStyle}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="{DynamicResource Loc_MATERIAL_TRADER_HINT}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextColorBrush}"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{DynamicResource Loc_MATERIAL_TRADER_ORIGIN}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+
+                        <TextBox x:Name="MaterialTraderOriginBox"
+                                 Grid.Column="1"
+                                 Style="{DynamicResource TextBoxStyle}"/>
+
+                        <Button Grid.Column="2"
+                                Content="{DynamicResource Loc_MATERIAL_TRADER_USE_CURRENT}"
+                                Margin="7,0,0,0"
+                                Padding="9,3"
+                                Click="MaterialTraderUseCurrentSystem_Click"/>
+
+                        <CheckBox x:Name="MaterialTraderNeededOnlyCheckBox"
+                                  Grid.Column="3"
+                                  Content="{DynamicResource Loc_MATERIAL_TRADER_NEEDED_ONLY}"
+                                  IsChecked="True"
+                                  VerticalAlignment="Center"
+                                  Margin="14,0,0,0"/>
+
+                        <Button x:Name="MaterialTraderSearchButton"
+                                Grid.Column="5"
+                                Content="{DynamicResource Loc_MATERIAL_TRADER_FIND}"
+                                Padding="14,4"
+                                Click="MaterialTraderSearch_Click"/>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2"
+                                Margin="0,8,0,8">
+                        <TextBlock x:Name="MaterialTraderStatusText"
+                                   Foreground="{DynamicResource AccentColorBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{DynamicResource Loc_MATERIAL_TRADER_SOURCE}"
+                                   Margin="0,2,0,0"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource MutedTextColorBrush}"/>
+                    </StackPanel>
+
+                    <DataGrid x:Name="MaterialTraderGrid"
+                              Grid.Row="3"
+                              AlternationCount="2">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_TYPE}"
+                                                Binding="{Binding Type}"
+                                                Width="125"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_SYSTEM}"
+                                                Binding="{Binding SystemName}"
+                                                Width="165"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_STATION}"
+                                                Binding="{Binding StationName}"
+                                                Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_ECONOMY}"
+                                                Binding="{Binding Economy}"
+                                                Width="125"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_DISTANCE}"
+                                                Binding="{Binding DistanceLy}"
+                                                Width="90"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_DISTANCE_TO_STAR}"
+                                                Binding="{Binding DistanceLs}"
+                                                Width="100"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL_TRADER_UPDATED}"
+                                                Binding="{Binding UpdatedText}"
+                                                Width="135"/>
+                            <DataGridTemplateColumn Header="{DynamicResource Loc_MATERIAL_TRADER_ACTIONS}"
+                                                    Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{DynamicResource Loc_MATERIAL_TRADER_ROUTE}"
+                                                Padding="8,3"
+                                                CommandParameter="{Binding}"
+                                                Click="MaterialTraderRoute_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+
             <TabItem Header="{DynamicResource Loc_ENGINEERS}" Style="{DynamicResource EliteTabItemStyle}">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>

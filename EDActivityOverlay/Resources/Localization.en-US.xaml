@@ -922,6 +922,31 @@
     <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">CURRENT · {0} · {1}</sys:String>    <sys:String x:Key="Loc_AVAILABLE_EXPERIMENTAL_EFFECTS">AVAILABLE EXPERIMENTAL EFFECTS</sys:String>
     <sys:String x:Key="Loc_PIN_EXPERIMENTAL_EFFECT">PIN EXPERIMENTAL EFFECT</sys:String>
     <sys:String x:Key="Loc_ENGINEER_EXPERIMENTALS_UNAVAILABLE">Experimental-effect assignments are unavailable for this engineer.</sys:String>
-    <sys:String x:Key="Loc_ROUTE_TO_ENGINEER">ROUTE TO ENGINEER</sys:String></ResourceDictionary>
+    <sys:String x:Key="Loc_ROUTE_TO_ENGINEER">ROUTE TO ENGINEER</sys:String>    <sys:String x:Key="Loc_MATERIAL_TRADERS">MATERIAL TRADERS</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_HINT">Find the nearest Raw, Manufactured and Encoded material traders from the current system or a manually entered system. “Needed only” uses the missing categories from the pinned engineering plan.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ORIGIN">FROM SYSTEM:</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_USE_CURRENT">CURRENT</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_NEEDED_ONLY">NEEDED TYPES ONLY</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_FIND">FIND</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SOURCE">Source: Ardent API / EDDN. Trader type is inferred from station economy.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_TYPE">TRADER TYPE</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SYSTEM">SYSTEM</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_STATION">STATION</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ECONOMY">ECONOMY</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE">DISTANCE</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_TO_STAR">TO STAR</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_UPDATED">UPDATED</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ACTIONS">ACTIONS</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ROUTE">ROUTE</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_RAW">RAW</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_MANUFACTURED">MANUFACTURED</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ENCODED">ENCODED</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SEARCHING">Searching nearest material traders…</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SEARCH_FAILED">Material trader search failed.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_NONE_FOUND">No matching material traders found in the returned Ardent results.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_FOUND_FORMAT">Found {0} nearest trader type(s) from {1}.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_CURRENT_SYSTEM_UNAVAILABLE">Current system is not available from the journal. Enter a system manually.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LY_FORMAT">{0:0.0} ly</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} ls</sys:String></ResourceDictionary>
 
 

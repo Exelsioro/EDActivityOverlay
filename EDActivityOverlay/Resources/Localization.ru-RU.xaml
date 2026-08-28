@@ -922,6 +922,31 @@
     <sys:String x:Key="Loc_SHIP_STATUS_CURRENT_CAPTION_FORMAT">ТЕКУЩАЯ · {0} · {1}</sys:String>    <sys:String x:Key="Loc_AVAILABLE_EXPERIMENTAL_EFFECTS">ДОСТУПНЫЕ ЭКСПЕРИМЕНТАЛЬНЫЕ ЭФФЕКТЫ</sys:String>
     <sys:String x:Key="Loc_PIN_EXPERIMENTAL_EFFECT">ЗАКРЕПИТЬ ЭКСП. ЭФФЕКТ</sys:String>
     <sys:String x:Key="Loc_ENGINEER_EXPERIMENTALS_UNAVAILABLE">Для этого инженера не удалось определить доступные экспериментальные эффекты.</sys:String>
-    <sys:String x:Key="Loc_ROUTE_TO_ENGINEER">МАРШРУТ К ИНЖЕНЕРУ</sys:String></ResourceDictionary>
+    <sys:String x:Key="Loc_ROUTE_TO_ENGINEER">МАРШРУТ К ИНЖЕНЕРУ</sys:String>    <sys:String x:Key="Loc_MATERIAL_TRADERS">ТОРГОВЦЫ МАТЕРИАЛАМИ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_HINT">Поиск ближайших торговцев сырьём, промышленными материалами и данными от текущей или введённой системы. «Только нужные» берёт недостающие категории из закреплённого инженерного плана.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ORIGIN">ОТ СИСТЕМЫ:</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_USE_CURRENT">ТЕКУЩАЯ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_NEEDED_ONLY">ТОЛЬКО НУЖНЫЕ ТИПЫ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_FIND">НАЙТИ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SOURCE">Источник: Ardent API / EDDN. Тип торговца определяется по экономике станции.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_TYPE">ТИП ТОРГОВЦА</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SYSTEM">СИСТЕМА</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_STATION">СТАНЦИЯ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ECONOMY">ЭКОНОМИКА</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE">РАССТОЯНИЕ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_TO_STAR">ДО ЗВЕЗДЫ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_UPDATED">ОБНОВЛЕНО</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ACTIONS">ДЕЙСТВИЯ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ROUTE">МАРШРУТ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_RAW">СЫРЬЁ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_MANUFACTURED">ПРОМЫШЛЕННЫЕ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_ENCODED">ДАННЫЕ</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SEARCHING">Ищу ближайших торговцев материалами…</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_SEARCH_FAILED">Не удалось найти торговцев материалами.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_NONE_FOUND">В результатах Ardent не найдено подходящих торговцев.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_FOUND_FORMAT">Найдено ближайших типов торговцев: {0}. Исходная система: {1}.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_CURRENT_SYSTEM_UNAVAILABLE">Текущая система ещё не получена из журнала. Введите систему вручную.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LY_FORMAT">{0:0.0} св. л.</sys:String>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} св. с.</sys:String></ResourceDictionary>
 
 
