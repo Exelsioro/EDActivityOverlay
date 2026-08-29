@@ -204,12 +204,24 @@ public sealed class EngineeringUpdateV1Tests : IDisposable
     [Fact]
     public void EngineeringUiContainsExperimentalControlsAndGalaxyMapRouteHandoff()
     {
-        string code =
+        string mainCode =
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
                     "Windows",
                     "EngineeringWindow.xaml.cs"));
+
+        string traderCode =
+            File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
+                    "Windows",
+                    "EngineeringWindow.MaterialTraders.cs"));
+
+        string code =
+            mainCode
+            + Environment.NewLine
+            + traderCode;
 
         string xaml =
             File.ReadAllText(
@@ -240,12 +252,12 @@ public sealed class EngineeringUpdateV1Tests : IDisposable
 
         Assert.Contains(
             "recipe.Ingredients.Select",
-            code,
+            mainCode,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "Math.Max(1, recipe.Grade)",
-            code,
+            mainCode,
             StringComparison.Ordinal);
     }
 
@@ -352,7 +364,8 @@ public sealed class EngineeringUpdateV1Tests : IDisposable
                         .. relative
                     ]);
 
-            if (File.Exists(candidate))
+            if (File.Exists(
+                    candidate))
             {
                 return candidate;
             }

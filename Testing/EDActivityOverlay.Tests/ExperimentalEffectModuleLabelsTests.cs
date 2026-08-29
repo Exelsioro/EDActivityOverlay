@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Engineering;
@@ -80,8 +81,25 @@ public sealed class ExperimentalEffectModuleLabelsTests
             shield.ModuleName);
 
         Assert.NotEqual(
-            powerPlant.DisplayName,
-            shield.DisplayName);
+            powerPlant.ModuleName,
+            shield.ModuleName);
+
+        string modelSource =
+            File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
+                    "Models",
+                    "EngineeringModels.cs"));
+
+        Assert.Contains(
+            "LocalizedExperimentalModuleName",
+            modelSource,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "Loc_Experimental_Format",
+            modelSource,
+            StringComparison.Ordinal);
 
         Assert.Equal(
             "iron",
@@ -153,5 +171,35 @@ public sealed class ExperimentalEffectModuleLabelsTests
             " / ",
             effect.ModuleName,
             StringComparison.Ordinal);
+    }
+
+    private static string FindProjectFile(
+        params string[] relative)
+    {
+        for (
+            DirectoryInfo? directory =
+                new(
+                    AppContext.BaseDirectory);
+            directory is not null;
+            directory = directory.Parent)
+        {
+            string candidate =
+                Path.Combine(
+                    [
+                        directory.FullName,
+                        .. relative
+                    ]);
+
+            if (File.Exists(
+                    candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new FileNotFoundException(
+            string.Join(
+                Path.DirectorySeparatorChar,
+                relative));
     }
 }

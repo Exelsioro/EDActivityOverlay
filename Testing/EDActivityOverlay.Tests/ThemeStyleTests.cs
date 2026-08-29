@@ -69,7 +69,7 @@ public sealed class ThemeStyleTests
         string engineeringMarkup = File.ReadAllText(Path.Combine(
             repository, "EDActivityOverlay", "Windows", "EngineeringWindow.xaml"));
         Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", engineeringMarkup, StringComparison.Ordinal);
-        Assert.Equal(5, engineeringMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(6, engineeringMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
 
         XElement dataGridRowStyle = Assert.Single(styles.Descendants(),
             element => element.Name.LocalName == "Style"
