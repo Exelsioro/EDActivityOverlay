@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -256,7 +256,12 @@ public sealed class EngineeringUpdateV1Tests : IDisposable
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "Math.Max(1, recipe.Grade)",
+            "BuildGradePathIngredientRows",
+            mainCode,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "recipe.Grade",
             mainCode,
             StringComparison.Ordinal);
     }

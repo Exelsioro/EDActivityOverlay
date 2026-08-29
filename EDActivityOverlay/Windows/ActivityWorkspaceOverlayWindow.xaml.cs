@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -125,17 +125,48 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     public void ApplyInteractionMode(bool enabled, bool showCursor)
     {
-        interactive = enabled;
-        showCursorWhenInteractive = showCursor;
-        WindowsAPI.SetClickThrough(this, !enabled);
-        InteractionHint.Text = enabled ? Loc.Get("Loc_DRAG_TO_MOVE") : Loc.Get("Loc_CTRL_6_INTERACT");
-        DragHandle.Cursor = enabled ? Cursors.SizeAll : Cursors.Arrow;
-        if (enabled && showCursor && IsVisible)
+        interactive =
+            enabled;
+
+        showCursorWhenInteractive =
+            showCursor;
+
+        WindowsAPI.SetClickThrough(
+            this,
+            !enabled);
+
+        IsHitTestVisible =
+            enabled;
+
+        ForceCursor =
+            !enabled;
+
+        Cursor =
+            enabled
+            && showCursor
+                ? Cursors.Arrow
+                : Cursors.None;
+
+        InteractionHint.Text =
+            enabled
+                ? Loc.Get(
+                    "Loc_DRAG_TO_MOVE")
+                : Loc.Get(
+                    "Loc_CTRL_6_INTERACT");
+
+        DragHandle.Cursor =
+            enabled
+                ? Cursors.SizeAll
+                : Cursors.None;
+
+        if (enabled
+            && showCursor
+            && IsVisible)
         {
-            WindowsAPI.EnsureCursorVisibleOnWindow(this);
+            WindowsAPI.EnsureCursorVisibleOnWindow(
+                this);
         }
     }
-
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         WindowsAPI.SetupOverlayWindow(this);
@@ -430,23 +461,47 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                         : null))
             .ToArray();
 
-        ExplorationBodiesGrid.ItemsSource = rows;
+        CatalogRow? previousSelection =
+            ExplorationBodiesGrid.SelectedItem
+            as CatalogRow;
 
-        CatalogCountText.Text = Loc.Format(
-            "Loc_Exploration_catalog_count_format",
-            rows.Length,
-            catalog.Bodies.Count);
+        ExplorationBodiesGrid.ItemsSource =
+            rows;
 
-        if (rows.Length > 0)
+        CatalogCountText.Text =
+            Loc.Format(
+                "Loc_Exploration_catalog_count_format",
+                rows.Length,
+                catalog.Bodies.Count);
+
+        CatalogRow? preservedSelection =
+            previousSelection is null
+                ? null
+                : rows.FirstOrDefault(
+                    row =>
+                        previousSelection.Body.BodyId >= 0
+                            ? row.Body.BodyId
+                              == previousSelection.Body.BodyId
+                            : row.Name.Equals(
+                                previousSelection.Name,
+                                StringComparison.OrdinalIgnoreCase));
+
+        if (preservedSelection is not null)
         {
-            ExplorationBodiesGrid.SelectedIndex = 0;
+            ExplorationBodiesGrid.SelectedItem =
+                preservedSelection;
+        }
+        else if (rows.Length > 0)
+        {
+            ExplorationBodiesGrid.SelectedIndex =
+                0;
         }
         else
         {
-            ShowSelectedBody(null);
+            ShowSelectedBody(
+                null);
         }
     }
-
     private static Dictionary<int, ExplorationVisitDisposition>
         BuildVisitDispositionMap(
             GameStateSnapshot state,
@@ -1719,14 +1774,9 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         long localValue =
             state.ExplorationBodies
-                .Sum(body => body.EstimatedScanValue)
-            + state.ExplorationBodies
-                .Where(body => body.IsMapped)
-                .Sum(body =>
-                    body.MappingEfficient
-                        ? body.EstimatedEfficientMappingValue
-                        : body.EstimatedMappingValue);
-
+                .Sum(
+                    ExplorationPresentationValueResolver
+                        .ResolveCurrentVisitValue);
         if (localValue > 0)
         {
             result += "  •  "

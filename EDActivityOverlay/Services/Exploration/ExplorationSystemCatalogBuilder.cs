@@ -1,4 +1,4 @@
-﻿using EDActivityOverlay.Models;
+using EDActivityOverlay.Models;
 
 namespace EDActivityOverlay.Services.Exploration;
 
@@ -66,9 +66,16 @@ public static class ExplorationSystemCatalogBuilder
         string subtype = Prefer(local.BodyClass, external?.Subtype, local.Description);
         bool terraformable = local.Terraformable
                              || ContainsTerraform(external?.TerraformingState);
-        long mappingValue = local.EstimatedEfficientMappingValue > 0
-            ? local.EstimatedEfficientMappingValue
-            : external?.EstimatedMappingValue ?? local.EstimatedMappingValue;
+        long mappingValue =
+            ExplorationPresentationValueResolver.ResolveMappingEstimate(
+                local);
+
+        if (mappingValue <= 0)
+        {
+            mappingValue =
+                external?.EstimatedMappingValue
+                ?? 0;
+        }
         int biologicalSignals = Math.Max(
             local.BiologicalSignals,
             history?.BiologicalSignals ?? 0);
