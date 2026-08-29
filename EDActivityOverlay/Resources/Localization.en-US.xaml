@@ -967,6 +967,36 @@
     <sys:String x:Key="Loc_TRADE_SORT_DISTANCE">Distance</sys:String>
     <sys:String x:Key="Loc_TRADE_RESULTS_SUMMARY">{0} routes · best {1:N0} CR/trip</sys:String>
     <sys:String x:Key="Loc_TRADE_RESULTS_SEARCHING">SEARCH {0}/{1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_WORKSPACE_TITLE">TRADING</sys:String>
+    <sys:String x:Key="Loc_TRADE_ANCHOR_SYSTEM">Supplier search anchor</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_FREE">Free cargo</sys:String>
+    <sys:String x:Key="Loc_TRADE_MAX_AGE">Maximum data age</sys:String>
+    <sys:String x:Key="Loc_TRADE_SYNC_JOURNAL">SYNC JOURNAL</sys:String>
+    <sys:String x:Key="Loc_TRADE_ADVANCED_FILTERS">ADVANCED FILTERS</sys:String>
+    <sys:String x:Key="Loc_TRADE_MIN_PAD">Minimum landing pad</sys:String>
+    <sys:String x:Key="Loc_TRADE_PAD_ANY">Any</sys:String>
+    <sys:String x:Key="Loc_TRADE_PAD_MEDIUM">Medium+</sys:String>
+    <sys:String x:Key="Loc_TRADE_PAD_LARGE">Large</sys:String>
+    <sys:String x:Key="Loc_TRADE_MAX_STATION_DISTANCE">Maximum station distance</sys:String>
+    <sys:String x:Key="Loc_TRADE_MIN_SUPPLY">Minimum supply</sys:String>
+    <sys:String x:Key="Loc_TRADE_MIN_DEMAND">Minimum demand</sys:String>
+    <sys:String x:Key="Loc_TRADE_ANY">Any</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY">Commodity</sys:String>
+    <sys:String x:Key="Loc_TRADE_SOURCE">Supplier</sys:String>
+    <sys:String x:Key="Loc_TRADE_TARGET">Buyer</sys:String>
+    <sys:String x:Key="Loc_TRADE_PROFIT_T">Profit / t</sys:String>
+    <sys:String x:Key="Loc_TRADE_PROFIT_TRIP">Profit / trip</sys:String>
+    <sys:String x:Key="Loc_TRADE_LEG_DISTANCE">Trade leg</sys:String>
+    <sys:String x:Key="Loc_TRADE_AGE">Age</sys:String>
+    <sys:String x:Key="Loc_TRADE_SELECT_ROUTE">Select a trade route</sys:String>
+    <sys:String x:Key="Loc_TRADE_PIN_ROUTE">PIN ROUTE</sys:String>
+    <sys:String x:Key="Loc_TRADE_DETAIL_PROFIT">{0:N0} CR / trip  •  {1:N0} CR / t</sys:String>
+    <sys:String x:Key="Loc_TRADE_DETAIL_ECONOMICS">Buy {0:N0} CR  →  sell {1:N0} CR
+Supply {2:N0}  •  demand {3}  •  tradable {4:N0} t
+Trade leg {5:0.0} LY</sys:String>
+    <sys:String x:Key="Loc_TRADE_WORKSPACE_PROGRESS_FOOTER">Market scan {0}/{1}  •  {2:F1}s  •  results update as they arrive</sys:String>
+    <sys:String x:Key="Loc_TRADE_WORKSPACE_IDLE_FOOTER">Anchor only limits supplier search. Displayed distance is supplier → buyer.</sys:String>
+    <sys:String x:Key="Loc_TRADE_RESULTS_SUMMARY_LONG">{0} routes  •  best {1:N0} CR / trip</sys:String>
 </ResourceDictionary>
 
 

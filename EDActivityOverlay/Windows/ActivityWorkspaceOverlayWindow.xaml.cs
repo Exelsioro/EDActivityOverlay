@@ -63,6 +63,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         this.parentWindow = parentWindow;
         activity = initialActivity;
         InitializeComponent();
+        InitializeTradeWorkspace();
         DssTargetComboBox.ItemsSource = Enumerable.Range(
             DssProbePatternCatalog.MinimumTarget,
             DssProbePatternCatalog.MaximumTarget - DssProbePatternCatalog.MinimumTarget + 1);
@@ -95,6 +96,13 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         {
             CloseFullExplorationView();
         }
+
+        if (activity == ActivityType.Trade
+            && value != ActivityType.Trade)
+        {
+            LeaveTradeWorkspace();
+        }
+
         activity = value;
         RefreshContent(JournalMonitorService.Instance.Current);
     }
@@ -179,6 +187,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private void RefreshContent(GameStateSnapshot state)
     {
+        if (activity == ActivityType.Trade)
+        {
+            RefreshTradeWorkspace(state);
+            return;
+        }
+
         bool exploration = activity == ActivityType.Exploration;
 
         LocationText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
@@ -2477,6 +2491,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         }
 
         ApplyRoutePanelState();
+        tradeWorkspaceControl?.RefreshLocalization();
         RefreshContent(
             JournalMonitorService.Instance.Current);
     }
@@ -2506,7 +2521,15 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         PositionOverlay();
         IntPtr foreground = WindowsAPI.GetForegroundWindow();
-        bool focused = foreground == targetWindow || WindowsAPI.IsOverlayWindow(foreground);
+        WindowsAPI.GetWindowThreadProcessId(
+            targetWindow,
+            out uint targetProcessId);
+
+        bool focused =
+            WindowsAPI.IsWindowOwnedByProcess(
+                foreground,
+                targetProcessId)
+            || WindowsAPI.IsOverlayWindow(foreground);
         bool visible = WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow) && focused;
         if (visible && !IsVisible) Show();
         else if (!visible && IsVisible) Hide();
@@ -2518,7 +2541,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         if (targetWindow == IntPtr.Zero || !WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT rect)) return;
         double targetWidth = rect.Right - rect.Left;
         double targetHeight = rect.Bottom - rect.Top;
-        if (fullExplorationVisible)
+        if (fullExplorationVisible
+            || activity == ActivityType.Trade)
         {
             Width = Math.Min(1180, Math.Max(MinWidth, targetWidth - 64));
             Height = Math.Min(760, Math.Max(MinHeight, targetHeight - 64));
@@ -2567,6 +2591,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         if (disposed) return;
         disposed = true;
         if (fullExplorationVisible) parentWindow?.EndExclusiveOverlayInteraction();
+        DisposeTradeWorkspace();
         updateTimer.Stop();
         updateTimer.Tick -= UpdateTimer_Tick;
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;

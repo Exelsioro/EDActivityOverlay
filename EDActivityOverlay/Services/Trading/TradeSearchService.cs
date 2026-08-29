@@ -537,7 +537,7 @@ public sealed class TradeSearchService
                     candidate.ProfitPerTon)
             .ThenBy(
                 candidate =>
-                    candidate.TotalTravelDistanceLy)
+                    candidate.SourceToTargetDistanceLy)
             .Take(
                 maxResults)
             .ToArray();

@@ -1,4 +1,4 @@
-﻿namespace EDActivityOverlay.Services.Trading;
+namespace EDActivityOverlay.Services.Trading;
 
 public static class TradeRouteEngine
 {
@@ -155,15 +155,14 @@ public static class TradeRouteEngine
                         (long)profitPerTon
                         * amount);
 
-                double totalDistance =
-                    originToSource
-                    + sourceToTarget;
+                double tradeLegDistance =
+                    sourceToTarget;
 
                 var priority =
                     new CandidatePriority(
                         profitPerTrip,
                         profitPerTon,
-                        -totalDistance);
+                        -tradeLegDistance);
 
                 if (best.Count >= maxResults
                     && best.TryPeek(
@@ -235,7 +234,7 @@ public static class TradeRouteEngine
                         candidate.ProfitPerTon)
                 .ThenBy(
                     candidate =>
-                        candidate.TotalTravelDistanceLy)
+                        candidate.SourceToTargetDistanceLy)
                 .ToArray();
     }
 

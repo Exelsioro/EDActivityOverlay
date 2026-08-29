@@ -36,7 +36,7 @@ public static class TradeRoutePresentationAdapter
             },
             CargoCapacity = candidate.TradableAmount,
             IsRoundTrip = false,
-            RouteDistance = candidate.TotalTravelDistanceLy,
+            RouteDistance = candidate.SourceToTargetDistanceLy,
             LastUpdate = candidate.OldestUpdateUtc.ToLocalTime().ToString("g"),
             TotalProfitPerTrip = SaturatingInt(candidate.ProfitPerTrip)
         };

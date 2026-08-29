@@ -1,4 +1,4 @@
-﻿using EDActivityOverlay.Models.Trading;
+using EDActivityOverlay.Models.Trading;
 using EDActivityOverlay.Services.Trading;
 using Xunit;
 
@@ -120,10 +120,10 @@ public sealed class TradeRoutePresentationAdapterTests
             200_000,
             route.TotalProfitPerTrip);
 
-        // v2 presents the whole actionable trip from the player's origin:
-        // origin -> supplier (10 ly) + supplier -> buyer (25 ly).
+        // Trade distance is the supplier -> buyer leg only.
+        // The search anchor is only used to include/exclude suppliers.
         Assert.Equal(
-            35,
+            25,
             route.RouteDistance,
             8);
     }

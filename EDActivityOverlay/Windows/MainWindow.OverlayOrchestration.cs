@@ -13,9 +13,9 @@ namespace EDActivityOverlay
     public partial class MainWindow
     {
         private bool IsTradeSurfaceVisible() =>
-            tradeRouteWindow?.IsVisible == true
-            || resultsOverlayWindow?.IsVisible == true
-            || pinnedRouteOverlay?.IsVisible == true;
+            currentActivity == ActivityType.Trade
+            && (activityWorkspaceWindow?.IsVisible == true
+                || pinnedRouteOverlay?.IsVisible == true);
 
         private void SetupGlobalHotkeys()
         {
@@ -313,6 +313,12 @@ namespace EDActivityOverlay
             pinnedRouteOverlay.PinTradeRoute(tradeRoute);
             engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
             isPinnedRouteActive = true;
+
+            if (currentActivity == ActivityType.Trade)
+            {
+                CloseActivityWorkspace();
+            }
+
             CloseOverlayWindows();
             Logger.Logger.Info("Route pinned successfully, closing other overlays");
         }

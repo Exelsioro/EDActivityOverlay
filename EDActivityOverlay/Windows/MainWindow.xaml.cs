@@ -113,7 +113,7 @@ namespace EDActivityOverlay
             SetupOverlay();
             notificationOverlayWindow = new NotificationOverlayWindow(targetWindow);
             shipStatusOverlayWindow = new ShipStatusOverlayWindow(targetWindow);
-            shipStatusOverlayWindow.SetContextSuppression(IsTradeSurfaceVisible);
+            shipStatusOverlayWindow.SetContextSuppression(null);
             SetupUpdateTimer();
             LoadConfiguredSettings();
             RestoreMainOverlayCollapsedState();

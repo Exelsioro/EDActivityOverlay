@@ -967,6 +967,36 @@
     <sys:String x:Key="Loc_TRADE_SORT_DISTANCE">Расстояние</sys:String>
     <sys:String x:Key="Loc_TRADE_RESULTS_SUMMARY">{0} маршрутов · лучший {1:N0} кр./рейс</sys:String>
     <sys:String x:Key="Loc_TRADE_RESULTS_SEARCHING">ПОИСК {0}/{1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_WORKSPACE_TITLE">ТОРГОВЛЯ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ANCHOR_SYSTEM">Якорь поиска поставщика</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_FREE">Свободный грузовой отсек</sys:String>
+    <sys:String x:Key="Loc_TRADE_MAX_AGE">Макс. возраст данных</sys:String>
+    <sys:String x:Key="Loc_TRADE_SYNC_JOURNAL">СИНХРОНИЗИРОВАТЬ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ADVANCED_FILTERS">РАСШИРЕННЫЕ ФИЛЬТРЫ</sys:String>
+    <sys:String x:Key="Loc_TRADE_MIN_PAD">Мин. посадочная площадка</sys:String>
+    <sys:String x:Key="Loc_TRADE_PAD_ANY">Любая</sys:String>
+    <sys:String x:Key="Loc_TRADE_PAD_MEDIUM">Средняя+</sys:String>
+    <sys:String x:Key="Loc_TRADE_PAD_LARGE">Большая</sys:String>
+    <sys:String x:Key="Loc_TRADE_MAX_STATION_DISTANCE">Макс. расстояние до станции</sys:String>
+    <sys:String x:Key="Loc_TRADE_MIN_SUPPLY">Мин. предложение</sys:String>
+    <sys:String x:Key="Loc_TRADE_MIN_DEMAND">Мин. спрос</sys:String>
+    <sys:String x:Key="Loc_TRADE_ANY">Любое</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY">Товар</sys:String>
+    <sys:String x:Key="Loc_TRADE_SOURCE">Поставщик</sys:String>
+    <sys:String x:Key="Loc_TRADE_TARGET">Покупатель</sys:String>
+    <sys:String x:Key="Loc_TRADE_PROFIT_T">Прибыль / т</sys:String>
+    <sys:String x:Key="Loc_TRADE_PROFIT_TRIP">Прибыль / рейс</sys:String>
+    <sys:String x:Key="Loc_TRADE_LEG_DISTANCE">Торговое плечо</sys:String>
+    <sys:String x:Key="Loc_TRADE_AGE">Возраст</sys:String>
+    <sys:String x:Key="Loc_TRADE_SELECT_ROUTE">Выберите торговый маршрут</sys:String>
+    <sys:String x:Key="Loc_TRADE_PIN_ROUTE">ЗАКРЕПИТЬ МАРШРУТ</sys:String>
+    <sys:String x:Key="Loc_TRADE_DETAIL_PROFIT">{0:N0} кр. / рейс  •  {1:N0} кр. / т</sys:String>
+    <sys:String x:Key="Loc_TRADE_DETAIL_ECONOMICS">Покупка {0:N0} кр.  →  продажа {1:N0} кр.
+Предложение {2:N0}  •  спрос {3}  •  доступно {4:N0} т
+Торговое плечо {5:0.0} св. л.</sys:String>
+    <sys:String x:Key="Loc_TRADE_WORKSPACE_PROGRESS_FOOTER">Поиск рынка {0}/{1}  •  {2:F1} с  •  результаты обновляются по готовности</sys:String>
+    <sys:String x:Key="Loc_TRADE_WORKSPACE_IDLE_FOOTER">Якорь ограничивает только поиск поставщика. Расстояние = поставщик → покупатель.</sys:String>
+    <sys:String x:Key="Loc_TRADE_RESULTS_SUMMARY_LONG">{0} маршрутов  •  лучший {1:N0} кр. / рейс</sys:String>
 </ResourceDictionary>
 
 

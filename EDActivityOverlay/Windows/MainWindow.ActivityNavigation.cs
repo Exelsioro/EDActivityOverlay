@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
@@ -63,9 +63,9 @@ public partial class MainWindow
         switch (activity)
         {
             case ActivityType.Trade:
+                CloseOverlayWindows();
                 CloseEngineeringOverlay();
-                CloseActivityWorkspace();
-                EnsureTradeWorkspaceVisible();
+                EnsureJournalWorkspaceVisible(ActivityType.Trade);
                 break;
             case ActivityType.Engineering:
                 CloseOverlayWindows();
@@ -113,8 +113,7 @@ public partial class MainWindow
     {
         bool isVisible = activity == currentActivity && activity switch
         {
-            ActivityType.Trade => tradeRouteWindow?.IsVisible == true
-                                  || resultsOverlayWindow?.IsVisible == true
+            ActivityType.Trade => activityWorkspaceWindow?.IsVisible == true
                                   || pinnedRouteOverlay?.IsVisible == true,
             ActivityType.Engineering => engineeringOverlayWindow?.IsVisible == true,
             ActivityType.Exploration or ActivityType.Mining => activityWorkspaceWindow?.IsVisible == true,
