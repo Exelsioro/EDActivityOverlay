@@ -947,6 +947,26 @@
     <sys:String x:Key="Loc_MATERIAL_TRADER_FOUND_FORMAT">Найдено ближайших типов торговцев: {0}. Исходная система: {1}.</sys:String>
     <sys:String x:Key="Loc_MATERIAL_TRADER_CURRENT_SYSTEM_UNAVAILABLE">Текущая система ещё не получена из журнала. Введите систему вручную.</sys:String>
     <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LY_FORMAT">{0:0.0} св. л.</sys:String>
-    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} св. с.</sys:String></ResourceDictionary>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} св. с.</sys:String>    <sys:String x:Key="Loc_TRADE_SOURCE_RADIUS">Радиус поставщика</sys:String>
+    <sys:String x:Key="Loc_TRADE_TARGET_RADIUS">Радиус покупателя</sys:String>
+    <sys:String x:Key="Loc_TRADE_INCLUDE_FLEET_CARRIERS">Включать флит-кэрриеры</sys:String>
+    <sys:String x:Key="Loc_TRADE_CANCEL">ОТМЕНА</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_RESOLVING">Определение исходной системы...</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_LOADING_MARKET">Загрузка рыночных данных...</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_PROGRESS">Поиск {0}/{1} · маршрутов {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_PROGRESS_FAILED">Поиск {0}/{1} · маршрутов {2} · ошибок {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_DONE">Готово · {0} маршрутов · {1:F1} с</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_CANCELLING">Отмена поиска...</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_CANCELLED">Поиск отменён · сохранено маршрутов: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_ERROR">Ошибка поиска: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_VALIDATION_SYSTEM">Укажите исходную систему.</sys:String>
+    <sys:String x:Key="Loc_TRADE_VALIDATION_CARGO">Свободный грузовой отсек должен быть больше нуля.</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT">СОРТИРОВКА</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_PROFIT">Прибыль / рейс</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_PER_TON">Прибыль / т</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_DISTANCE">Расстояние</sys:String>
+    <sys:String x:Key="Loc_TRADE_RESULTS_SUMMARY">{0} маршрутов · лучший {1:N0} кр./рейс</sys:String>
+    <sys:String x:Key="Loc_TRADE_RESULTS_SEARCHING">ПОИСК {0}/{1}</sys:String>
+</ResourceDictionary>
 
 

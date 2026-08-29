@@ -947,6 +947,26 @@
     <sys:String x:Key="Loc_MATERIAL_TRADER_FOUND_FORMAT">Found {0} nearest trader type(s) from {1}.</sys:String>
     <sys:String x:Key="Loc_MATERIAL_TRADER_CURRENT_SYSTEM_UNAVAILABLE">Current system is not available from the journal. Enter a system manually.</sys:String>
     <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LY_FORMAT">{0:0.0} ly</sys:String>
-    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} ls</sys:String></ResourceDictionary>
+    <sys:String x:Key="Loc_MATERIAL_TRADER_DISTANCE_LS_FORMAT">{0:0} ls</sys:String>    <sys:String x:Key="Loc_TRADE_SOURCE_RADIUS">Supplier radius</sys:String>
+    <sys:String x:Key="Loc_TRADE_TARGET_RADIUS">Buyer radius</sys:String>
+    <sys:String x:Key="Loc_TRADE_INCLUDE_FLEET_CARRIERS">Include Fleet Carriers</sys:String>
+    <sys:String x:Key="Loc_TRADE_CANCEL">CANCEL</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_RESOLVING">Resolving origin system...</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_LOADING_MARKET">Loading market data...</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_PROGRESS">Searching {0}/{1} · routes {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_PROGRESS_FAILED">Searching {0}/{1} · routes {2} · errors {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_DONE">Done · {0} routes · {1:F1}s</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_CANCELLING">Cancelling search...</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_CANCELLED">Search cancelled · {0} routes kept</sys:String>
+    <sys:String x:Key="Loc_TRADE_SEARCH_ERROR">Search error: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_VALIDATION_SYSTEM">Enter an origin system.</sys:String>
+    <sys:String x:Key="Loc_TRADE_VALIDATION_CARGO">Cargo capacity must be greater than zero.</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT">SORT</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_PROFIT">Profit / trip</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_PER_TON">Profit / t</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_DISTANCE">Distance</sys:String>
+    <sys:String x:Key="Loc_TRADE_RESULTS_SUMMARY">{0} routes · best {1:N0} CR/trip</sys:String>
+    <sys:String x:Key="Loc_TRADE_RESULTS_SEARCHING">SEARCH {0}/{1}</sys:String>
+</ResourceDictionary>
 
 
