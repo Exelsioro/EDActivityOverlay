@@ -1055,6 +1055,39 @@ Trade leg {5:0.0} LY</sys:String>
     <sys:String x:Key="Loc_TRADE_FILTERS_FORMAT">FILTERS · {0}</sys:String>
     <sys:String x:Key="Loc_TRADE_TRAVEL_ENTRY_DETAIL">ENTRY FROM ANCHOR ~{0} · {1} jumps · empty cargo</sys:String>
     <sys:String x:Key="Loc_TRADE_ENTRY_COMPACT">entry ~{0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_MODE_SELL_CARGO">Sell current cargo</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SEARCH">FIND BUYERS</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SEARCHING">Searching buyers for {0} commodities · {1:N0} t...</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_DONE">{0} buyer markets · {1:0.0}s</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_NO_RESULTS">No suitable buyer found for current cargo.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_VALIDATION_JOURNAL">Current Journal location is required to sell cargo.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_VALIDATION_EMPTY">Current cargo is empty or Cargo.json has not been loaded yet.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SORT_VALUE">Sale value</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SORT_VALUE_HOUR">Sale value / hour</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SORT_VALUE_TON">Sale value / t</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_MIXED">{0} commodities</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_SOURCE">Current cargo · {0:N0} t</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_COVERAGE">{0:N0}/{1:N0} t · {2:0}%</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_PER_TON">{0:N0} CR/t</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_VALUE">{0:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_NOW">NOW</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_LIVE_BADGE">LIVE MARKET</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_DETAIL_TITLE">SELL CURRENT CARGO</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_DETAIL_VALUE">Sale value {0:N0} CR · {1:N0}/{2:N0} t sellable</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_CURRENT_CARGO">CURRENT CARGO</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_BUYER">BUYER</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_CURRENT_MARKET_META">Current docked market · live Market.json</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_LINE">{0}: {1:N0}/{2:N0} t × {3:N0} CR = {4:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_UNSOLD">Unsold at this market: {0:N0} t</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ALREADY_HERE">You are already docked at this market. Live Market.json prices are used.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_TRAVEL_DETAIL">TO BUYER ~{0} · {1} jumps · loaded range ~{2:0.0} LY&#10;Estimated sale-value rate {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_EMPTY">No cargo</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_IDLE_FOOTER">Uses actual Cargo.json. Current open Market.json overrides remote data for this station.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_FOOTER">{0} buyer markets · best sale {1:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_FILTERS">{0} · buyer radius {1} LY · {2} filters</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_READY">Ready to search buyers for current cargo.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_BEST">{0:N0} CR · {1} → {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_META">{0:N0}/{1:N0} t sellable · {2:0.0} LY · {3:0.#} h old</sys:String>
 </ResourceDictionary>
 
 

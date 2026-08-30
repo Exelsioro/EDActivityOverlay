@@ -165,11 +165,16 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                     state.CargoCapacity)
                 : Loc.Get("Loc_cargo_unknown");
 
+        string balance =
+            state.JournalAvailable
+                ? $"  •  {Math.Max(0, state.Balance):N0} CR"
+                : string.Empty;
+
         string journalLine =
             $"{location}  •  "
             + $"{(string.IsNullOrWhiteSpace(ship) ? Loc.Get("Loc_ship_unknown") : ship)}"
-            + $"  •  {cargo}";
-
+            + $"  •  {cargo}"
+            + balance;
         JournalContextText.Text =
             journalLine;
 
@@ -209,10 +214,19 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         UpdateJournalState(
             currentJournal);
 
-        ShowSelectedCandidate(
-            selectedCandidate);
+        if (IsCargoSaleMode)
+        {
+            ShowSelectedCargoSaleCandidate(
+                selectedCargoSaleCandidate);
+        }
+        else
+        {
+            ShowSelectedCandidate(
+                selectedCandidate);
+        }
 
         UpdateAdvancedFiltersUi();
+        UpdateRouteModeUi();
         RefreshFooter();
         RefreshCompactPresentation();
     }
@@ -476,6 +490,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             new List<TradeRouteCandidate>();
 
         roundTripByOutboundKey.Clear();
+        ResetCargoSaleResults();
 
         currentPage =
             0;
@@ -782,6 +797,13 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
     private void RefreshCurrentPage(
         bool selectFirstWhenEmpty = false)
     {
+        if (IsCargoSaleMode)
+        {
+            RefreshCargoSalePage(
+                selectFirstWhenEmpty);
+            return;
+        }
+
         List<TradeRouteCandidate> sorted =
             SortedCandidates()
                 .ToList();
@@ -912,6 +934,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
     private void UpdatePaginationUi()
     {
+        if (IsCargoSaleMode)
+        {
+            UpdateCargoSalePaginationUi();
+            return;
+        }
+
         int pageCount =
             Math.Max(
                 1,
@@ -985,8 +1013,24 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         SelectionChangedEventArgs e)
     {
         if (RoutesList.SelectedItem
+            is CargoSaleRow cargoRow)
+        {
+            selectedCandidate =
+                null;
+            selectedCargoSaleCandidate =
+                cargoRow.Candidate;
+
+            ShowSelectedCargoSaleCandidate(
+                cargoRow.Candidate);
+
+            return;
+        }
+
+        if (RoutesList.SelectedItem
             is TradeRow row)
         {
+            selectedCargoSaleCandidate =
+                null;
             selectedCandidate =
                 row.Candidate;
 
@@ -994,7 +1038,6 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 selectedCandidate);
         }
     }
-
     private void PreviousPageButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1007,11 +1050,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         currentPage--;
         selectedCandidate =
             null;
+        selectedCargoSaleCandidate =
+            null;
 
         RefreshCurrentPage(
             selectFirstWhenEmpty: true);
     }
-
     private void NextPageButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1020,7 +1064,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             Math.Max(
                 1,
                 (int)Math.Ceiling(
-                    currentCandidates.Count
+                    ActiveResultCount
                     / (double)PageSize));
 
         if (currentPage + 1 >= pageCount)
@@ -1031,11 +1075,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         currentPage++;
         selectedCandidate =
             null;
+        selectedCargoSaleCandidate =
+            null;
 
         RefreshCurrentPage(
             selectFirstWhenEmpty: true);
     }
-
     private void SortComboBox_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -1047,16 +1092,18 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         CaptureSession();
 
-        if (currentCandidates.Count > 0)
+        if (ActiveResultCount > 0)
         {
             currentPage =
                 0;
 
             RefreshCurrentPage(
-                selectFirstWhenEmpty: selectedCandidate is null);
+                selectFirstWhenEmpty:
+                    IsCargoSaleMode
+                        ? selectedCargoSaleCandidate is null
+                        : selectedCandidate is null);
         }
     }
-
     private void ShowSelectedCandidate(
         TradeRouteCandidate? candidate)
     {
@@ -1204,6 +1251,13 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         out TradeSearchConstraints constraints,
         out string error)
     {
+        if (IsCargoSaleMode)
+        {
+            return TryBuildCargoSaleConstraints(
+                out constraints,
+                out error);
+        }
+
         constraints =
             null!;
 
@@ -1365,17 +1419,20 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         SortComboBox.IsEnabled =
             true;
 
+        ApplyCargoSaleControlAvailability(
+            running);
+
         SearchButton.SetResourceReference(
             ContentControl.ContentProperty,
             running
                 ? "Loc_TRADE_CANCEL"
-                : "Loc_SEARCH_ROUTES");
+                : SearchIdleResourceKey());
 
         CompactActionButton.SetResourceReference(
             ContentControl.ContentProperty,
             running
                 ? "Loc_TRADE_CANCEL"
-                : "Loc_SEARCH_ROUTES");
+                : SearchIdleResourceKey());
     }
 
     private void CaptureSession()
@@ -1521,6 +1578,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
     private void RefreshFooter()
     {
+        if (IsCargoSaleMode)
+        {
+            RefreshCargoSaleFooter();
+            return;
+        }
+
         if (currentCandidates.Count == 0)
         {
             FooterText.Text =
@@ -1545,6 +1608,13 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
     private void RefreshCompactPresentation(
         bool preserveStatus = false)
     {
+        if (IsCargoSaleMode)
+        {
+            RefreshCargoSaleCompact(
+                preserveStatus);
+            return;
+        }
+
         string anchor =
             string.IsNullOrWhiteSpace(
                 AnchorSystemTextBox.Text)

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Exploration;
+using EDActivityOverlay.Services.Trading;
 
 namespace EDActivityOverlay.Services.Journal;
 
@@ -9,7 +10,9 @@ internal sealed class JournalStateReducer
 {
     private readonly object sync = new();
     private readonly Dictionary<string, int> cargo = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, CargoCommoditySnapshot> cargoByCommodityId = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, MarketItemSnapshot> market = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, MarketItemSnapshot> marketByCommodityId = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<NavRouteStar> navRoute = new();
     private readonly HashSet<int> scannedBodies = new();
     private readonly HashSet<int> mappedBodies = new();
@@ -285,37 +288,71 @@ internal sealed class JournalStateReducer
         lock (sync)
         {
             market.Clear();
-            if (root.TryGetProperty("Items", out JsonElement items) && items.ValueKind == JsonValueKind.Array)
+            marketByCommodityId.Clear();
+
+            if (root.TryGetProperty("Items", out JsonElement items)
+                && items.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement item in items.EnumerateArray())
                 {
-                    string name = GetLocalizedName(item, "Name");
-                    if (string.IsNullOrWhiteSpace(name))
+                    string commodityId =
+                        CommodityIdentity.Normalize(
+                            GetString(item, "Name"));
+
+                    string displayName =
+                        GetLocalizedName(
+                            item,
+                            "Name");
+
+                    if (string.IsNullOrWhiteSpace(commodityId))
                     {
                         continue;
                     }
 
-                    market[name] = new MarketItemSnapshot(
-                        name,
-                        TryGetInt32(item, "BuyPrice"),
-                        TryGetInt32(item, "SellPrice"),
-                        TryGetInt32(item, "Stock"),
-                        TryGetInt32(item, "Demand"));
+                    if (string.IsNullOrWhiteSpace(displayName))
+                    {
+                        displayName =
+                            commodityId;
+                    }
+
+                    var snapshot =
+                        new MarketItemSnapshot(
+                            displayName,
+                            TryGetInt32(item, "BuyPrice"),
+                            TryGetInt32(item, "SellPrice"),
+                            TryGetInt32(item, "Stock"),
+                            TryGetInt32(item, "Demand"));
+
+                    market[displayName] =
+                        snapshot;
+
+                    marketByCommodityId[commodityId] =
+                        snapshot;
                 }
             }
 
-            DateTimeOffset timestamp = GetTimestamp(root);
+            DateTimeOffset timestamp =
+                GetTimestamp(root);
+
             state = CopyCollections(state with
             {
-                MarketSystem = GetString(root, "StarSystem"),
-                MarketStation = GetString(root, "StationName"),
-                MarketUpdatedUtc = timestamp,
-                LastEventUtc = MaxTimestamp(state.LastEventUtc, timestamp)
+                MarketSystem =
+                    GetString(root, "StarSystem"),
+                MarketStation =
+                    GetString(root, "StationName"),
+                MarketSnapshotId =
+                    TryGetNullableInt64(root, "MarketID"),
+                MarketUpdatedUtc =
+                    timestamp,
+                LastEventUtc =
+                    MaxTimestamp(
+                        state.LastEventUtc,
+                        timestamp)
             });
         }
+
         RaiseStateChanged();
     }
-
     private GameStateSnapshot ReduceJournalEvent(
         GameStateSnapshot current,
         string eventName,
@@ -625,43 +662,124 @@ internal sealed class JournalStateReducer
     private void ReplaceCargo(JsonElement root)
     {
         cargo.Clear();
-        if (!root.TryGetProperty("Inventory", out JsonElement inventory) || inventory.ValueKind != JsonValueKind.Array)
+        cargoByCommodityId.Clear();
+
+        if (!root.TryGetProperty("Inventory", out JsonElement inventory)
+            || inventory.ValueKind != JsonValueKind.Array)
         {
             return;
         }
 
         foreach (JsonElement item in inventory.EnumerateArray())
         {
-            string name = GetLocalizedName(item, "Name");
-            int count = TryGetInt32(item, "Count");
-            if (!string.IsNullOrWhiteSpace(name) && count > 0)
+            string commodityId =
+                CommodityIdentity.Normalize(
+                    GetString(item, "Name"));
+
+            string displayName =
+                GetLocalizedName(
+                    item,
+                    "Name");
+
+            int count =
+                TryGetInt32(
+                    item,
+                    "Count");
+
+            if (string.IsNullOrWhiteSpace(commodityId)
+                || count <= 0)
             {
-                cargo[name] = count;
+                continue;
             }
+
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                displayName =
+                    commodityId;
+            }
+
+            cargo[displayName] =
+                count;
+
+            cargoByCommodityId[commodityId] =
+                new CargoCommoditySnapshot(
+                    commodityId,
+                    displayName,
+                    count);
         }
     }
 
     private void ApplyCargoDelta(JsonElement root, int direction)
     {
-        string name = GetLocalizedName(root, "Type");
-        int count = TryGetInt32(root, "Count");
-        if (string.IsNullOrWhiteSpace(name) || count <= 0)
+        string commodityId =
+            CommodityIdentity.Normalize(
+                GetString(root, "Type"));
+
+        string displayName =
+            GetLocalizedName(
+                root,
+                "Type");
+
+        int count =
+            TryGetInt32(
+                root,
+                "Count");
+
+        if (string.IsNullOrWhiteSpace(commodityId)
+            || count <= 0)
         {
             return;
         }
 
-        cargo.TryGetValue(name, out int currentCount);
-        int nextCount = Math.Max(0, currentCount + (count * direction));
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName =
+                commodityId;
+        }
+
+        cargoByCommodityId.TryGetValue(
+            commodityId,
+            out CargoCommoditySnapshot? previous);
+
+        int currentCount =
+            previous?.Count
+            ?? 0;
+
+        int nextCount =
+            Math.Max(
+                0,
+                currentCount
+                + count * direction);
+
+        if (previous is not null
+            && !previous.DisplayName.Equals(
+                displayName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            cargo.Remove(
+                previous.DisplayName);
+        }
+
         if (nextCount == 0)
         {
-            cargo.Remove(name);
+            cargo.Remove(
+                displayName);
+
+            cargoByCommodityId.Remove(
+                commodityId);
         }
         else
         {
-            cargo[name] = nextCount;
+            cargo[displayName] =
+                nextCount;
+
+            cargoByCommodityId[commodityId] =
+                new CargoCommoditySnapshot(
+                    commodityId,
+                    displayName,
+                    nextCount);
         }
     }
-
     private void Update(Func<GameStateSnapshot, GameStateSnapshot> update)
     {
         lock (sync)
@@ -676,17 +794,32 @@ internal sealed class JournalStateReducer
         OrganicScanProgressSnapshot[] progress = GetCurrentOrganicProgress(current);
         return current with
         {
-            Cargo = new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(cargo, StringComparer.OrdinalIgnoreCase)),
-            Market = new ReadOnlyDictionary<string, MarketItemSnapshot>(new Dictionary<string, MarketItemSnapshot>(market, StringComparer.OrdinalIgnoreCase)),
+            Cargo = new ReadOnlyDictionary<string, int>(
+                new Dictionary<string, int>(
+                    cargo,
+                    StringComparer.OrdinalIgnoreCase)),
+            CargoByCommodityId = new ReadOnlyDictionary<string, CargoCommoditySnapshot>(
+                new Dictionary<string, CargoCommoditySnapshot>(
+                    cargoByCommodityId,
+                    StringComparer.OrdinalIgnoreCase)),
+            Market = new ReadOnlyDictionary<string, MarketItemSnapshot>(
+                new Dictionary<string, MarketItemSnapshot>(
+                    market,
+                    StringComparer.OrdinalIgnoreCase)),
+            MarketByCommodityId = new ReadOnlyDictionary<string, MarketItemSnapshot>(
+                new Dictionary<string, MarketItemSnapshot>(
+                    marketByCommodityId,
+                    StringComparer.OrdinalIgnoreCase)),
             NavRoute = navRoute.ToArray(),
             RefinedMiningCargo = new ReadOnlyDictionary<string, int>(
-                new Dictionary<string, int>(refinedMiningCargo, StringComparer.OrdinalIgnoreCase)),
+                new Dictionary<string, int>(
+                    refinedMiningCargo,
+                    StringComparer.OrdinalIgnoreCase)),
             ExplorationBodies = explorationBodies.Values.OrderBy(body => body.BodyId).ToArray(),
             OrganicProgress = progress,
             CompletedOrganicSamples = progress.Count(item => item.Completed)
         };
     }
-
     private static bool AddBodyId(JsonElement root, HashSet<int> bodies)
     {
         int id = TryGetInt32(root, "BodyID", -1);

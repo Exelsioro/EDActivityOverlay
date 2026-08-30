@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Trading;
@@ -26,6 +26,14 @@ public partial class TradeWorkspaceControl
         TradeSearchConstraints constraints,
         CancellationToken cancellationToken)
     {
+        if (IsCargoSaleMode)
+        {
+            await RunCargoSaleSearchAsync(
+                constraints,
+                cancellationToken);
+            return;
+        }
+
         if (!IsRoundTripMode)
         {
             await foreach (TradeSearchProgress progress
@@ -411,6 +419,7 @@ public partial class TradeWorkspaceControl
         searchCancellation?.Cancel();
 
         roundTripByOutboundKey.Clear();
+        ResetCargoSaleResults();
         currentCandidates.Clear();
         currentPage =
             0;
@@ -432,13 +441,22 @@ public partial class TradeWorkspaceControl
 
     private void UpdateRouteModeUi()
     {
-        PrimaryProfitSortItem.SetResourceReference(
-            ContentControl.ContentProperty,
-            IsRoundTripMode
-                ? "Loc_TRADE_SORT_CYCLE"
-                : "Loc_TRADE_SORT_PROFIT");
-    }
+        UpdateCargoSaleSortLabels();
+        ApplyCargoSaleControlAvailability(
+            searchCancellation is not null);
 
+        SearchButton.SetResourceReference(
+            ContentControl.ContentProperty,
+            searchCancellation is not null
+                ? "Loc_TRADE_CANCEL"
+                : SearchIdleResourceKey());
+
+        CompactActionButton.SetResourceReference(
+            ContentControl.ContentProperty,
+            searchCancellation is not null
+                ? "Loc_TRADE_CANCEL"
+                : SearchIdleResourceKey());
+    }
     private string RouteModeTag() =>
         (RouteModeComboBox.SelectedItem
             as ComboBoxItem)?.Tag?.ToString()

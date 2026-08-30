@@ -283,6 +283,7 @@
                                       SelectionChanged="RouteModeComboBox_SelectionChanged">
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_ONE_WAY}" Tag="oneway"/>
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_ROUND_TRIP}" Tag="roundtrip"/>
+                                <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_SELL_CARGO}" Tag="cargo"/>
                             </ComboBox>
                         </StackPanel>
 
@@ -464,9 +465,9 @@
                                   Style="{DynamicResource ComboBoxStyle}"
                                   SelectionChanged="SortComboBox_SelectionChanged">
                             <ComboBoxItem x:Name="PrimaryProfitSortItem" Content="{DynamicResource Loc_TRADE_SORT_PROFIT}" Tag="profit"/>
-                            <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_PER_HOUR}" Tag="perhour"/>
+                            <ComboBoxItem x:Name="PerHourSortItem" Content="{DynamicResource Loc_TRADE_SORT_PER_HOUR}" Tag="perhour"/>
                             <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_FASTEST}" Tag="time"/>
-                            <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_PER_TON}" Tag="perton"/>
+                            <ComboBoxItem x:Name="PerTonSortItem" Content="{DynamicResource Loc_TRADE_SORT_PER_TON}" Tag="perton"/>
                             <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_DISTANCE}" Tag="distance"/>
                             <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_FRESHEST}" Tag="freshness"/>
                         </ComboBox>
@@ -700,7 +701,8 @@
                                           Margin="0,10,0,10"
                                           VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                    <TextBlock Text="{DynamicResource Loc_TRADE_SOURCE}"
+                                    <TextBlock x:Name="SelectedSourceLabelText"
+                                               Text="{DynamicResource Loc_TRADE_SOURCE}"
                                                FontSize="9"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource MutedTextColorBrush}"/>
@@ -714,7 +716,8 @@
                                                TextWrapping="Wrap"
                                                Foreground="{DynamicResource SecondaryTextColorBrush}"/>
 
-                                    <TextBlock Text="{DynamicResource Loc_TRADE_TARGET}"
+                                    <TextBlock x:Name="SelectedTargetLabelText"
+                                               Text="{DynamicResource Loc_TRADE_TARGET}"
                                                FontSize="9"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource MutedTextColorBrush}"/>

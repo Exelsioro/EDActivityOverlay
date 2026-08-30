@@ -1055,6 +1055,39 @@
     <sys:String x:Key="Loc_TRADE_FILTERS_FORMAT">ФИЛЬТРЫ · {0}</sys:String>
     <sys:String x:Key="Loc_TRADE_TRAVEL_ENTRY_DETAIL">ВХОД ОТ ЯКОРЯ ~{0} · прыжков {1} · пустой трюм</sys:String>
     <sys:String x:Key="Loc_TRADE_ENTRY_COMPACT">до входа ~{0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_MODE_SELL_CARGO">Продать текущий груз</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SEARCH">НАЙТИ ПОКУПАТЕЛЕЙ</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SEARCHING">Ищем покупателей для {0} товаров · {1:N0} т...</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_DONE">Рынков-покупателей: {0} · {1:0.0} с</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_NO_RESULTS">Подходящих покупателей текущего груза не найдено.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_VALIDATION_JOURNAL">Для продажи груза нужна текущая позиция из Journal.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_VALIDATION_EMPTY">Трюм пуст или Cargo.json ещё не загружен.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SORT_VALUE">Стоимость продажи</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SORT_VALUE_HOUR">Стоимость / час</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_SORT_VALUE_TON">Стоимость / т</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_MIXED">Товаров: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_SOURCE">Текущий груз · {0:N0} т</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_COVERAGE">{0:N0}/{1:N0} т · {2:0}%</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_PER_TON">{0:N0} кр./т</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ROW_VALUE">{0:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_NOW">СЕЙЧАС</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_LIVE_BADGE">ЖИВОЙ РЫНОК</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_DETAIL_TITLE">ПРОДАТЬ ТЕКУЩИЙ ГРУЗ</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_DETAIL_VALUE">Стоимость продажи {0:N0} кр. · можно продать {1:N0}/{2:N0} т</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_CURRENT_CARGO">ТЕКУЩИЙ ГРУЗ</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_BUYER">ПОКУПАТЕЛЬ</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_CURRENT_MARKET_META">Текущий рынок · живые данные Market.json</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_LINE">{0}: {1:N0}/{2:N0} т × {3:N0} кр. = {4:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_UNSOLD">Не получится продать на этом рынке: {0:N0} т</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_ALREADY_HERE">Вы уже пристыкованы к этому рынку. Используются актуальные цены Market.json.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_TRAVEL_DETAIL">ДО ПОКУПАТЕЛЯ ~{0} · прыжков {1} · дальность с грузом ~{2:0.0} св. л.&#10;Оценочная стоимость продажи / час {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_EMPTY">Груза нет</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_IDLE_FOOTER">Используется фактический Cargo.json. Открытый Market.json имеет приоритет над удалёнными данными этой станции.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_FOOTER">Рынков-покупателей: {0} · лучшая продажа {1:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_FILTERS">{0} · радиус покупателя {1} LY · фильтров {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_READY">Готово к поиску покупателей текущего груза.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_BEST">{0:N0} кр. · {1} → {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_META">Можно продать {0:N0}/{1:N0} т · {2:0.0} LY · данные {3:0.#} ч</sys:String>
 </ResourceDictionary>
 
 
