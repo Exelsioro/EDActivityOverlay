@@ -169,6 +169,7 @@ public partial class MainWindow
             }
 
             if (isPinnedRouteActive
+                && !pinnedRouteSuppressedByTradeWorkspace
                 && pinnedRouteOverlay is { IsLoaded: true })
             {
                 pinnedRouteOverlay.Show();

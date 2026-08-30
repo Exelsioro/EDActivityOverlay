@@ -224,8 +224,13 @@ public sealed class TradeV9bActiveHudTests
             xaml,
             StringComparison.Ordinal);
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "RoutesList_PreviewMouseLeftButtonUp",
+            xaml,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "SelectionChanged=\"RoutesList_SelectionChanged\"",
             xaml,
             StringComparison.Ordinal);
     }
@@ -250,6 +255,78 @@ public sealed class TradeV9bActiveHudTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void FullTradeSuppressesPinnedRouteCard()
+    {
+        string host =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "Windows",
+                "ActivityWorkspaceOverlayWindow.Trade.cs");
+
+        string main =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "Windows",
+                "MainWindow.OverlayOrchestration.cs");
+
+        string pinned =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "Windows",
+                "PinnedRouteOverlay.xaml.cs");
+
+        Assert.Contains(
+            "SetPinnedRouteSuppressedByTradeWorkspace",
+            host,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "pinnedRouteSuppressedByTradeWorkspace",
+            main,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "SetSuppressedByTradeWorkspace",
+            pinned,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "if (suppressedByTradeWorkspace)",
+            pinned,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExplicitPinButtonRemainsThePinEntryPoint()
+    {
+        string xaml =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "UserControls",
+                "TradeWorkspaceControl.xaml");
+
+        string code =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "UserControls",
+                "TradeWorkspaceControl.xaml.cs");
+
+        Assert.Contains(
+            "Click=\"PinRouteButton_Click\"",
+            xaml,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "private void PinRouteButton_Click(",
+            code,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "PreviewMouseLeftButtonUp=\"RoutesList_PreviewMouseLeftButtonUp\"",
+            xaml,
+            StringComparison.Ordinal);
+    }
     private static TradeRouteCandidate Route() =>
         new()
         {

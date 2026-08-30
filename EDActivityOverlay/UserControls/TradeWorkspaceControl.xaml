@@ -528,8 +528,7 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                                      SelectionMode="Single"
-                                     SelectionChanged="RoutesList_SelectionChanged"
-                                     PreviewMouseLeftButtonUp="RoutesList_PreviewMouseLeftButtonUp">
+                                     SelectionChanged="RoutesList_SelectionChanged">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

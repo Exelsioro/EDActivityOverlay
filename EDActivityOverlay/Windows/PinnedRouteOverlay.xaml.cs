@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using EDActivityOverlay.Services.Journal;
@@ -24,6 +24,7 @@ public partial class PinnedRouteOverlay : Window
     private double manualXRatio;
     private double manualYRatio;
     private bool disposed;
+    private bool suppressedByTradeWorkspace;
     private string fromSystem = string.Empty;
     private string fromStation = string.Empty;
     private string toSystem = string.Empty;
@@ -55,6 +56,51 @@ public partial class PinnedRouteOverlay : Window
         hasManualPosition = false;
         ApplyChrome();
         PositionOverlay();
+    }
+
+    public void SetSuppressedByTradeWorkspace(
+        bool value)
+    {
+        suppressedByTradeWorkspace =
+            value;
+
+        if (value)
+        {
+            if (IsVisible)
+            {
+                Hide();
+            }
+
+            return;
+        }
+
+        PositionOverlay();
+
+        if (targetWindow == IntPtr.Zero
+            || !IsLoaded
+            || currentRoute is null
+            || OverlayVisibilityState.SuppressAll
+            || OverlayVisibilityState.SuppressActivity
+            || !WindowsAPI.IsWindow(targetWindow)
+            || !WindowsAPI.IsWindowVisible(targetWindow)
+            || WindowsAPI.IsIconic(targetWindow))
+        {
+            return;
+        }
+
+        IntPtr foreground =
+            WindowsAPI.GetForegroundWindow();
+
+        bool focused =
+            foreground == targetWindow
+            || WindowsAPI.IsOverlayWindow(
+                foreground);
+
+        if (focused
+            && !IsVisible)
+        {
+            Show();
+        }
     }
 
     public void SetChromeStyle(string? value)
@@ -106,7 +152,11 @@ public partial class PinnedRouteOverlay : Window
         progressTracker.ProgressChanged += OnProgressChanged;
         ApplyProgress(progressTracker.Current);
         PositionOverlay();
-        Show();
+
+        if (!suppressedByTradeWorkspace)
+        {
+            Show();
+        }
 
         Logger.Logger.LogUserAction(
             $"Trade route pinned: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
@@ -168,6 +218,17 @@ public partial class PinnedRouteOverlay : Window
         {
             return;
         }
+
+        if (suppressedByTradeWorkspace)
+        {
+            if (IsVisible)
+            {
+                Hide();
+            }
+
+            return;
+        }
+
         if (OverlayVisibilityState.SuppressAll || OverlayVisibilityState.SuppressActivity)
         {
             if (IsVisible) Hide();

@@ -160,9 +160,15 @@ public partial class ActivityWorkspaceOverlayWindow
     }
 
     private void TradeViewModeChanged(
-        bool full) =>
+        bool full)
+    {
         ApplyTradeWorkspaceMode(
             full);
+
+        parentWindow?
+            .SetPinnedRouteSuppressedByTradeWorkspace(
+                full);
+    }
 
     private void LeaveTradeWorkspace()
     {

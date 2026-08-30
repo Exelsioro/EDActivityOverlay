@@ -12,6 +12,8 @@ namespace EDActivityOverlay
 {
     public partial class MainWindow
     {
+        private bool pinnedRouteSuppressedByTradeWorkspace;
+
         private bool IsTradeSurfaceVisible() =>
             currentActivity == ActivityType.Trade
             && (activityWorkspaceWindow?.IsVisible == true
@@ -211,7 +213,9 @@ namespace EDActivityOverlay
         {
 
 
-            if (restorePinnedVisible && pinnedRouteOverlay != null)
+            if (restorePinnedVisible
+                && !pinnedRouteSuppressedByTradeWorkspace
+                && pinnedRouteOverlay != null)
             {
                 pinnedRouteOverlay.Show();
             }
@@ -274,6 +278,8 @@ namespace EDActivityOverlay
             pinnedRouteOverlay.SetTargetWindow(targetWindow, targetProcessId);
             pinnedRouteOverlay.SetPlacement(SettingsService.Instance.Settings.PinnedRoutePosition);
             pinnedRouteOverlay.ApplyInteractionMode(interactionModeEnabled && interactiveModeActive, showCursorWhenInteractive);
+            pinnedRouteOverlay.SetSuppressedByTradeWorkspace(
+                pinnedRouteSuppressedByTradeWorkspace);
             pinnedRouteOverlay.PinTradeRoute(tradeRoute);
             engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
             isPinnedRouteActive = true;
@@ -288,6 +294,16 @@ namespace EDActivityOverlay
             Logger.Logger.Info("Route pinned successfully, closing other overlays");
         }
 
+        public void SetPinnedRouteSuppressedByTradeWorkspace(
+            bool suppressed)
+        {
+            pinnedRouteSuppressedByTradeWorkspace =
+                suppressed;
+
+            pinnedRouteOverlay?
+                .SetSuppressedByTradeWorkspace(
+                    suppressed);
+        }
         public void UnpinRouteOverlay()
         {
             if (pinnedRouteOverlay != null && isPinnedRouteActive)

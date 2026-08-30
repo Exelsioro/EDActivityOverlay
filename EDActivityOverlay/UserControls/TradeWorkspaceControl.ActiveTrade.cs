@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Trading;
@@ -363,25 +362,6 @@ public partial class TradeWorkspaceControl
         CaptureSession();
 
         await StartOrCancelSearchAsync();
-    }
-
-    private void RoutesList_PreviewMouseLeftButtonUp(
-        object sender,
-        MouseButtonEventArgs e)
-    {
-        if (RoutesList.SelectedItem
-            is not TradeRow row)
-        {
-            return;
-        }
-
-        selectedCandidate =
-            row.Candidate;
-
-        ShowSelectedCandidate(
-            selectedCandidate);
-
-        PinSelectedCandidate();
     }
 
     private async Task RerouteActiveTradeAsync()
