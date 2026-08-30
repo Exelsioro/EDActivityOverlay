@@ -34,6 +34,15 @@ public partial class TradeWorkspaceControl
             return;
         }
 
+        if (IsContinuousMode)
+        {
+            await RunContinuousSearchAsync(
+                constraints,
+                cancellationToken);
+
+            return;
+        }
+
         if (!IsRoundTripMode)
         {
             await foreach (TradeSearchProgress progress
@@ -401,6 +410,19 @@ public partial class TradeWorkspaceControl
             return;
         }
 
+        if (TryGetContinuousPlan(
+                selectedCandidate,
+                out TradeContinuousPlan plan))
+        {
+            PrepareContinuousPin(
+                plan);
+
+            PinRequested?.Invoke(
+                plan.First);
+
+            return;
+        }
+
         if (TryGetRoundTrip(
                 selectedCandidate,
                 out TradeRoundTripCandidate roundTrip))
@@ -430,6 +452,8 @@ public partial class TradeWorkspaceControl
 
         roundTripByOutboundKey.Clear();
         ResetCargoSaleResults();
+        ResetContinuousResults();
+        ClearResultSnapshot();
         currentCandidates.Clear();
         currentPage =
             0;
@@ -443,6 +467,7 @@ public partial class TradeWorkspaceControl
         ShowSelectedCandidate(
             null);
 
+        ApplyContinuousDefaultSort();
         UpdateRouteModeUi();
         CaptureSession();
         RefreshFooter();
@@ -452,8 +477,11 @@ public partial class TradeWorkspaceControl
     private void UpdateRouteModeUi()
     {
         UpdateCargoSaleSortLabels();
+        UpdateContinuousSortLabels();
         UpdateConfidenceSortAvailability();
         ApplyCargoSaleControlAvailability(
+            searchCancellation is not null);
+        ApplyContinuousControlAvailability(
             searchCancellation is not null);
 
         SearchButton.SetResourceReference(

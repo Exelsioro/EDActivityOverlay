@@ -289,6 +289,30 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"Overlay chrome style updated to: {normalized}");
         }
 
+        public void SetTradeHistoryDirectory(
+            string directory)
+        {
+            directory =
+                directory?.Trim()
+                ?? string.Empty;
+
+            if (string.Equals(
+                    _settings.TradeHistoryDirectory,
+                    directory,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.TradeHistoryDirectory =
+                directory;
+
+            SaveSettings();
+
+            Logger.Logger.Info(
+                $"Trade history directory updated: customDirectory={!string.IsNullOrWhiteSpace(directory)}");
+        }
+
         public void SetJournalSettings(bool enabled, string directory)
         {
             directory = directory?.Trim() ?? string.Empty;
@@ -568,6 +592,12 @@ namespace EDActivityOverlay.Services
         /// Optional custom Journal directory. Empty uses the Windows Saved Games folder.
         /// </summary>
         public string JournalDirectory { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Optional directory for durable trade-history JSONL.
+        /// Empty preserves %APPDATA%/EDActivityOverlay.
+        /// </summary>
+        public string TradeHistoryDirectory { get; set; } = string.Empty;
 
         /// <summary>Enriches the current system from public community APIs.</summary>
         public bool EnableOnlineExplorationData { get; set; } = true;

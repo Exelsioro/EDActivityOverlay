@@ -110,7 +110,10 @@ public partial class TradeWorkspaceControl
             null;
 
         RefreshCargoSalePage(
-            selectFirstWhenEmpty: true);
+            selectFirstWhenEmpty: false);
+
+        CaptureResultSnapshot(
+            freshResults: true);
     }
 
     private IEnumerable<CargoSaleCandidate> SortedCargoSaleCandidates() =>
@@ -776,7 +779,9 @@ public partial class TradeWorkspaceControl
     private string SearchIdleResourceKey() =>
         IsCargoSaleMode
             ? "Loc_TRADE_CARGO_SEARCH"
-            : "Loc_SEARCH_ROUTES";
+            : IsContinuousMode
+                ? "Loc_TRADE_CONTINUOUS_SEARCH"
+                : "Loc_SEARCH_ROUTES";
 
     private void ApplyCargoSaleControlAvailability(
         bool running)
