@@ -1050,8 +1050,11 @@ Trade leg {5:0.0} LY</sys:String>
     <sys:String x:Key="Loc_TRADE_CRH_MILLION">{0:0.0}m CR/h</sys:String>
     <sys:String x:Key="Loc_TRADE_CRH_THOUSAND">{0:0.0}k CR/h</sys:String>
     <sys:String x:Key="Loc_TRADE_CRH_RAW">{0:N0} CR/h</sys:String>
-    <sys:String x:Key="Loc_TRADE_TRAVEL_ONEWAY_DETAIL">One way ~{0} · {1} jumps · loaded range ~{2:0.0} LY&#10;Supercruise ~{3} to {4:N0} ls&#10;Estimated efficiency {5}&#10;Confidence {6}</sys:String>
-    <sys:String x:Key="Loc_TRADE_TRAVEL_ROUND_DETAIL">OUTBOUND ~{0} · {1} jumps · loaded range ~{2:0.0} LY · cargo {3:N0} t · SC ~{4} / {5:N0} ls&#10;RETURN ~{6} · {7} jumps · loaded range ~{8:0.0} LY · cargo {9:N0} t · SC ~{10} / {11:N0} ls&#10;FULL CYCLE ~{12} · estimated efficiency {13}&#10;Confidence {14}</sys:String>
+    <sys:String x:Key="Loc_TRADE_TRAVEL_ONEWAY_DETAIL">TRADE LEG ~{0} · {1} jumps · loaded range ~{2:0.0} LY&#10;Supercruise ~{3} to {4:N0} ls&#10;First-run efficiency {5}&#10;Confidence {6}</sys:String>
+    <sys:String x:Key="Loc_TRADE_TRAVEL_ROUND_DETAIL">OUTBOUND ~{0} · {1} jumps · loaded range ~{2:0.0} LY · cargo {3:N0} t · SC ~{4} / {5:N0} ls&#10;RETURN ~{6} · {7} jumps · loaded range ~{8:0.0} LY · cargo {9:N0} t · SC ~{10} / {11:N0} ls&#10;STEADY CYCLE ~{12} · estimated efficiency {13}&#10;Confidence {14}</sys:String>
+    <sys:String x:Key="Loc_TRADE_FILTERS_FORMAT">FILTERS · {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_TRAVEL_ENTRY_DETAIL">ENTRY FROM ANCHOR ~{0} · {1} jumps · empty cargo</sys:String>
+    <sys:String x:Key="Loc_TRADE_ENTRY_COMPACT">entry ~{0}</sys:String>
 </ResourceDictionary>
 
 

@@ -247,7 +247,8 @@ public sealed class TradeSearchService
                     MergeTopCandidates(
                         best,
                         outcome.Candidates,
-                        constraints.MaxResults);
+                        constraints.MaxResults,
+                        constraints);
             }
 
             yield return
@@ -510,38 +511,37 @@ public sealed class TradeSearchService
     private static IReadOnlyList<TradeRouteCandidate> MergeTopCandidates(
         IReadOnlyList<TradeRouteCandidate> current,
         IReadOnlyList<TradeRouteCandidate> incoming,
-        int maxResults) =>
-        current
-            .Concat(
-                incoming)
-            .GroupBy(
-                candidate =>
-                    (
-                        candidate.Source.MarketId,
-                        candidate.Target.MarketId,
-                        Commodity:
-                            candidate.Source.CommodityName),
-                CandidateIdentityComparer.Instance)
-            .Select(
-                group =>
+        int maxResults,
+        TradeSearchConstraints constraints)
+    {
+        TradeRouteCandidate[] distinct =
+            current
+                .Concat(incoming)
+                .GroupBy(
+                    candidate =>
+                        (candidate.Source.MarketId,
+                         candidate.Target.MarketId,
+                         Commodity: candidate.Source.CommodityName),
+                    CandidateIdentityComparer.Instance)
+                .Select(group =>
                     group
-                        .OrderByDescending(
-                            candidate =>
-                                candidate.ProfitPerTrip)
+                        .OrderByDescending(candidate => candidate.ProfitPerTrip)
+                        .ThenByDescending(candidate => candidate.ProfitPerTon)
                         .First())
-            .OrderByDescending(
-                candidate =>
-                    candidate.ProfitPerTrip)
-            .ThenByDescending(
-                candidate =>
-                    candidate.ProfitPerTon)
-            .ThenBy(
-                candidate =>
-                    candidate.SourceToTargetDistanceLy)
-            .Take(
-                maxResults)
-            .ToArray();
+                .ToArray();
 
+        if (constraints.DiversifyCandidatePool)
+        {
+            return TradeCandidateRetention.SelectDiversified(distinct, maxResults);
+        }
+
+        return distinct
+            .OrderByDescending(candidate => candidate.ProfitPerTrip)
+            .ThenByDescending(candidate => candidate.ProfitPerTon)
+            .ThenBy(candidate => candidate.SourceToTargetDistanceLy)
+            .Take(maxResults)
+            .ToArray();
+    }
     private sealed record CommoditySearchOutcome(
         string CommodityName,
         IReadOnlyList<TradeRouteCandidate> Candidates,

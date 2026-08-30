@@ -1050,8 +1050,11 @@
     <sys:String x:Key="Loc_TRADE_CRH_MILLION">{0:0.0} млн кр./ч</sys:String>
     <sys:String x:Key="Loc_TRADE_CRH_THOUSAND">{0:0.0} тыс. кр./ч</sys:String>
     <sys:String x:Key="Loc_TRADE_CRH_RAW">{0:N0} кр./ч</sys:String>
-    <sys:String x:Key="Loc_TRADE_TRAVEL_ONEWAY_DETAIL">В одну сторону ~{0} · прыжков {1} · дальность с грузом ~{2:0.0} св. л.&#10;Supercruise ~{3} до {4:N0} ls&#10;Оценочная эффективность {5}&#10;Точность {6}</sys:String>
-    <sys:String x:Key="Loc_TRADE_TRAVEL_ROUND_DETAIL">ТУДА ~{0} · прыжков {1} · дальность с грузом ~{2:0.0} св. л. · груз {3:N0} т · SC ~{4} / {5:N0} ls&#10;ОБРАТНО ~{6} · прыжков {7} · дальность с грузом ~{8:0.0} св. л. · груз {9:N0} т · SC ~{10} / {11:N0} ls&#10;ПОЛНЫЙ ЦИКЛ ~{12} · оценочная эффективность {13}&#10;Точность {14}</sys:String>
+    <sys:String x:Key="Loc_TRADE_TRAVEL_ONEWAY_DETAIL">ТОРГОВОЕ ПЛЕЧО ~{0} · прыжков {1} · дальность с грузом ~{2:0.0} св. л.&#10;Supercruise ~{3} до {4:N0} ls&#10;Эффективность первого рейса {5}&#10;Точность {6}</sys:String>
+    <sys:String x:Key="Loc_TRADE_TRAVEL_ROUND_DETAIL">ТУДА ~{0} · прыжков {1} · дальность с грузом ~{2:0.0} св. л. · груз {3:N0} т · SC ~{4} / {5:N0} ls&#10;ОБРАТНО ~{6} · прыжков {7} · дальность с грузом ~{8:0.0} св. л. · груз {9:N0} т · SC ~{10} / {11:N0} ls&#10;РАБОЧИЙ ЦИКЛ ~{12} · оценочная эффективность {13}&#10;Точность {14}</sys:String>
+    <sys:String x:Key="Loc_TRADE_FILTERS_FORMAT">ФИЛЬТРЫ · {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_TRAVEL_ENTRY_DETAIL">ВХОД ОТ ЯКОРЯ ~{0} · прыжков {1} · пустой трюм</sys:String>
+    <sys:String x:Key="Loc_TRADE_ENTRY_COMPACT">до входа ~{0}</sys:String>
 </ResourceDictionary>
 
 

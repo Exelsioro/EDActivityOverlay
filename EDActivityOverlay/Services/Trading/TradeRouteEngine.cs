@@ -10,234 +10,190 @@ public static class TradeRouteEngine
         DateTimeOffset? now = null,
         int maxResults = int.MaxValue)
     {
-        ArgumentNullException.ThrowIfNull(
-            origin);
-
-        ArgumentNullException.ThrowIfNull(
-            sourceOrders);
-
-        ArgumentNullException.ThrowIfNull(
-            targetOrders);
-
-        ArgumentNullException.ThrowIfNull(
-            constraints);
+        ArgumentNullException.ThrowIfNull(origin);
+        ArgumentNullException.ThrowIfNull(sourceOrders);
+        ArgumentNullException.ThrowIfNull(targetOrders);
+        ArgumentNullException.ThrowIfNull(constraints);
 
         constraints.Validate();
 
         if (maxResults < 1)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(maxResults));
+            throw new ArgumentOutOfRangeException(nameof(maxResults));
         }
 
-        DateTimeOffset currentTime =
-            now
-            ?? DateTimeOffset.UtcNow;
+        DateTimeOffset currentTime = now ?? DateTimeOffset.UtcNow;
 
         TradeMarketOrder[] sources =
             sourceOrders
-                .GroupBy(
-                    order =>
-                        order.MarketId)
-                .Select(
-                    group =>
-                        group.First())
-                .Where(
-                    order =>
-                        IsUsableSource(
-                            order,
-                            origin,
-                            constraints,
-                            currentTime))
+                .GroupBy(order => order.MarketId)
+                .Select(group => group.First())
+                .Where(order => IsUsableSource(order, origin, constraints, currentTime))
                 .ToArray();
 
         TradeMarketOrder[] targets =
             targetOrders
-                .GroupBy(
-                    order =>
-                        order.MarketId)
-                .Select(
-                    group =>
-                        group.First())
-                .Where(
-                    order =>
-                        IsUsableTarget(
-                            order,
-                            constraints,
-                            currentTime))
+                .GroupBy(order => order.MarketId)
+                .Select(group => group.First())
+                .Where(order => IsUsableTarget(order, constraints, currentTime))
                 .ToArray();
 
-        // The global result only keeps MaxResults routes. Therefore the global
-        // Top-N can never require route N+1 from a single commodity: that
-        // commodity alone already has N routes ranked above it. Keeping Top-N
-        // per commodity is exact, not heuristic.
-        var best =
-            new PriorityQueue<
-                TradeRouteCandidate,
-                CandidatePriority>();
+        var bestProfit = new PriorityQueue<TradeRouteCandidate, CandidatePriority>();
+        var bestPerTon = new PriorityQueue<TradeRouteCandidate, PerTonPriority>();
+        var bestDistance = new PriorityQueue<TradeRouteCandidate, DistancePriority>();
+        var bestFirstRun = new PriorityQueue<TradeRouteCandidate, FirstRunPriority>();
+        var bestFreshness = new PriorityQueue<TradeRouteCandidate, FreshnessPriority>();
 
-        foreach (TradeMarketOrder source
-                 in sources)
+        foreach (TradeMarketOrder source in sources)
         {
-            double originToSource =
-                Distance(
-                    origin.X,
-                    origin.Y,
-                    origin.Z,
-                    source.SystemX,
-                    source.SystemY,
-                    source.SystemZ);
+            double originToSource = Distance(
+                origin.X, origin.Y, origin.Z,
+                source.SystemX, source.SystemY, source.SystemZ);
 
-            TimeSpan sourceAge =
-                Age(
-                    currentTime,
-                    source.UpdatedAt);
+            TimeSpan sourceAge = Age(currentTime, source.UpdatedAt);
 
-            foreach (TradeMarketOrder target
-                     in targets)
+            foreach (TradeMarketOrder target in targets)
             {
                 if (!source.CommodityName.Equals(
                         target.CommodityName,
                         StringComparison.OrdinalIgnoreCase)
-                    || source.MarketId
-                       == target.MarketId)
+                    || source.MarketId == target.MarketId)
                 {
                     continue;
                 }
 
-                double sourceToTarget =
-                    Distance(
-                        source.SystemX,
-                        source.SystemY,
-                        source.SystemZ,
-                        target.SystemX,
-                        target.SystemY,
-                        target.SystemZ);
+                double sourceToTarget = Distance(
+                    source.SystemX, source.SystemY, source.SystemZ,
+                    target.SystemX, target.SystemY, target.SystemZ);
 
-                if (sourceToTarget
-                    > constraints.TargetSearchRadiusLy)
+                if (sourceToTarget > constraints.TargetSearchRadiusLy)
                 {
                     continue;
                 }
 
                 int profitPerTon =
-                    target.SellToStationPrice
-                    - source.BuyFromStationPrice;
+                    target.SellToStationPrice - source.BuyFromStationPrice;
 
                 if (profitPerTon <= 0)
                 {
                     continue;
                 }
 
-                long usableDemand =
-                    target.HasInfiniteDemand
-                        ? constraints.CargoCapacity
-                        : Math.Max(
-                            0,
-                            target.Demand);
+                long usableDemand = target.HasInfiniteDemand
+                    ? constraints.CargoCapacity
+                    : Math.Max(0, target.Demand);
 
-                long amount =
+                long affordableAmount = constraints.AvailableCredits is { } availableCredits
+                    ? Math.Max(0, availableCredits) / source.BuyFromStationPrice
+                    : long.MaxValue;
+
+                long amount = Math.Min(
+                    constraints.CargoCapacity,
                     Math.Min(
-                        constraints.CargoCapacity,
-                        Math.Min(
-                            Math.Max(
-                                0,
-                                source.Stock),
-                            usableDemand));
+                        Math.Max(0, source.Stock),
+                        Math.Min(usableDemand, affordableAmount)));
 
                 if (amount <= 0)
                 {
                     continue;
                 }
 
-                long profitPerTrip =
-                    checked(
-                        (long)profitPerTon
-                        * amount);
+                long profitPerTrip = checked((long)profitPerTon * amount);
+                TimeSpan targetAge = Age(currentTime, target.UpdatedAt);
+                TimeSpan worstAge = sourceAge >= targetAge ? sourceAge : targetAge;
 
-                double tradeLegDistance =
-                    sourceToTarget;
+                double sourceArrival = source.DistanceToArrivalLs ?? 1_000_000d;
+                double targetArrival = target.DistanceToArrivalLs ?? 1_000_000d;
+                double firstRunBurden =
+                    originToSource
+                    + sourceToTarget
+                    + sourceArrival / 50_000d
+                    + targetArrival / 50_000d;
 
-                var priority =
-                    new CandidatePriority(
-                        profitPerTrip,
-                        profitPerTon,
-                        -tradeLegDistance);
+                var profitPriority =
+                    new CandidatePriority(profitPerTrip, profitPerTon, -sourceToTarget);
 
-                if (best.Count >= maxResults
-                    && best.TryPeek(
-                        out _,
-                        out CandidatePriority worst)
-                    && priority.CompareTo(
-                           worst)
-                       <= 0)
+                var perTonPriority =
+                    new PerTonPriority(profitPerTon, profitPerTrip, -sourceToTarget);
+
+                var distancePriority =
+                    new DistancePriority(-sourceToTarget, profitPerTrip, profitPerTon);
+
+                var firstRunPriority =
+                    new FirstRunPriority(-firstRunBurden, profitPerTrip);
+
+                var freshnessPriority =
+                    new FreshnessPriority(-worstAge.Ticks, profitPerTrip);
+
+                bool wantsProfit = CanEnter(bestProfit, profitPriority, maxResults);
+                bool wantsPerTon =
+                    constraints.DiversifyCandidatePool
+                    && CanEnter(bestPerTon, perTonPriority, maxResults);
+                bool wantsDistance =
+                    constraints.DiversifyCandidatePool
+                    && CanEnter(bestDistance, distancePriority, maxResults);
+                bool wantsFirstRun =
+                    constraints.DiversifyCandidatePool
+                    && CanEnter(bestFirstRun, firstRunPriority, maxResults);
+                bool wantsFreshness =
+                    constraints.DiversifyCandidatePool
+                    && CanEnter(bestFreshness, freshnessPriority, maxResults);
+
+                if (!wantsProfit
+                    && !wantsPerTon
+                    && !wantsDistance
+                    && !wantsFirstRun
+                    && !wantsFreshness)
                 {
-                    // The heap root is the worst retained route. Do not even
-                    // allocate a TradeRouteCandidate unless this pair can enter
-                    // the exact Top-N.
                     continue;
                 }
 
-                TimeSpan targetAge =
-                    Age(
-                        currentTime,
-                        target.UpdatedAt);
-
-                var candidate =
-                    new TradeRouteCandidate
-                    {
-                        Source =
-                            source,
-                        Target =
-                            target,
-                        ProfitPerTon =
-                            profitPerTon,
-                        TradableAmount =
-                            checked(
-                                (int)Math.Min(
-                                    amount,
-                                    int.MaxValue)),
-                        ProfitPerTrip =
-                            profitPerTrip,
-                        OriginToSourceDistanceLy =
-                            originToSource,
-                        SourceToTargetDistanceLy =
-                            sourceToTarget,
-                        SourceAge =
-                            sourceAge,
-                        TargetAge =
-                            targetAge
-                    };
-
-                best.Enqueue(
-                    candidate,
-                    priority);
-
-                if (best.Count > maxResults)
+                var candidate = new TradeRouteCandidate
                 {
-                    _ =
-                        best.Dequeue();
-                }
+                    Source = source,
+                    Target = target,
+                    ProfitPerTon = profitPerTon,
+                    TradableAmount = checked((int)Math.Min(amount, int.MaxValue)),
+                    ProfitPerTrip = profitPerTrip,
+                    OriginToSourceDistanceLy = originToSource,
+                    SourceToTargetDistanceLy = sourceToTarget,
+                    SourceAge = sourceAge,
+                    TargetAge = targetAge
+                };
+
+                if (wantsProfit)
+                    EnqueueBounded(bestProfit, candidate, profitPriority, maxResults);
+                if (wantsPerTon)
+                    EnqueueBounded(bestPerTon, candidate, perTonPriority, maxResults);
+                if (wantsDistance)
+                    EnqueueBounded(bestDistance, candidate, distancePriority, maxResults);
+                if (wantsFirstRun)
+                    EnqueueBounded(bestFirstRun, candidate, firstRunPriority, maxResults);
+                if (wantsFreshness)
+                    EnqueueBounded(bestFreshness, candidate, freshnessPriority, maxResults);
             }
         }
 
-        return
-            best.UnorderedItems
-                .Select(
-                    item =>
-                        item.Element)
-                .OrderByDescending(
-                    candidate =>
-                        candidate.ProfitPerTrip)
-                .ThenByDescending(
-                    candidate =>
-                        candidate.ProfitPerTon)
-                .ThenBy(
-                    candidate =>
-                        candidate.SourceToTargetDistanceLy)
-                .ToArray();
-    }
+        IEnumerable<TradeRouteCandidate> retained =
+            bestProfit.UnorderedItems.Select(item => item.Element);
 
+        if (!constraints.DiversifyCandidatePool)
+        {
+            return retained
+                .OrderByDescending(candidate => candidate.ProfitPerTrip)
+                .ThenByDescending(candidate => candidate.ProfitPerTon)
+                .ThenBy(candidate => candidate.SourceToTargetDistanceLy)
+                .ToArray();
+        }
+
+        retained = retained
+            .Concat(bestPerTon.UnorderedItems.Select(item => item.Element))
+            .Concat(bestDistance.UnorderedItems.Select(item => item.Element))
+            .Concat(bestFirstRun.UnorderedItems.Select(item => item.Element))
+            .Concat(bestFreshness.UnorderedItems.Select(item => item.Element));
+
+        return TradeCandidateRetention.SelectDiversified(retained, maxResults);
+    }
     private static bool IsUsableSource(
         TradeMarketOrder order,
         TradeSystemLocation origin,
@@ -387,7 +343,101 @@ public static class TradeRouteEngine
                 + dz * dz);
     }
 
+    private static bool CanEnter<TPriority>(
+        PriorityQueue<TradeRouteCandidate, TPriority> queue,
+        TPriority priority,
+        int maxResults)
+        where TPriority : IComparable<TPriority>
+    {
+        if (queue.Count < maxResults)
+        {
+            return true;
+        }
+
+        return queue.TryPeek(out _, out TPriority worst)
+               && priority.CompareTo(worst) > 0;
+    }
+
+    private static void EnqueueBounded<TPriority>(
+        PriorityQueue<TradeRouteCandidate, TPriority> queue,
+        TradeRouteCandidate candidate,
+        TPriority priority,
+        int maxResults)
+        where TPriority : IComparable<TPriority>
+    {
+        queue.Enqueue(candidate, priority);
+
+        if (queue.Count > maxResults)
+        {
+            _ = queue.Dequeue();
+        }
+    }
+
+    private readonly record struct PerTonPriority(
+        int ProfitPerTon,
+        long ProfitPerTrip,
+        double NegativeDistance)
+        : IComparable<PerTonPriority>
+    {
+        public int CompareTo(PerTonPriority other)
+        {
+            int perTon = ProfitPerTon.CompareTo(other.ProfitPerTon);
+            if (perTon != 0) return perTon;
+
+            int profit = ProfitPerTrip.CompareTo(other.ProfitPerTrip);
+            if (profit != 0) return profit;
+
+            return NegativeDistance.CompareTo(other.NegativeDistance);
+        }
+    }
+
+    private readonly record struct DistancePriority(
+        double NegativeDistance,
+        long ProfitPerTrip,
+        int ProfitPerTon)
+        : IComparable<DistancePriority>
+    {
+        public int CompareTo(DistancePriority other)
+        {
+            int distance = NegativeDistance.CompareTo(other.NegativeDistance);
+            if (distance != 0) return distance;
+
+            int profit = ProfitPerTrip.CompareTo(other.ProfitPerTrip);
+            if (profit != 0) return profit;
+
+            return ProfitPerTon.CompareTo(other.ProfitPerTon);
+        }
+    }
+
+    private readonly record struct FirstRunPriority(
+        double NegativeBurden,
+        long ProfitPerTrip)
+        : IComparable<FirstRunPriority>
+    {
+        public int CompareTo(FirstRunPriority other)
+        {
+            int burden = NegativeBurden.CompareTo(other.NegativeBurden);
+            return burden != 0
+                ? burden
+                : ProfitPerTrip.CompareTo(other.ProfitPerTrip);
+        }
+    }
+
+    private readonly record struct FreshnessPriority(
+        long NegativeWorstAgeTicks,
+        long ProfitPerTrip)
+        : IComparable<FreshnessPriority>
+    {
+        public int CompareTo(FreshnessPriority other)
+        {
+            int age = NegativeWorstAgeTicks.CompareTo(other.NegativeWorstAgeTicks);
+            return age != 0
+                ? age
+                : ProfitPerTrip.CompareTo(other.ProfitPerTrip);
+        }
+    }
     private readonly record struct CandidatePriority(
+
         long ProfitPerTrip,
         int ProfitPerTon,
         double NegativeTotalDistance)

@@ -56,6 +56,8 @@ public sealed record TradeSearchConstraints
     public string OriginSystemName { get; init; } = string.Empty;
     public long OriginSystemAddress { get; init; }
     public int CargoCapacity { get; init; } = 1;
+    public long? AvailableCredits { get; init; }
+    public bool DiversifyCandidatePool { get; init; }
     public int SourceSearchRadiusLy { get; init; } = 40;
     public int TargetSearchRadiusLy { get; init; } = 80;
     public TimeSpan MaxDataAge { get; init; } = TimeSpan.FromDays(3);
@@ -86,6 +88,8 @@ public sealed record TradeSearchConstraints
 
         if (CargoCapacity < 1)
             throw new ArgumentOutOfRangeException(nameof(CargoCapacity));
+        if (AvailableCredits is < 0)
+            throw new ArgumentOutOfRangeException(nameof(AvailableCredits));
         if (SourceSearchRadiusLy is < 0 or > 500)
             throw new ArgumentOutOfRangeException(nameof(SourceSearchRadiusLy));
         if (TargetSearchRadiusLy is < 0 or > 500)

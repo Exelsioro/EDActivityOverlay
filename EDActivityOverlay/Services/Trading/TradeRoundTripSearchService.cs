@@ -169,19 +169,21 @@ public sealed class TradeRoundTripSearchService
 
     private static TradeRouteCandidate[] BuildSeeds(
         IReadOnlyList<TradeRouteCandidate> candidates,
-        int seedLimit) =>
-        candidates
-            .GroupBy(candidate => (candidate.Source.MarketId, candidate.Target.MarketId))
-            .SelectMany(group => group
-                .OrderByDescending(candidate => candidate.ProfitPerTrip)
-                .ThenByDescending(candidate => candidate.ProfitPerTon)
-                .Take(MaxOutboundSeedsPerStationPair))
-            .OrderByDescending(candidate => candidate.ProfitPerTrip)
-            .ThenByDescending(candidate => candidate.ProfitPerTon)
-            .ThenBy(candidate => candidate.SourceToTargetDistanceLy)
-            .Take(seedLimit)
-            .ToArray();
+        int seedLimit)
+    {
+        TradeRouteCandidate[] perPair =
+            candidates
+                .GroupBy(candidate => (candidate.Source.MarketId, candidate.Target.MarketId))
+                .SelectMany(group => group
+                    .OrderByDescending(candidate => candidate.ProfitPerTrip)
+                    .ThenByDescending(candidate => candidate.ProfitPerTon)
+                    .Take(MaxOutboundSeedsPerStationPair))
+                .ToArray();
 
+        return TradeCandidateRetention
+            .SelectDiversified(perPair, seedLimit)
+            .ToArray();
+    }
     private async Task<PairOutcome> EnrichPairBoundedAsync(
         TradeRouteCandidate outbound,
         TradeSearchConstraints constraints,
@@ -280,6 +282,19 @@ public sealed class TradeRoundTripSearchService
         TradeRoundTripCandidate? best = null;
         int commodityMatches = 0;
 
+        long? creditsAtTarget = null;
+        if (constraints.AvailableCredits is { } startingCredits)
+        {
+            long outboundCost = checked(
+                (long)outbound.Source.BuyFromStationPrice * outbound.TradableAmount);
+            long outboundRevenue = checked(
+                (long)outbound.Target.SellToStationPrice * outbound.TradableAmount);
+
+            creditsAtTarget = Math.Max(
+                0,
+                checked(startingCredits - outboundCost + outboundRevenue));
+        }
+
         foreach (TradeMarketOrder returnSource in targetStationExports)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -316,9 +331,15 @@ public sealed class TradeRoundTripSearchService
                     ? constraints.CargoCapacity
                     : Math.Max(0, returnTarget.Demand);
 
+                long affordableAmount = creditsAtTarget is { } credits
+                    ? credits / returnSource.BuyFromStationPrice
+                    : long.MaxValue;
+
                 long amount = Math.Min(
                     constraints.CargoCapacity,
-                    Math.Min(Math.Max(0, returnSource.Stock), usableDemand));
+                    Math.Min(
+                        Math.Max(0, returnSource.Stock),
+                        Math.Min(usableDemand, affordableAmount)));
 
                 if (amount <= 0)
                 {

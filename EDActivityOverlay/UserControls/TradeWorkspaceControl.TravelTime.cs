@@ -1,4 +1,4 @@
-﻿using EDActivityOverlay.Services;
+using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Trading;
 
 namespace EDActivityOverlay.UserControls;
@@ -71,21 +71,37 @@ public partial class TradeWorkspaceControl
     private string FormatEstimatedTravelTime(
         TradeRouteCandidate candidate)
     {
+        bool isRoundTrip =
+            TryGetRoundTrip(
+                candidate,
+                out _);
+
         TradeRouteTravelEstimate estimate =
             EstimateTravel(
                 candidate);
 
+        if (estimate.Confidence
+            == TradeTravelEstimateConfidence.Unavailable)
+        {
+            return
+                "—";
+        }
+
         return
-            estimate.Confidence
-            == TradeTravelEstimateConfidence.Unavailable
-                ? "—"
-                : FormatTravelTime(
-                    estimate.CycleTime);
+            FormatTravelTime(
+                isRoundTrip
+                    ? estimate.CycleTime
+                    : estimate.FirstRunTime);
     }
 
     private long EstimatedProfitPerHour(
         TradeRouteCandidate candidate)
     {
+        bool isRoundTrip =
+            TryGetRoundTrip(
+                candidate,
+                out _);
+
         TradeRouteTravelEstimate estimate =
             EstimateTravel(
                 candidate);
@@ -99,21 +115,34 @@ public partial class TradeWorkspaceControl
 
         return
             estimate.ProfitPerHour(
-                candidate.ProfitPerTrip);
+                candidate.ProfitPerTrip,
+                includeEntry:
+                    !isRoundTrip);
     }
 
     private double EstimatedTravelSeconds(
         TradeRouteCandidate candidate)
     {
+        bool isRoundTrip =
+            TryGetRoundTrip(
+                candidate,
+                out _);
+
         TradeRouteTravelEstimate estimate =
             EstimateTravel(
                 candidate);
 
+        if (estimate.Confidence
+            == TradeTravelEstimateConfidence.Unavailable)
+        {
+            return
+                double.MaxValue;
+        }
+
         return
-            estimate.Confidence
-            == TradeTravelEstimateConfidence.Unavailable
-                ? double.MaxValue
-                : estimate.CycleTime.TotalSeconds;
+            isRoundTrip
+                ? estimate.CycleTime.TotalSeconds
+                : estimate.FirstRunTime.TotalSeconds;
     }
 
     private string FormatTravelDetail(
@@ -134,10 +163,23 @@ public partial class TradeWorkspaceControl
 
         long creditsPerHour =
             estimate.ProfitPerHour(
-                candidate.ProfitPerTrip);
+                candidate.ProfitPerTrip,
+                includeEntry:
+                    true);
+
+        string entry =
+            Loc.Format(
+                "Loc_TRADE_TRAVEL_ENTRY_DETAIL",
+                FormatTravelTime(
+                    estimate.Entry?.TotalTime
+                    ?? TimeSpan.Zero),
+                estimate.Entry?.EstimatedJumps
+                    ?? 0);
 
         return
-            Loc.Format(
+            entry
+            + Environment.NewLine
+            + Loc.Format(
                 "Loc_TRADE_TRAVEL_ONEWAY_DETAIL",
                 FormatTravelTime(
                     estimate.OneWayTime),
@@ -174,8 +216,19 @@ public partial class TradeWorkspaceControl
             estimate.ProfitPerHour(
                 candidate.ProfitPerCycle);
 
-        return
+        string entry =
             Loc.Format(
+                "Loc_TRADE_TRAVEL_ENTRY_DETAIL",
+                FormatTravelTime(
+                    estimate.Entry?.TotalTime
+                    ?? TimeSpan.Zero),
+                estimate.Entry?.EstimatedJumps
+                    ?? 0);
+
+        return
+            entry
+            + Environment.NewLine
+            + Loc.Format(
                 "Loc_TRADE_TRAVEL_ROUND_DETAIL",
                 FormatTravelTime(
                     estimate.Outbound.TotalTime),
@@ -223,11 +276,13 @@ public partial class TradeWorkspaceControl
             Loc.Format(
                 "Loc_TRADE_TRAVEL_COMPACT",
                 FormatTravelTime(
-                    estimate.OneWayTime),
-                estimate.Outbound.EstimatedJumps,
+                    estimate.FirstRunTime),
+                estimate.FirstRunEstimatedJumps,
                 FormatCreditsPerHour(
                     estimate.ProfitPerHour(
-                        candidate.ProfitPerTrip)));
+                        candidate.ProfitPerTrip,
+                        includeEntry:
+                            true)));
     }
 
     private string FormatCompactTravel(
@@ -254,7 +309,13 @@ public partial class TradeWorkspaceControl
                 estimate.TotalEstimatedJumps,
                 FormatCreditsPerHour(
                     estimate.ProfitPerHour(
-                        candidate.ProfitPerCycle)));
+                        candidate.ProfitPerCycle)))
+            + " · "
+            + Loc.Format(
+                "Loc_TRADE_ENTRY_COMPACT",
+                FormatTravelTime(
+                    estimate.Entry?.TotalTime
+                    ?? TimeSpan.Zero));
     }
 
     private static string FormatTravelTime(

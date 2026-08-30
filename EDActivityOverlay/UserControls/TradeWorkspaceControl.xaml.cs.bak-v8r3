@@ -1328,7 +1328,6 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 false;
         }
     }
-
     private void SetSearchRunning(
         bool running)
     {
@@ -1697,3 +1696,16 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         + $"{candidate.Target.MarketId}:"
         + candidate.Source.CommodityName.ToLowerInvariant();
 }
+         string journalLine =
+         JournalContextText.Text =
+         string balance =
+            state.JournalAvailable
+                ? $"  •  {Math.Max(0, state.Balance):N0} CR"
+                : string.Empty;
+
+        string journalLine =
+            $"{location}  •  "
+            + $"{(string.IsNullOrWhiteSpace(ship) ? Loc.Get("Loc_ship_unknown") : ship)}"
+            + $"  •  {cargo}"
+            + balance;
+ Trade journal balance

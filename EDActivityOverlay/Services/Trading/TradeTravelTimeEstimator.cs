@@ -1,4 +1,4 @@
-﻿using EDActivityOverlay.Models;
+using EDActivityOverlay.Models;
 
 namespace EDActivityOverlay.Services.Trading;
 
@@ -29,6 +29,7 @@ public sealed record TradeLegTravelEstimate
 
 public sealed record TradeRouteTravelEstimate
 {
+    public TradeLegTravelEstimate? Entry { get; init; }
     public required TradeLegTravelEstimate Outbound { get; init; }
     public TradeLegTravelEstimate? Return { get; init; }
 
@@ -44,19 +45,34 @@ public sealed record TradeRouteTravelEstimate
             : Outbound.TotalTime
               + Return.TotalTime;
 
+    public TimeSpan FirstRunTime =>
+        (Entry?.TotalTime ?? TimeSpan.Zero)
+        + CycleTime;
+
     public int TotalEstimatedJumps =>
         Outbound.EstimatedJumps
         + (Return?.EstimatedJumps ?? 0);
 
+    public int FirstRunEstimatedJumps =>
+        (Entry?.EstimatedJumps ?? 0)
+        + TotalEstimatedJumps;
+
     public long ProfitPerHour(
-        long profit) =>
-        CycleTime.TotalSeconds <= 0
+        long profit,
+        bool includeEntry = false)
+    {
+        TimeSpan duration = includeEntry
+            ? FirstRunTime
+            : CycleTime;
+
+        return duration.TotalSeconds <= 0
             ? 0
             : checked(
                 (long)Math.Round(
                     profit
                     * 3600d
-                    / CycleTime.TotalSeconds));
+                    / duration.TotalSeconds));
+    }
 }
 
 public sealed class TradeTravelTimeEstimator
@@ -104,6 +120,9 @@ public sealed class TradeTravelTimeEstimator
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(ship);
 
+        TradeLegTravelEstimate entry =
+            EstimateEntry(candidate, ship);
+
         TradeLegTravelEstimate outbound =
             EstimateLeg(
                 candidate.SourceToTargetDistanceLy,
@@ -111,32 +130,29 @@ public sealed class TradeTravelTimeEstimator
                 candidate.Target.DistanceToArrivalLs,
                 ship);
 
-        return
-            new TradeRouteTravelEstimate
-            {
-                Outbound =
-                    outbound,
-                Confidence =
-                    Confidence(
-                        ship,
-                        candidate.Target.DistanceToArrivalLs,
-                        returnStationDistanceLs:
-                            null),
-                ConfidenceReason =
-                    ConfidenceReason(
-                        ship,
-                        candidate.Target.DistanceToArrivalLs,
-                        returnStationDistanceLs:
-                            null)
-            };
+        return new TradeRouteTravelEstimate
+        {
+            Entry = entry,
+            Outbound = outbound,
+            Confidence = Confidence(
+                ship,
+                candidate.Target.DistanceToArrivalLs,
+                returnStationDistanceLs: null),
+            ConfidenceReason = ConfidenceReason(
+                ship,
+                candidate.Target.DistanceToArrivalLs,
+                returnStationDistanceLs: null)
+        };
     }
-
     public TradeRouteTravelEstimate EstimateRoundTrip(
         TradeRoundTripCandidate candidate,
         GameStateSnapshot ship)
     {
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(ship);
+
+        TradeLegTravelEstimate entry =
+            EstimateEntry(candidate.Outbound, ship);
 
         TradeLegTravelEstimate outbound =
             EstimateLeg(
@@ -152,26 +168,47 @@ public sealed class TradeTravelTimeEstimator
                 candidate.Outbound.Source.DistanceToArrivalLs,
                 ship);
 
-        return
-            new TradeRouteTravelEstimate
-            {
-                Outbound =
-                    outbound,
-                Return =
-                    returnLeg,
-                Confidence =
-                    Confidence(
-                        ship,
-                        candidate.Outbound.Target.DistanceToArrivalLs,
-                        candidate.Outbound.Source.DistanceToArrivalLs),
-                ConfidenceReason =
-                    ConfidenceReason(
-                        ship,
-                        candidate.Outbound.Target.DistanceToArrivalLs,
-                        candidate.Outbound.Source.DistanceToArrivalLs)
-            };
+        return new TradeRouteTravelEstimate
+        {
+            Entry = entry,
+            Outbound = outbound,
+            Return = returnLeg,
+            Confidence = Confidence(
+                ship,
+                candidate.Outbound.Target.DistanceToArrivalLs,
+                candidate.Outbound.Source.DistanceToArrivalLs),
+            ConfidenceReason = ConfidenceReason(
+                ship,
+                candidate.Outbound.Target.DistanceToArrivalLs,
+                candidate.Outbound.Source.DistanceToArrivalLs)
+        };
     }
 
+    private TradeLegTravelEstimate EstimateEntry(
+        TradeRouteCandidate candidate,
+        GameStateSnapshot ship)
+    {
+        if (ship.Docked
+            && ship.MarketId == candidate.Source.MarketId)
+        {
+            return new TradeLegTravelEstimate
+            {
+                CargoTons = 0,
+                LoadedJumpRangeLy = EstimateLoadedJumpRangeLy(ship, 0),
+                EstimatedJumps = 0,
+                JumpTime = TimeSpan.Zero,
+                SupercruiseTime = TimeSpan.Zero,
+                FixedOperationsTime = TimeSpan.Zero,
+                StationDistanceLs = 0
+            };
+        }
+
+        return EstimateLeg(
+            candidate.OriginToSourceDistanceLy,
+            cargoTons: 0,
+            candidate.Source.DistanceToArrivalLs,
+            ship);
+    }
     public TradeLegTravelEstimate EstimateLeg(
         double systemDistanceLy,
         int cargoTons,
