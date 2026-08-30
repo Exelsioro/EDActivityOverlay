@@ -17,6 +17,7 @@ public static partial class TradeRoutePresentationAdapter
             },
             FirstRoute = new TradeLeg
             {
+                PlannedQuantity = candidate.TradableAmount,
                 BuyCommodity = new Commodity
                 {
                     InternalName = CommodityIdentity.Normalize(candidate.Source.CommodityName),

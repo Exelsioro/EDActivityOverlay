@@ -280,14 +280,16 @@ public partial class ActivityWorkspaceOverlayWindow
             return;
         }
 
-        parentWindow.OnPinRouteRequested(
-            TradeRoutePresentationAdapter.ToPresentation(
-                candidate),
-            keepTradeWorkspace:
-                true);
+        TradeRouteProgressTracker? tracker =
+            parentWindow.OnPinRouteRequested(
+                TradeRoutePresentationAdapter.ToPresentation(
+                    candidate),
+                keepTradeWorkspace:
+                    true);
 
         tradeWorkspaceControl?.ActivatePinnedRoute(
-            candidate);
+            candidate,
+            tracker);
     }
     private void PinRoundTripRouteRequested(
         TradeRoundTripCandidate candidate)
@@ -297,16 +299,17 @@ public partial class ActivityWorkspaceOverlayWindow
             return;
         }
 
-        parentWindow.OnPinRouteRequested(
-            TradeRoutePresentationAdapter.ToPresentation(
-                candidate),
-            keepTradeWorkspace:
-                true);
+        TradeRouteProgressTracker? tracker =
+            parentWindow.OnPinRouteRequested(
+                TradeRoutePresentationAdapter.ToPresentation(
+                    candidate),
+                keepTradeWorkspace:
+                    true);
 
         tradeWorkspaceControl?.ActivatePinnedRoute(
-            candidate);
+            candidate,
+            tracker);
     }
-
     private void UpdatePinnedTradeRouteRequested(
         TradeRouteCandidate candidate)
     {
@@ -315,13 +318,18 @@ public partial class ActivityWorkspaceOverlayWindow
             return;
         }
 
-        parentWindow.OnPinRouteRequested(
-            TradeRoutePresentationAdapter.ToPresentation(
-                candidate),
-            keepTradeWorkspace:
-                true);
-    }
+        TradeRouteProgressTracker? tracker =
+            parentWindow.OnPinRouteRequested(
+                TradeRoutePresentationAdapter.ToPresentation(
+                    candidate),
+                keepTradeWorkspace:
+                    true,
+                preserveExecution:
+                    true);
 
+        tradeWorkspaceControl?.AttachExecutionTracker(
+            tracker);
+    }
     private void UnpinTradeRouteRequested()
     {
         parentWindow?.UnpinRouteOverlay();

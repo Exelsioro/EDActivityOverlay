@@ -138,19 +138,60 @@ public partial class PinnedRouteOverlay : Window
         PositionOverlay();
     }
 
-    public void PinTradeRoute(TradeRoute tradeRoute)
+    public TradeRouteProgressTracker PinTradeRoute(
+        TradeRoute tradeRoute,
+        bool preserveExecution = false)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
-        currentRoute = tradeRoute;
-        fromSystem = tradeRoute.CardHeader.FromStation.System;
-        fromStation = tradeRoute.CardHeader.FromStation.Name;
-        toSystem = tradeRoute.CardHeader.ToStation.System;
-        toStation = tradeRoute.CardHeader.ToStation.Name;
+        ObjectDisposedException.ThrowIf(
+            disposed,
+            this);
+
+        currentRoute =
+            tradeRoute;
+
+        fromSystem =
+            tradeRoute.CardHeader.FromStation.System;
+
+        fromStation =
+            tradeRoute.CardHeader.FromStation.Name;
+
+        toSystem =
+            tradeRoute.CardHeader.ToStation.System;
+
+        toStation =
+            tradeRoute.CardHeader.ToStation.Name;
+
         ApplyRouteEndpoints();
-        progressTracker?.Dispose();
-        progressTracker = new TradeRouteProgressTracker(tradeRoute);
-        progressTracker.ProgressChanged += OnProgressChanged;
-        ApplyProgress(progressTracker.Current);
+
+        if (progressTracker is null
+            || !preserveExecution)
+        {
+            if (progressTracker is not null)
+            {
+                progressTracker.ProgressChanged -=
+                    OnProgressChanged;
+
+                progressTracker.Dispose();
+            }
+
+            progressTracker =
+                new TradeRouteProgressTracker(
+                    tradeRoute);
+
+            progressTracker.ProgressChanged +=
+                OnProgressChanged;
+        }
+        else
+        {
+            progressTracker.UpdateRoute(
+                tradeRoute,
+                preserveExecution:
+                    true);
+        }
+
+        ApplyProgress(
+            progressTracker.Current);
+
         PositionOverlay();
 
         if (!suppressedByTradeWorkspace)
@@ -160,8 +201,9 @@ public partial class PinnedRouteOverlay : Window
 
         Logger.Logger.LogUserAction(
             $"Trade route pinned: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
-    }
 
+        return progressTracker;
+    }
     private void OnProgressChanged(object? sender, TradeRouteProgressChangedEventArgs e)
     {
         Dispatcher.BeginInvoke(new Action(() => ApplyProgress(e.Progress)));

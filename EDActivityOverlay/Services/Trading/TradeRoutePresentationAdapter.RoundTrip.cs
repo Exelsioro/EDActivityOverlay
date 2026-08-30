@@ -29,6 +29,8 @@ public static partial class TradeRoutePresentationAdapter
                 FirstRoute =
                     new TradeLeg
                     {
+                        PlannedQuantity =
+                            outbound.TradableAmount,
                         BuyCommodity =
                             new Commodity
                             {
@@ -68,6 +70,8 @@ public static partial class TradeRoutePresentationAdapter
                 SecondRoute =
                     new TradeLeg
                     {
+                        PlannedQuantity =
+                            candidate.ReturnTradableAmount,
                         BuyCommodity =
                             new Commodity
                             {

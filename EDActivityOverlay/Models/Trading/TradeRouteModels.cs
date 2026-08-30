@@ -6,6 +6,7 @@ public class TradeLeg
     {
         public Commodity SellCommodity { get; set; } = new Commodity();
         public Commodity BuyCommodity { get; set; } = new Commodity();
+        public int PlannedQuantity { get; set; }
         public int ProfitPerUnit { get; set; }
         public string LastUpdate { get; set; } = "";
     }

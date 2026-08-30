@@ -21,6 +21,7 @@ public sealed class TradeActiveRouteSession
     private bool cargoLoaded;
     private bool completed;
     private int? observedBuyPrice;
+    private int? executedAverageBuyPrice;
     private DateTimeOffset? ignoredDegradedMarketUpdate;
 
     public TradeActiveRouteSession(
@@ -119,8 +120,18 @@ public sealed class TradeActiveRouteSession
                != CurrentMarketUpdateUtc);
 
     public int EffectiveBuyPrice =>
-        observedBuyPrice
+        executedAverageBuyPrice
+        ?? observedBuyPrice
         ?? activeLeg.Source.BuyFromStationPrice;
+
+    public void SetExecutedAverageBuyPrice(
+        int? price)
+    {
+        executedAverageBuyPrice =
+            price is > 0
+                ? price
+                : null;
+    }
 
     public int EffectiveSellPrice =>
         LiveTargetMarket?.SellPrice
@@ -460,6 +471,9 @@ public sealed class TradeActiveRouteSession
             false;
 
         observedBuyPrice =
+            null;
+
+        executedAverageBuyPrice =
             null;
 
         ignoredDegradedMarketUpdate =

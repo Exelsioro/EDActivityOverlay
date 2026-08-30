@@ -264,36 +264,65 @@ namespace EDActivityOverlay
             Logger.Logger.Info("Results overlay window closed");
         }
 
-        public void OnPinRouteRequested(
+        public TradeRouteProgressTracker? OnPinRouteRequested(
             TradeRoute tradeRoute,
-            bool keepTradeWorkspace = false)
+            bool keepTradeWorkspace = false,
+            bool preserveExecution = false)
         {
-            Logger.Logger.Info($"Pin route requested from MainWindow: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
-            if (pinnedRouteOverlay == null || !pinnedRouteOverlay.IsLoaded)
+            Logger.Logger.Info(
+                $"Pin route requested from MainWindow: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
+
+            if (pinnedRouteOverlay == null
+                || !pinnedRouteOverlay.IsLoaded)
             {
-                Logger.Logger.Info("Creating new PinnedRouteOverlay instance");
-                pinnedRouteOverlay = new PinnedRouteOverlay(this);
+                Logger.Logger.Info(
+                    "Creating new PinnedRouteOverlay instance");
+
+                pinnedRouteOverlay =
+                    new PinnedRouteOverlay(
+                        this);
             }
 
-            pinnedRouteOverlay.SetTargetWindow(targetWindow, targetProcessId);
-            pinnedRouteOverlay.SetPlacement(SettingsService.Instance.Settings.PinnedRoutePosition);
-            pinnedRouteOverlay.ApplyInteractionMode(interactionModeEnabled && interactiveModeActive, showCursorWhenInteractive);
+            pinnedRouteOverlay.SetTargetWindow(
+                targetWindow,
+                targetProcessId);
+
+            pinnedRouteOverlay.SetPlacement(
+                SettingsService.Instance.Settings.PinnedRoutePosition);
+
+            pinnedRouteOverlay.ApplyInteractionMode(
+                interactionModeEnabled
+                && interactiveModeActive,
+                showCursorWhenInteractive);
+
             pinnedRouteOverlay.SetSuppressedByTradeWorkspace(
                 pinnedRouteSuppressedByTradeWorkspace);
-            pinnedRouteOverlay.PinTradeRoute(tradeRoute);
-            engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
-            isPinnedRouteActive = true;
 
-            if (currentActivity == ActivityType.Trade
+            TradeRouteProgressTracker tracker =
+                pinnedRouteOverlay.PinTradeRoute(
+                    tradeRoute,
+                    preserveExecution);
+
+            engineeringOverlayWindow?.SetPlacement(
+                GetEngineeringOverlayPlacement());
+
+            isPinnedRouteActive =
+                true;
+
+            if (currentActivity
+                    == ActivityType.Trade
                 && !keepTradeWorkspace)
             {
                 CloseActivityWorkspace();
             }
 
             CloseOverlayWindows();
-            Logger.Logger.Info("Route pinned successfully, closing other overlays");
-        }
 
+            Logger.Logger.Info(
+                "Route pinned successfully, closing other overlays");
+
+            return tracker;
+        }
         public void SetPinnedRouteSuppressedByTradeWorkspace(
             bool suppressed)
         {

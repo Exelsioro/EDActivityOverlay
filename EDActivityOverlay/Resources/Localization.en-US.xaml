@@ -1120,6 +1120,11 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING">Searching a better buyer for the loaded commodity...</sys:String>
     <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING_BUTTON">SEARCHING...</sys:String>
     <sys:String x:Key="Loc_TRADE_ACTIVE_NO_BETTER_BUYER">No better buyer found inside current filters.</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_BUY_PROGRESS">BOUGHT {0:N0}/{1:N0} t · actual avg {2:N0} CR/t · cost {3:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_LOADED">IN CARGO {0:N0} t · actual buy avg {1:N0} CR/t · projected P&amp;L {2:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_SELL_PROGRESS">SOLD {0:N0}/{1:N0} t · actual avg {2:N0} CR/t · revenue {3:N0} CR · realized P&amp;L {4:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_COMPLETED">TRADE COMPLETED ✓ · actual {0:N0} CR · plan {1:N0} CR · Δ {2:+0.0;-0.0;0.0}%</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_FOOTER">To {0}: {1:0.0} LY · ~{2} · {3} jumps&#10;Realized P&amp;L {4:N0} CR · projected {5:N0} CR</sys:String>
 </ResourceDictionary>
 
 

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
+using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Trading;
 
 namespace EDActivityOverlay.UserControls;
@@ -12,6 +13,8 @@ public partial class TradeWorkspaceControl
         new();
 
     private TradeActiveRouteSession? activeTradeSession;
+    private TradeRouteProgressTracker? executionTracker;
+    private TradeRouteProgress? executionProgress;
     private TradeSearchConstraints? lastSearchConstraints;
     private bool rerouteRunning;
 
@@ -22,7 +25,8 @@ public partial class TradeWorkspaceControl
     public event Action? UnpinRequested;
 
     public void ActivatePinnedRoute(
-        TradeRouteCandidate candidate)
+        TradeRouteCandidate candidate,
+        TradeRouteProgressTracker? tracker = null)
     {
         TradeSearchConstraints constraints =
             lastSearchConstraints
@@ -40,14 +44,17 @@ public partial class TradeWorkspaceControl
 
         ResetCargoSaleResults();
 
+        AttachExecutionTracker(
+            tracker);
+
         SetFullMode(
             false);
 
         RefreshActiveTradeCompact();
     }
-
     public void ActivatePinnedRoute(
-        TradeRoundTripCandidate candidate)
+        TradeRoundTripCandidate candidate,
+        TradeRouteProgressTracker? tracker = null)
     {
         TradeSearchConstraints constraints =
             lastSearchConstraints
@@ -67,14 +74,107 @@ public partial class TradeWorkspaceControl
 
         ResetCargoSaleResults();
 
+        AttachExecutionTracker(
+            tracker);
+
         SetFullMode(
             false);
 
         RefreshActiveTradeCompact();
     }
 
+    public void AttachExecutionTracker(
+        TradeRouteProgressTracker? tracker)
+    {
+        if (ReferenceEquals(
+                executionTracker,
+                tracker))
+        {
+            if (tracker is not null)
+            {
+                ApplyExecutionProgress(
+                    tracker.Current);
+            }
+
+            return;
+        }
+
+        DetachExecutionTracker();
+
+        executionTracker =
+            tracker;
+
+        if (executionTracker is null)
+        {
+            executionProgress =
+                null;
+
+            return;
+        }
+
+        executionTracker.ProgressChanged +=
+            ExecutionTracker_ProgressChanged;
+
+        ApplyExecutionProgress(
+            executionTracker.Current);
+    }
+
+    private void DetachExecutionTracker()
+    {
+        if (executionTracker is not null)
+        {
+            executionTracker.ProgressChanged -=
+                ExecutionTracker_ProgressChanged;
+        }
+
+        executionTracker =
+            null;
+
+        executionProgress =
+            null;
+    }
+
+    private void ExecutionTracker_ProgressChanged(
+        object? sender,
+        TradeRouteProgressChangedEventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            ApplyExecutionProgress(
+                e.Progress);
+
+            RefreshActiveTradeCompact();
+
+            return;
+        }
+
+        Dispatcher.BeginInvoke(
+            new Action(
+                () =>
+                {
+                    ApplyExecutionProgress(
+                        e.Progress);
+
+                    RefreshActiveTradeCompact();
+                }));
+    }
+
+    private void ApplyExecutionProgress(
+        TradeRouteProgress progress)
+    {
+        executionProgress =
+            progress;
+
+        activeTradeSession?
+            .SetExecutedAverageBuyPrice(
+                progress.AverageBuyPrice > 0
+                    ? progress.AverageBuyPrice
+                    : null);
+    }
     public void ClearActiveTradeRouteFromHost()
     {
+        DetachExecutionTracker();
+
         activeTradeSession =
             null;
 
@@ -125,6 +225,9 @@ public partial class TradeWorkspaceControl
         TradeRouteCandidate leg =
             session.ActiveLeg;
 
+        TradeRouteProgress? execution =
+            executionProgress;
+
         string legBadge =
             session.IsReturnLeg
                 ? Loc.Get(
@@ -132,18 +235,29 @@ public partial class TradeWorkspaceControl
                 : Loc.Get(
                     "Loc_TRADE_ACTIVE_OUTBOUND_LEG");
 
+        string stage =
+            execution is null
+                ? StageLabel(
+                    session.Stage)
+                : StageLabel(
+                    execution.Stage);
+
+        int quantity =
+            execution is { PlannedQuantity: > 0 }
+                ? execution.PlannedQuantity
+                : leg.TradableAmount;
+
         CompactFiltersText.Text =
             Loc.Format(
                 "Loc_TRADE_ACTIVE_HEADER",
                 legBadge,
-                StageLabel(
-                    session.Stage));
+                stage);
 
         CompactBestRouteText.Text =
             Loc.Format(
                 "Loc_TRADE_ACTIVE_ROUTE",
                 leg.Source.CommodityName.ToUpperInvariant(),
-                leg.TradableAmount,
+                quantity,
                 leg.Source.SystemName,
                 leg.Source.StationName,
                 leg.Target.SystemName,
@@ -151,20 +265,84 @@ public partial class TradeWorkspaceControl
 
         CompactStatusText.Text =
             BuildActiveStatus(
-                session);
+                session,
+                execution);
 
         CompactFooterText.Text =
             BuildActiveFooter(
-                session);
+                session,
+                execution);
 
         UpdateCompactModeButtons();
     }
-
     private string BuildActiveStatus(
-        TradeActiveRouteSession session)
+        TradeActiveRouteSession session,
+        TradeRouteProgress? execution)
     {
         TradeRouteCandidate leg =
             session.ActiveLeg;
+
+        if (execution?.Stage
+            == TradeRouteStage.Completed)
+        {
+            return Loc.Format(
+                "Loc_TRADE_EXEC_COMPLETED",
+                execution.ActualProfit,
+                execution.PlannedProfit,
+                execution.ProjectedVariancePercent);
+        }
+
+        if (execution is not null
+            && execution.PurchasedQuantity > 0
+            && execution.Stage
+               == TradeRouteStage.Buy)
+        {
+            return Loc.Format(
+                "Loc_TRADE_EXEC_BUY_PROGRESS",
+                execution.PurchasedQuantity,
+                execution.PlannedQuantity,
+                execution.AverageBuyPrice,
+                execution.PurchaseCost);
+        }
+
+        if (execution is not null
+            && execution.PurchasedQuantity > 0
+            && execution.Stage
+               == TradeRouteStage.FlyToSell)
+        {
+            return Loc.Format(
+                "Loc_TRADE_EXEC_LOADED",
+                execution.RemainingQuantity,
+                execution.AverageBuyPrice,
+                execution.ProjectedProfit);
+        }
+
+        if (execution is not null
+            && execution.SoldQuantity > 0
+            && execution.Stage
+               == TradeRouteStage.Sell)
+        {
+            string sold =
+                Loc.Format(
+                    "Loc_TRADE_EXEC_SELL_PROGRESS",
+                    execution.SoldQuantity,
+                    Math.Max(
+                        execution.PurchasedQuantity,
+                        execution.PlannedQuantity),
+                    execution.AverageSellPrice,
+                    execution.SaleRevenue,
+                    execution.ActualProfit);
+
+            if (session.ShouldOfferReroute)
+            {
+                sold +=
+                    Environment.NewLine
+                    + Loc.Get(
+                        "Loc_TRADE_ACTIVE_TARGET_DEGRADED");
+            }
+
+            return sold;
+        }
 
         if (session.Stage
             == TradeActiveStage.Completed)
@@ -242,9 +420,9 @@ public partial class TradeWorkspaceControl
                     "Loc_TRADE_ACTIVE_TO_SOURCE")
         };
     }
-
     private string BuildActiveFooter(
-        TradeActiveRouteSession session)
+        TradeActiveRouteSession session,
+        TradeRouteProgress? execution)
     {
         TradeRouteCandidate leg =
             session.ActiveLeg;
@@ -282,6 +460,20 @@ public partial class TradeWorkspaceControl
                 : Loc.Get(
                     "Loc_TRADE_ACTIVE_DEST_SUPPLIER");
 
+        if (execution is not null
+            && execution.HasTransactions)
+        {
+            return Loc.Format(
+                "Loc_TRADE_EXEC_FOOTER",
+                destination,
+                distance,
+                FormatTravelTime(
+                    travel.TotalTime),
+                travel.EstimatedJumps,
+                execution.ActualProfit,
+                execution.ProjectedProfit);
+        }
+
         return Loc.Format(
             "Loc_TRADE_ACTIVE_FOOTER",
             destination,
@@ -291,7 +483,6 @@ public partial class TradeWorkspaceControl
             travel.EstimatedJumps,
             session.ExpectedProfit);
     }
-
     private async void CompactActionButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -434,6 +625,8 @@ public partial class TradeWorkspaceControl
     private void ClearActiveTradeRoute(
         bool notifyHost)
     {
+        DetachExecutionTracker();
+
         activeTradeSession =
             null;
 
@@ -570,6 +763,27 @@ public partial class TradeWorkspaceControl
             .Values
             .Any(item =>
                 item.Count > 0);
+
+    private static string StageLabel(
+        TradeRouteStage stage) =>
+        stage switch
+        {
+            TradeRouteStage.Buy =>
+                Loc.Get(
+                    "Loc_TRADE_ACTIVE_STAGE_SOURCE"),
+            TradeRouteStage.FlyToSell =>
+                Loc.Get(
+                    "Loc_TRADE_ACTIVE_STAGE_TO_TARGET"),
+            TradeRouteStage.Sell =>
+                Loc.Get(
+                    "Loc_TRADE_ACTIVE_STAGE_TARGET"),
+            TradeRouteStage.Completed =>
+                Loc.Get(
+                    "Loc_TRADE_ACTIVE_STAGE_DONE"),
+            _ =>
+                Loc.Get(
+                    "Loc_TRADE_ACTIVE_STAGE_TO_SOURCE")
+        };
 
     private static string StageLabel(
         TradeActiveStage stage) =>

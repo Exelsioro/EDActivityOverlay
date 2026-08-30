@@ -242,6 +242,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         disposed = true;
 
+        DetachExecutionTracker();
+
         searchCancellation?.Cancel();
         searchCancellation?.Dispose();
         searchCancellation = null;
