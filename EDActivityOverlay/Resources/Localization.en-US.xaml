@@ -1193,7 +1193,7 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_CONTINUE">CONTINUE</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_RETRY">RETRY PLAN</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_STOP">STOP</sys:String>
-    <sys:String x:Key="Loc_TRADE_FILTERS_CHANGED">FILTERS CHANGED В· current list is from the previous search В· press Search to apply</sys:String>
+    <sys:String x:Key="Loc_TRADE_FILTERS_CHANGED">FILTERS CHANGED · current list is from the previous search · press Search to apply</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY">HISTORY</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_TITLE">TRADE HISTORY</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_BACK">BACK TO SEARCH</sys:String>
@@ -1204,6 +1204,15 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_EMPTY">Completed pinned trade routes will appear here.</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_SUMMARY_META">Sold {0:N0} t · tracked time {1} · best trade {2:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_REROUTES">reroutes {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_STORAGE_TITLE">TRADE HISTORY STORAGE</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_STORAGE_DESCRIPTION">Completed pinned trade routes are stored as an append-only JSONL file. Changing the directory switches the active history store; existing files are not moved or deleted.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_DIRECTORY">Trade history directory</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_DIRECTORY_HINT">Leave empty to use %APPDATA%\EDActivityOverlay. A trade-history.jsonl file in the selected directory is loaded automatically.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_RESOLVED_FORMAT">Active history file: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_PATH_INVALID">Invalid trade history directory.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_OPEN_FOLDER">OPEN</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SELECT_DIRECTORY">Select trade history directory</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_CARGO_FORMAT">{0:N0} t</sys:String>
 </ResourceDictionary>
 
 

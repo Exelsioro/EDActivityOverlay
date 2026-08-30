@@ -157,11 +157,17 @@ public partial class TradeWorkspaceControl
                 record.RouteSummary)
                 ? "—"
                 : record.RouteSummary,
-            $"{sold:N0} t",
-            $"{record.ActualProfit:N0} CR",
+            Loc.Format(
+                "Loc_TRADE_HISTORY_CARGO_FORMAT",
+                sold),
+            Loc.Format(
+                "Loc_Credits_Format",
+                record.ActualProfit),
             FormatHistoryDuration(
                 record.Duration),
-            $"{record.ActualProfitPerHour:N0} CR/h",
+            Loc.Format(
+                "Loc_TRADE_CRH_RAW",
+                record.ActualProfitPerHour),
             $"{record.VariancePercent:+0.0;-0.0;0.0}%",
             meta);
     }

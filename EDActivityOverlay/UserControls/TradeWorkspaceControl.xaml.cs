@@ -7,6 +7,7 @@ using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Ardent;
 using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Trading;
+using EDActivityOverlay.Utils;
 
 namespace EDActivityOverlay.UserControls;
 
@@ -137,6 +138,15 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
     public bool IsFullMode { get; private set; }
 
+    public void SetChromeStyle(
+        string? style)
+    {
+        OverlayChromeHelper.Apply(
+            CompactTradePanel,
+            OverlayChromeStyles.Normalize(
+                style));
+    }
+
     public event Action? CloseRequested;
     public event Action? DragRequested;
     public event Action<bool>? ViewModeChanged;
@@ -169,7 +179,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         string balance =
             state.JournalAvailable
-                ? $"  •  {Math.Max(0, state.Balance):N0} CR"
+                ? "  •  "
+                  + Loc.Format(
+                      "Loc_Credits_Format",
+                      Math.Max(
+                          0,
+                          state.Balance))
                 : string.Empty;
 
         string journalLine =

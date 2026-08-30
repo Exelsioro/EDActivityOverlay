@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using EDActivityOverlay.Services;
 
 namespace EDActivityOverlay.Services.Trading;
 
@@ -11,7 +12,7 @@ public sealed class TradeHistoryService
         new(() => new TradeHistoryService());
 
     private readonly object sync = new();
-    private readonly string filePath;
+    private string filePath;
     private readonly int maxRecords;
     private readonly JsonSerializerOptions jsonOptions =
         new()
@@ -41,11 +42,8 @@ public sealed class TradeHistoryService
 
         this.filePath =
             filePath
-            ?? Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.ApplicationData),
-                "EDActivityOverlay",
-                "trade-history.jsonl");
+            ?? TradeHistoryPathResolver.ResolveFilePath(
+                SettingsService.Instance.Settings.TradeHistoryDirectory);
 
         if (loadExisting)
         {
@@ -53,8 +51,63 @@ public sealed class TradeHistoryService
         }
     }
 
-    public string FilePath =>
-        filePath;
+    public string FilePath
+    {
+        get
+        {
+            lock (sync)
+            {
+                return
+                    filePath;
+            }
+        }
+    }
+
+    public string DirectoryPath =>
+        Path.GetDirectoryName(
+            FilePath)
+        ?? TradeHistoryPathResolver.DefaultDirectory;
+
+    /// <summary>
+    /// Switches the active durable history store. Existing history is not
+    /// moved or deleted: the selected directory is loaded as a separate store.
+    /// </summary>
+    public void ConfigureDirectory(
+        string? configuredDirectory)
+    {
+        string resolvedFile =
+            TradeHistoryPathResolver.ResolveFilePath(
+                configuredDirectory);
+
+        bool changed =
+            false;
+
+        lock (sync)
+        {
+            if (string.Equals(
+                    filePath,
+                    resolvedFile,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            filePath =
+                resolvedFile;
+
+            LoadLocked();
+
+            changed =
+                true;
+        }
+
+        if (changed)
+        {
+            HistoryChanged?.Invoke(
+                this,
+                EventArgs.Empty);
+        }
+    }
 
     public void Record(
         TradeHistoryRecord record)
@@ -86,12 +139,12 @@ public sealed class TradeHistoryService
             changed =
                 true;
 
-            Directory.CreateDirectory(
-                Path.GetDirectoryName(filePath)
-                ?? ".");
-
             try
             {
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(filePath)
+                    ?? ".");
+
                 string line =
                     JsonSerializer.Serialize(
                         record,
@@ -113,21 +166,14 @@ public sealed class TradeHistoryService
                         0,
                         removeCount);
 
-                    knownIds.Clear();
-
-                    foreach (TradeHistoryRecord item
-                             in records)
-                    {
-                        knownIds.Add(
-                            item.Id);
-                    }
-
-                    CompactFile();
+                    RebuildKnownIdsLocked();
+                    CompactFileLocked();
                 }
-
             }
             catch (Exception ex)
             {
+                // Execution history remains available in memory for the
+                // current process even if durable persistence fails.
                 Logger.Logger.Warning(
                     $"Unable to persist trade history: {ex.Message}");
             }
@@ -237,85 +283,97 @@ public sealed class TradeHistoryService
     {
         lock (sync)
         {
-            records.Clear();
-            knownIds.Clear();
-            sessionIds.Clear();
+            LoadLocked();
+        }
+    }
 
-            if (!File.Exists(
-                    filePath))
-            {
-                return;
-            }
+    private void LoadLocked()
+    {
+        records.Clear();
+        knownIds.Clear();
 
-            try
+        // Session statistics are scoped to the active store. Changing the
+        // configured directory therefore starts a fresh session view.
+        sessionIds.Clear();
+
+        if (!File.Exists(
+                filePath))
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (string line
+                     in File.ReadLines(
+                         filePath))
             {
-                foreach (string line
-                         in File.ReadLines(
-                             filePath))
+                if (string.IsNullOrWhiteSpace(
+                        line))
                 {
-                    if (string.IsNullOrWhiteSpace(
-                            line))
+                    continue;
+                }
+
+                try
+                {
+                    TradeHistoryRecord? item =
+                        JsonSerializer.Deserialize<TradeHistoryRecord>(
+                            line,
+                            jsonOptions);
+
+                    if (item is null
+                        || !knownIds.Add(
+                            item.Id))
                     {
                         continue;
                     }
 
-                    try
-                    {
-                        TradeHistoryRecord? item =
-                            JsonSerializer.Deserialize<TradeHistoryRecord>(
-                                line,
-                                jsonOptions);
-
-                        if (item is null
-                            || !knownIds.Add(
-                                item.Id))
-                        {
-                            continue;
-                        }
-
-                        records.Add(
-                            item);
-                    }
-                    catch
-                    {
-                        // JSONL deliberately tolerates one damaged entry.
-                    }
+                    records.Add(
+                        item);
                 }
-
-                records.Sort(
-                    static (left, right) =>
-                        left.CompletedAtUtc.CompareTo(
-                            right.CompletedAtUtc));
-
-                if (records.Count
-                    > maxRecords)
+                catch
                 {
-                    records.RemoveRange(
-                        0,
-                        records.Count
-                        - maxRecords);
-
-                    knownIds.Clear();
-
-                    foreach (TradeHistoryRecord item
-                             in records)
-                    {
-                        knownIds.Add(
-                            item.Id);
-                    }
-
-                    CompactFile();
+                    // JSONL deliberately tolerates one damaged entry.
                 }
             }
-            catch (Exception ex)
+
+            records.Sort(
+                static (left, right) =>
+                    left.CompletedAtUtc.CompareTo(
+                        right.CompletedAtUtc));
+
+            if (records.Count
+                > maxRecords)
             {
-                Logger.Logger.Warning(
-                    $"Unable to load trade history: {ex.Message}");
+                records.RemoveRange(
+                    0,
+                    records.Count
+                    - maxRecords);
+
+                RebuildKnownIdsLocked();
+                CompactFileLocked();
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.Logger.Warning(
+                $"Unable to load trade history: {ex.Message}");
         }
     }
 
-    private void CompactFile()
+    private void RebuildKnownIdsLocked()
+    {
+        knownIds.Clear();
+
+        foreach (TradeHistoryRecord item
+                 in records)
+        {
+            knownIds.Add(
+                item.Id);
+        }
+    }
+
+    private void CompactFileLocked()
     {
         try
         {

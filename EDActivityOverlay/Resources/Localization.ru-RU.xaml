@@ -1120,11 +1120,11 @@
     <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING">Ищем лучшего покупателя для уже загруженного товара...</sys:String>
     <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING_BUTTON">ИЩЕМ...</sys:String>
     <sys:String x:Key="Loc_TRADE_ACTIVE_NO_BETTER_BUYER">В текущих фильтрах лучшего покупателя не найдено.</sys:String>
-    <sys:String x:Key="Loc_TRADE_EXEC_BUY_PROGRESS">КУПЛЕНО {0:N0}/{1:N0} т · факт avg {2:N0} кр./т · затраты {3:N0} кр.</sys:String>
-    <sys:String x:Key="Loc_TRADE_EXEC_LOADED">В ТРЮМЕ {0:N0} т · факт покупки avg {1:N0} кр./т · прогноз P&amp;L {2:N0} кр.</sys:String>
-    <sys:String x:Key="Loc_TRADE_EXEC_SELL_PROGRESS">ПРОДАНО {0:N0}/{1:N0} т · факт avg {2:N0} кр./т · выручка {3:N0} кр. · realized P&amp;L {4:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_BUY_PROGRESS">КУПЛЕНО {0:N0}/{1:N0} т · средняя цена {2:N0} кр./т · затраты {3:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_LOADED">В ТРЮМЕ {0:N0} т · средняя цена покупки {1:N0} кр./т · прогноз прибыли {2:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_SELL_PROGRESS">ПРОДАНО {0:N0}/{1:N0} т · средняя цена {2:N0} кр./т · выручка {3:N0} кр. · фактическая прибыль {4:N0} кр.</sys:String>
     <sys:String x:Key="Loc_TRADE_EXEC_COMPLETED">СДЕЛКА ЗАВЕРШЕНА ✓ · факт {0:N0} кр. · план {1:N0} кр. · Δ {2:+0.0;-0.0;0.0}%</sys:String>
-    <sys:String x:Key="Loc_TRADE_EXEC_FOOTER">До {0}: {1:0.0} LY · ~{2} · прыжков {3}&#10;Realized P&amp;L {4:N0} кр. · прогноз {5:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_EXEC_FOOTER">До {0}: {1:0.0} LY · ~{2} · прыжков {3}&#10;Фактическая прибыль {4:N0} кр. · прогноз {5:N0} кр.</sys:String>
     <sys:String x:Key="Loc_TRADE_SORT_CONFIDENCE">Надёжность</sys:String>
     <sys:String x:Key="Loc_TRADE_CONFIDENCE_TITLE">НАДЁЖНОСТЬ / РИСК РЫНКА</sys:String>
     <sys:String x:Key="Loc_TRADE_CONFIDENCE_HIGH">НАДЁЖНО</sys:String>
@@ -1174,14 +1174,14 @@
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_TRAVEL_NEXT">Прогноз ~{0} · прыжков {1}</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_PLANNING_FACTOR">Коэффициент планировщика {0:0}% · для ранжирования {1}</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_CONFIDENCE_LEGS">Первый {0}/100 · прогноз {1}/100</sys:String>
-    <sys:String x:Key="Loc_TRADE_CONTINUOUS_CONFIDENCE_ETA">Возраст данных второго рейса включает ~{0:0} мин ETA · худший эффективный возраст {1:0.0} ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONTINUOUS_CONFIDENCE_ETA">Возраст данных второго рейса учитывает ~{0:0} мин до его выполнения · худший эффективный возраст {1:0.0} ч</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_BACKTRACK_DETAIL">Маршрут возвращает на недавно посещённый рынок: это мягкий штраф, а не запрет.</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPACT_BEST">{0} → {1}&#10;{2:N0} кр. за {3} рейса</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPACT_NEXT">ДАЛЬШЕ: {0} → {1}</sys:String>
-    <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPACT_META">{0} · надёжность {1}/100 · planner {2:0}%</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPACT_META">{0} · надёжность {1}/100 · коэффициент плана {2:0}%</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_SORT_TOTAL">Прибыль за 2 рейса</sys:String>
-    <sys:String x:Key="Loc_TRADE_CONTINUOUS_SORT_RATE">CR/ч за 2 рейса</sys:String>
-    <sys:String x:Key="Loc_TRADE_CONTINUOUS_SORT_FIRST_TON">CR/т первого рейса</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONTINUOUS_SORT_RATE">кр./ч за 2 рейса</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONTINUOUS_SORT_FIRST_TON">кр./т первого рейса</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPLETE_HEADER">НЕПРЕРЫВНЫЙ · ПЕРЕСЧЁТ ПО ПРИБЫТИЮ</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPLETE_NEXT">ДАЛЬШЕ: {0} → {1} / {2}&#10;прибыль первого рейса {3:N0} кр.</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_COMPLETE_META">Горизонт {0:N0} кр. · ~{1} · {2} · надёжность {3}/100</sys:String>
@@ -1193,17 +1193,26 @@
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_CONTINUE">ПРОДОЛЖИТЬ</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_RETRY">ПОВТОРИТЬ ПЛАН</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_STOP">СТОП</sys:String>
-    <sys:String x:Key="Loc_TRADE_FILTERS_CHANGED">Р¤РР›Р¬РўР Р« РР—РњР•РќР•РќР« В· СЃРїРёСЃРѕРє РѕС‚ РїСЂРѕС€Р»РѕРіРѕ РїРѕРёСЃРєР° В· РЅР°Р¶РјРё РџРѕРёСЃРє, С‡С‚РѕР±С‹ РїСЂРёРјРµРЅРёС‚СЊ</sys:String>
+    <sys:String x:Key="Loc_TRADE_FILTERS_CHANGED">ФИЛЬТРЫ ИЗМЕНЕНЫ · список от прошлого поиска · нажмите «Поиск», чтобы применить</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY">ИСТОРИЯ</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_TITLE">ИСТОРИЯ ТОРГОВЛИ</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_BACK">К ПОИСКУ</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_SESSION_PROFIT">ПРИБЫЛЬ СЕССИИ</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_SESSION_TRADES">СДЕЛОК В СЕССИИ</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_ALL_PROFIT">ПРИБЫЛЬ ЗА ВСЁ ВРЕМЯ</sys:String>
-    <sys:String x:Key="Loc_TRADE_HISTORY_AVG_RATE">ФАКТИЧЕСКИЙ CR/Ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_AVG_RATE">ФАКТИЧЕСКИЕ КР./Ч</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_EMPTY">Завершённые закреплённые торговые маршруты появятся здесь.</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_SUMMARY_META">Продано {0:N0} т · учтённое время {1} · лучшая сделка {2:N0} кр.</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_REROUTES">перестроений {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_STORAGE_TITLE">ХРАНЕНИЕ ИСТОРИИ ТОРГОВЛИ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_STORAGE_DESCRIPTION">Завершённые закреплённые торговые маршруты хранятся в JSONL. Смена каталога переключает активную историю; существующие файлы не перемещаются и не удаляются.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_DIRECTORY">Каталог истории торговли</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_DIRECTORY_HINT">Оставьте пустым для %APPDATA%\EDActivityOverlay. Файл trade-history.jsonl из выбранного каталога загружается автоматически.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_RESOLVED_FORMAT">Активный файл истории: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_PATH_INVALID">Некорректный каталог истории торговли.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_OPEN_FOLDER">ОТКРЫТЬ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SELECT_DIRECTORY">Выберите каталог истории торговли</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_CARGO_FORMAT">{0:N0} т</sys:String>
 </ResourceDictionary>
 
 

@@ -127,9 +127,15 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         ApplyChrome();
     }
 
-    private void ApplyChrome() => OverlayChromeHelper.Apply(
-        OverlayFrame,
-        chromeStyle);
+    private void ApplyChrome()
+    {
+        OverlayChromeHelper.Apply(
+            OverlayFrame,
+            chromeStyle);
+
+        tradeWorkspaceControl?.SetChromeStyle(
+            chromeStyle);
+    }
 
     public void ApplyInteractionMode(bool enabled, bool showCursor)
     {

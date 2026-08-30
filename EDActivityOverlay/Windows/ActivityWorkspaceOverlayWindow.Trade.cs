@@ -114,12 +114,46 @@ public partial class ActivityWorkspaceOverlayWindow
             MinHeight =
                 TradeWorkspaceMinHeight;
 
+            Rect tradeWorkArea =
+                targetWindow != IntPtr.Zero
+                    ? WindowsAPI.GetMonitorWorkArea(
+                        targetWindow)
+                    : SystemParameters.WorkArea;
+
+            double availableWidth =
+                tradeWorkArea.Width;
+
+            double availableHeight =
+                tradeWorkArea.Height;
+
+            if (targetWindow != IntPtr.Zero
+                && WindowsAPI.TryGetWindowRectDips(
+                    targetWindow,
+                    out WindowsAPI.RECT targetRect))
+            {
+                availableWidth =
+                    Math.Min(
+                        availableWidth,
+                        Math.Max(
+                            1,
+                            targetRect.Right
+                            - targetRect.Left));
+
+                availableHeight =
+                    Math.Min(
+                        availableHeight,
+                        Math.Max(
+                            1,
+                            targetRect.Bottom
+                            - targetRect.Top));
+            }
+
             Width =
                 Math.Min(
                     1180,
                     Math.Max(
                         TradeWorkspaceMinWidth,
-                        SystemParameters.WorkArea.Width
+                        availableWidth
                         * 0.82));
 
             Height =
@@ -127,7 +161,7 @@ public partial class ActivityWorkspaceOverlayWindow
                     760,
                     Math.Max(
                         TradeWorkspaceMinHeight,
-                        SystemParameters.WorkArea.Height
+                        availableHeight
                         * 0.80));
 
             if (!tradeExclusiveInteraction)

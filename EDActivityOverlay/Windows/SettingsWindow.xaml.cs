@@ -10,6 +10,7 @@ using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Exploration;
 using EDActivityOverlay.Services.Navigation;
 using EDActivityOverlay.Services.Dss;
+using EDActivityOverlay.Services.Trading;
 using EDActivityOverlay.Services.Hardware;
 using EDActivityOverlay.Models;
 using System.Collections.Generic;
@@ -220,6 +221,12 @@ namespace EDActivityOverlay.Windows
             SaveRouteAutomationSettings();
             SaveHotkeySettings();
             SaveJournalSettings();
+
+            if (!SaveTradeHistorySettings())
+            {
+                return;
+            }
+
             SaveExplorationDataSettings();
             SaveX52Settings();
 
@@ -299,6 +306,7 @@ namespace EDActivityOverlay.Windows
             ExplorationSpoilerOptions[2].Label = Text("Loc_Exploration_spoilers_full_catalog");
             ExplorationSpoilerComboBox?.Items.Refresh();
             LoadJournalSettings();
+            LoadTradeHistorySettings();
             LoadExplorationDataSettings();
             LoadExperimentalDssSettings();
             LoadX52Settings();
@@ -341,6 +349,150 @@ namespace EDActivityOverlay.Windows
             else
             {
                 JournalMonitorService.Instance.Stop();
+            }
+        }
+
+        private void LoadTradeHistorySettings()
+        {
+            AppSettings settings =
+                SettingsService.Instance.Settings;
+
+            TradeHistoryDirectoryTextBox.Text =
+                settings.TradeHistoryDirectory;
+
+            UpdateTradeHistoryDirectoryPreview();
+        }
+
+        private bool SaveTradeHistorySettings()
+        {
+            string configured =
+                TradeHistoryDirectoryTextBox.Text.Trim();
+
+            try
+            {
+                _ =
+                    TradeHistoryPathResolver.ResolveDirectory(
+                        configured);
+            }
+            catch
+            {
+                ApplyStatusText.Text =
+                    Loc.Get(
+                        "Loc_TRADE_HISTORY_PATH_INVALID");
+
+                return false;
+            }
+
+            SettingsService.Instance.SetTradeHistoryDirectory(
+                configured);
+
+            TradeHistoryService.Instance.ConfigureDirectory(
+                configured);
+
+            UpdateTradeHistoryDirectoryPreview();
+
+            return true;
+        }
+
+        private void TradeHistoryDirectoryTextBox_TextChanged(
+            object sender,
+            TextChangedEventArgs e)
+        {
+            UpdateTradeHistoryDirectoryPreview();
+        }
+
+        private void UpdateTradeHistoryDirectoryPreview()
+        {
+            if (TradeHistoryDirectoryResolvedText is null
+                || TradeHistoryDirectoryTextBox is null)
+            {
+                return;
+            }
+
+            try
+            {
+                string resolved =
+                    TradeHistoryPathResolver.ResolveFilePath(
+                        TradeHistoryDirectoryTextBox.Text);
+
+                TradeHistoryDirectoryResolvedText.Text =
+                    Loc.Format(
+                        "Loc_TRADE_HISTORY_RESOLVED_FORMAT",
+                        resolved);
+            }
+            catch
+            {
+                TradeHistoryDirectoryResolvedText.Text =
+                    Loc.Get(
+                        "Loc_TRADE_HISTORY_PATH_INVALID");
+            }
+        }
+
+        private void BrowseTradeHistoryDirectoryButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            string initial;
+
+            try
+            {
+                initial =
+                    TradeHistoryPathResolver.ResolveDirectory(
+                        TradeHistoryDirectoryTextBox.Text);
+            }
+            catch
+            {
+                initial =
+                    TradeHistoryPathResolver.DefaultDirectory;
+            }
+
+            var dialog =
+                new OpenFolderDialog
+                {
+                    Title =
+                        Loc.Get(
+                            "Loc_TRADE_HISTORY_SELECT_DIRECTORY"),
+                    InitialDirectory =
+                        Directory.Exists(
+                            initial)
+                            ? initial
+                            : Environment.GetFolderPath(
+                                Environment.SpecialFolder.UserProfile)
+                };
+
+            if (dialog.ShowDialog() == true)
+            {
+                TradeHistoryDirectoryTextBox.Text =
+                    dialog.FolderName;
+            }
+        }
+
+        private void OpenTradeHistoryDirectoryButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            try
+            {
+                string directory =
+                    TradeHistoryPathResolver.ResolveDirectory(
+                        TradeHistoryDirectoryTextBox.Text);
+
+                Directory.CreateDirectory(
+                    directory);
+
+                Process.Start(
+                    new ProcessStartInfo(
+                        directory)
+                    {
+                        UseShellExecute =
+                            true
+                    });
+            }
+            catch
+            {
+                ApplyStatusText.Text =
+                    Loc.Get(
+                        "Loc_TRADE_HISTORY_PATH_INVALID");
             }
         }
 
