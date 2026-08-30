@@ -206,6 +206,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             applyingJournal = false;
         }
 
+        RefreshActiveTradeState(
+            state);
         RefreshCompactPresentation();
     }
 
@@ -441,10 +443,6 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         RoutedEventArgs e) =>
         await StartOrCancelSearchAsync();
 
-    private async void CompactActionButton_Click(
-        object sender,
-        RoutedEventArgs e) =>
-        await StartOrCancelSearchAsync();
 
     private async Task StartOrCancelSearchAsync()
     {
@@ -479,6 +477,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         }
 
         CaptureSession();
+        RememberSearchConstraints(
+            constraints);
 
         var cancellation =
             new CancellationTokenSource();
@@ -1433,6 +1433,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             running
                 ? "Loc_TRADE_CANCEL"
                 : SearchIdleResourceKey());
+
+        UpdateCompactModeButtons();
     }
 
     private void CaptureSession()
@@ -1608,6 +1610,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
     private void RefreshCompactPresentation(
         bool preserveStatus = false)
     {
+        if (HasActiveTradeRoute)
+        {
+            RefreshActiveTradeCompact();
+            return;
+        }
+
         if (IsCargoSaleMode)
         {
             RefreshCargoSaleCompact(

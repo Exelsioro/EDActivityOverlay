@@ -19,12 +19,14 @@ public static partial class TradeRoutePresentationAdapter
             {
                 BuyCommodity = new Commodity
                 {
+                    InternalName = CommodityIdentity.Normalize(candidate.Source.CommodityName),
                     Name = candidate.Source.CommodityName,
                     Price = candidate.Source.BuyFromStationPrice,
                     Supply = candidate.Source.Stock.ToString("N0")
                 },
                 SellCommodity = new Commodity
                 {
+                    InternalName = CommodityIdentity.Normalize(candidate.Target.CommodityName),
                     Name = candidate.Target.CommodityName,
                     Price = candidate.Target.SellToStationPrice,
                     Demand = candidate.Target.HasInfiniteDemand
@@ -48,6 +50,8 @@ public static partial class TradeRoutePresentationAdapter
     private static Station ToStation(TradeMarketOrder order) =>
         new()
         {
+            MarketId = order.MarketId,
+            SystemAddress = order.SystemAddress,
             Name = order.StationName,
             System = order.SystemName,
             DistanceFromStar = order.DistanceToArrivalLs ?? 0,

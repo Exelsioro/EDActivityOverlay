@@ -1088,6 +1088,38 @@
     <sys:String x:Key="Loc_TRADE_CARGO_READY">Готово к поиску покупателей текущего груза.</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_BEST">{0:N0} кр. · {1} → {2}</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_META">Можно продать {0:N0}/{1:N0} т · {2:0.0} LY · данные {3:0.#} ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SELL_CARGO">ПРОДАТЬ ГРУЗ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_HEADER">АКТИВНАЯ ТОРГОВЛЯ · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_OUTBOUND_LEG">ТУДА</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_RETURN_LEG">ОБРАТНО</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_TO_SOURCE">К ПОСТАВЩИКУ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_SOURCE">У ПОСТАВЩИКА</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_TO_TARGET">К ПОКУПАТЕЛЮ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_TARGET">У ПОКУПАТЕЛЯ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_DONE">ЗАВЕРШЕНО</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_ROUTE">{0} · {1:N0} т
+{2} / {3} → {4} / {5}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SOURCE_LIVE">ПОСТАВЩИК LIVE · план {0:N0} → {1:N0} кр./т · запас {2:N0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SOURCE_MISSING">ПОСТАВЩИК LIVE · товара нет на текущем рынке</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TARGET_LIVE">ПОКУПАТЕЛЬ LIVE · план {0:N0} → {1:N0} кр./т · спрос {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TARGET_MISSING">ПОКУПАТЕЛЬ LIVE · товар нельзя продать на текущем рынке</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TARGET_DEGRADED">ЦЕЛЬ УХУДШИЛАСЬ · можно найти нового покупателя</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_IN_CARGO">В ТРЮМЕ ✓ · {0:N0} т</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_AT_SOURCE">У ПОСТАВЩИКА · открой рынок для проверки</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TO_TARGET">Груз куплен · лети к покупателю</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TO_SOURCE">Лети к поставщику</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_COMPLETED">СДЕЛКА ЗАВЕРШЕНА ✓</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_DEST_SUPPLIER">поставщика</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_DEST_BUYER">покупателя</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_FOOTER">До {0}: {1:0.0} LY · ~{2} · прыжков {3}
+Ожидаемая прибыль ~{4:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTE">СМЕНИТЬ ЦЕЛЬ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_KEEP_ROUTE">ОСТАВИТЬ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_CANCEL_ROUTE">ОТМЕНИТЬ МАРШРУТ</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SEARCH">ПОИСК</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING">Ищем лучшего покупателя для уже загруженного товара...</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING_BUTTON">ИЩЕМ...</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_NO_BETTER_BUYER">В текущих фильтрах лучшего покупателя не найдено.</sys:String>
 </ResourceDictionary>
 
 

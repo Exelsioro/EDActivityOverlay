@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
@@ -58,6 +58,12 @@ public partial class ActivityWorkspaceOverlayWindow
 
         tradeWorkspaceControl.RoundTripPinRequested +=
             PinRoundTripRouteRequested;
+
+        tradeWorkspaceControl.ReroutePinUpdateRequested +=
+            UpdatePinnedTradeRouteRequested;
+
+        tradeWorkspaceControl.UnpinRequested +=
+            UnpinTradeRouteRequested;
 
         root.Children.Add(
             tradeWorkspaceControl);
@@ -270,9 +276,13 @@ public partial class ActivityWorkspaceOverlayWindow
 
         parentWindow.OnPinRouteRequested(
             TradeRoutePresentationAdapter.ToPresentation(
-                candidate));
-    }
+                candidate),
+            keepTradeWorkspace:
+                true);
 
+        tradeWorkspaceControl?.ActivatePinnedRoute(
+            candidate);
+    }
     private void PinRoundTripRouteRequested(
         TradeRoundTripCandidate candidate)
     {
@@ -283,9 +293,38 @@ public partial class ActivityWorkspaceOverlayWindow
 
         parentWindow.OnPinRouteRequested(
             TradeRoutePresentationAdapter.ToPresentation(
-                candidate));
+                candidate),
+            keepTradeWorkspace:
+                true);
+
+        tradeWorkspaceControl?.ActivatePinnedRoute(
+            candidate);
     }
 
+    private void UpdatePinnedTradeRouteRequested(
+        TradeRouteCandidate candidate)
+    {
+        if (parentWindow is null)
+        {
+            return;
+        }
+
+        parentWindow.OnPinRouteRequested(
+            TradeRoutePresentationAdapter.ToPresentation(
+                candidate),
+            keepTradeWorkspace:
+                true);
+    }
+
+    private void UnpinTradeRouteRequested()
+    {
+        parentWindow?.UnpinRouteOverlay();
+    }
+
+    public void ClearActiveTradeRouteFromHost()
+    {
+        tradeWorkspaceControl?.ClearActiveTradeRouteFromHost();
+    }
     private void EndTradeExclusiveInteraction()
     {
         if (!tradeExclusiveInteraction)
@@ -323,6 +362,12 @@ public partial class ActivityWorkspaceOverlayWindow
 
         tradeWorkspaceControl.RoundTripPinRequested -=
             PinRoundTripRouteRequested;
+
+        tradeWorkspaceControl.ReroutePinUpdateRequested -=
+            UpdatePinnedTradeRouteRequested;
+
+        tradeWorkspaceControl.UnpinRequested -=
+            UnpinTradeRouteRequested;
 
         tradeWorkspaceControl.Dispose();
 

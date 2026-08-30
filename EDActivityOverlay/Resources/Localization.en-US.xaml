@@ -1088,6 +1088,38 @@ Trade leg {5:0.0} LY</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_READY">Ready to search buyers for current cargo.</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_BEST">{0:N0} CR · {1} → {2}</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_COMPACT_META">{0:N0}/{1:N0} t sellable · {2:0.0} LY · {3:0.#} h old</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SELL_CARGO">SELL CARGO</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_HEADER">ACTIVE TRADE · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_OUTBOUND_LEG">OUTBOUND</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_RETURN_LEG">RETURN</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_TO_SOURCE">TO SUPPLIER</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_SOURCE">AT SUPPLIER</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_TO_TARGET">TO BUYER</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_TARGET">AT BUYER</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_STAGE_DONE">COMPLETED</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_ROUTE">{0} · {1:N0} t
+{2} / {3} → {4} / {5}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SOURCE_LIVE">SUPPLIER LIVE · planned {0:N0} → {1:N0} CR/t · stock {2:N0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SOURCE_MISSING">SUPPLIER LIVE · commodity unavailable on current market</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TARGET_LIVE">BUYER LIVE · planned {0:N0} → {1:N0} CR/t · demand {2}</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TARGET_MISSING">BUYER LIVE · commodity is not sellable on current market</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TARGET_DEGRADED">TARGET DEGRADED · better buyer can be searched</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_IN_CARGO">IN CARGO ✓ · {0:N0} t</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_AT_SOURCE">AT SUPPLIER · open Commodity Market to revalidate</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TO_TARGET">Cargo loaded · proceed to buyer</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_TO_SOURCE">Proceed to supplier</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_COMPLETED">TRADE COMPLETED ✓</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_DEST_SUPPLIER">supplier</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_DEST_BUYER">buyer</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_FOOTER">To {0}: {1:0.0} LY · ~{2} · {3} jumps
+Expected profit ~{4:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTE">REROUTE</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_KEEP_ROUTE">KEEP ROUTE</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_CANCEL_ROUTE">CANCEL ROUTE</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_SEARCH">SEARCH</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING">Searching a better buyer for the loaded commodity...</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_REROUTING_BUTTON">SEARCHING...</sys:String>
+    <sys:String x:Key="Loc_TRADE_ACTIVE_NO_BETTER_BUYER">No better buyer found inside current filters.</sys:String>
 </ResourceDictionary>
 
 

@@ -1,4 +1,4 @@
-﻿using EDActivityOverlay.Models.Trading;
+using EDActivityOverlay.Models.Trading;
 
 namespace EDActivityOverlay.Services.Trading;
 
@@ -32,6 +32,8 @@ public static partial class TradeRoutePresentationAdapter
                         BuyCommodity =
                             new Commodity
                             {
+                                InternalName =
+                                    CommodityIdentity.Normalize(outbound.Source.CommodityName),
                                 Name =
                                     outbound.Source.CommodityName,
                                 Price =
@@ -43,6 +45,8 @@ public static partial class TradeRoutePresentationAdapter
                         SellCommodity =
                             new Commodity
                             {
+                                InternalName =
+                                    CommodityIdentity.Normalize(outbound.Target.CommodityName),
                                 Name =
                                     outbound.Target.CommodityName,
                                 Price =
@@ -67,6 +71,8 @@ public static partial class TradeRoutePresentationAdapter
                         BuyCommodity =
                             new Commodity
                             {
+                                InternalName =
+                                    CommodityIdentity.Normalize(candidate.ReturnSource.CommodityName),
                                 Name =
                                     candidate.ReturnSource.CommodityName,
                                 Price =
@@ -78,6 +84,8 @@ public static partial class TradeRoutePresentationAdapter
                         SellCommodity =
                             new Commodity
                             {
+                                InternalName =
+                                    CommodityIdentity.Normalize(candidate.ReturnTarget.CommodityName),
                                 Name =
                                     candidate.ReturnTarget.CommodityName,
                                 Price =

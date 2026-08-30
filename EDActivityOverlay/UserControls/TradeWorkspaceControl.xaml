@@ -80,7 +80,9 @@
                 <Grid Grid.Row="3" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="6"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="6"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Button x:Name="CompactActionButton"
@@ -91,15 +93,24 @@
                             Background="{DynamicResource SecondaryBackgroundColorBrush}"
                             BorderBrush="{DynamicResource AccentColorBrush}"
                             Click="CompactActionButton_Click"/>
-                    <Button Grid.Column="2"
+                    <Button x:Name="CompactSellCargoButton"
+                            Grid.Column="2"
+                            Height="30"
+                            IsEnabled="False"
+                            Content="{DynamicResource Loc_TRADE_ACTIVE_SELL_CARGO}"
+                            Foreground="{DynamicResource PrimaryTextColorBrush}"
+                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                            BorderBrush="{DynamicResource BorderColorBrush}"
+                            Click="CompactSellCargoButton_Click"/>
+                    <Button x:Name="CompactSecondaryButton"
+                            Grid.Column="4"
                             Height="30"
                             Content="{DynamicResource Loc_TRADE_MORE}"
                             Foreground="{DynamicResource PrimaryTextColorBrush}"
                             Background="{DynamicResource SecondaryBackgroundColorBrush}"
                             BorderBrush="{DynamicResource BorderColorBrush}"
-                            Click="OpenFullButton_Click"/>
+                            Click="CompactSecondaryButton_Click"/>
                 </Grid>
-
                 <TextBlock x:Name="CompactFooterText"
                            Grid.Row="4"
                            Margin="0,7,0,0"
@@ -517,7 +528,8 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                                      SelectionMode="Single"
-                                     SelectionChanged="RoutesList_SelectionChanged">
+                                     SelectionChanged="RoutesList_SelectionChanged"
+                                     PreviewMouseLeftButtonUp="RoutesList_PreviewMouseLeftButtonUp">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

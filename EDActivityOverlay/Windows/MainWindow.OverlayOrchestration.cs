@@ -260,7 +260,9 @@ namespace EDActivityOverlay
             Logger.Logger.Info("Results overlay window closed");
         }
 
-        public void OnPinRouteRequested(TradeRoute tradeRoute)
+        public void OnPinRouteRequested(
+            TradeRoute tradeRoute,
+            bool keepTradeWorkspace = false)
         {
             Logger.Logger.Info($"Pin route requested from MainWindow: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
             if (pinnedRouteOverlay == null || !pinnedRouteOverlay.IsLoaded)
@@ -276,7 +278,8 @@ namespace EDActivityOverlay
             engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
             isPinnedRouteActive = true;
 
-            if (currentActivity == ActivityType.Trade)
+            if (currentActivity == ActivityType.Trade
+                && !keepTradeWorkspace)
             {
                 CloseActivityWorkspace();
             }
@@ -301,6 +304,7 @@ namespace EDActivityOverlay
 
                 pinnedRouteOverlay = null;
                 isPinnedRouteActive = false;
+                activityWorkspaceWindow?.ClearActiveTradeRouteFromHost();
                 Logger.Logger.Info("Pinned route overlay unpinned successfully");
             }
         }

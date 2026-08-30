@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Xunit;
 
@@ -82,7 +82,7 @@ public sealed class TradeUnifiedWorkspaceTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "OpenFullButton_Click",
+            "CompactSecondaryButton_Click",
             xaml,
             StringComparison.Ordinal);
 
