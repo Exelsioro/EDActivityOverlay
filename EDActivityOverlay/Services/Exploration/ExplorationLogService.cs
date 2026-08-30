@@ -11,7 +11,6 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
     private readonly object sync = new();
     private readonly string statePath;
     private readonly List<ExplorationLogEntry> entries = new();
-    private readonly HashSet<Guid> sessionEntryIds = new();
     private string system = string.Empty;
     private bool started;
 
@@ -24,7 +23,6 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
             lock (sync)
             {
                 return entries
-                    .Where(item => sessionEntryIds.Contains(item.Id))
                     .OrderByDescending(item => item.TimestampUtc)
                     .ToArray();
             }
@@ -110,7 +108,6 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
         lock (sync)
         {
             entries.Add(entry);
-            sessionEntryIds.Add(entry.Id);
             TrimAndSave();
         }
         RaiseChanged();
@@ -149,7 +146,6 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
                 bookmarked);
 
             entries.Add(entry);
-            sessionEntryIds.Add(entry.Id);
             TrimAndSave();
         }
         RaiseChanged();
