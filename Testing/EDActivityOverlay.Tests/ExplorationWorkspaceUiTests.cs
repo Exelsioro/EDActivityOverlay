@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Xunit;
 
 namespace EDActivityOverlay.LayoutTests;
@@ -80,15 +80,16 @@ public sealed class ExplorationWorkspaceUiTests
     }
 
     [Fact]
-    public void ShipStatusWidgetIsSuppressedWhileAnyTradeSurfaceIsVisible()
+    public void ShipStatusWidgetRemainsIndependentWhileTradeWorkspaceIsVisible()
     {
         string main = File.ReadAllText(FindProjectFile("Windows", "MainWindow.xaml.cs"));
         string orchestration = File.ReadAllText(FindProjectFile("Windows", "MainWindow.OverlayOrchestration.cs"));
         string status = File.ReadAllText(FindProjectFile("Windows", "ShipStatusOverlayWindow.xaml.cs"));
 
-        Assert.Contains("SetContextSuppression(IsTradeSurfaceVisible)", main, StringComparison.Ordinal);
-        Assert.Contains("tradeRouteWindow?.IsVisible == true", orchestration, StringComparison.Ordinal);
-        Assert.Contains("resultsOverlayWindow?.IsVisible == true", orchestration, StringComparison.Ordinal);
+        Assert.Contains("shipStatusOverlayWindow.SetContextSuppression(null);", main, StringComparison.Ordinal);
+        Assert.DoesNotContain("SetContextSuppression(IsTradeSurfaceVisible)", main, StringComparison.Ordinal);
+        Assert.Contains("currentActivity == ActivityType.Trade", orchestration, StringComparison.Ordinal);
+        Assert.Contains("activityWorkspaceWindow?.IsVisible == true", orchestration, StringComparison.Ordinal);
         Assert.Contains("pinnedRouteOverlay?.IsVisible == true", orchestration, StringComparison.Ordinal);
         Assert.Contains("!contextSuppressed", status, StringComparison.Ordinal);
     }

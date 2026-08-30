@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using EDActivityOverlay.Services.Journal;
@@ -24,6 +24,7 @@ public partial class PinnedRouteOverlay : Window
     private double manualXRatio;
     private double manualYRatio;
     private bool disposed;
+    private bool suppressedByTradeWorkspace;
     private string fromSystem = string.Empty;
     private string fromStation = string.Empty;
     private string toSystem = string.Empty;
@@ -55,6 +56,51 @@ public partial class PinnedRouteOverlay : Window
         hasManualPosition = false;
         ApplyChrome();
         PositionOverlay();
+    }
+
+    public void SetSuppressedByTradeWorkspace(
+        bool value)
+    {
+        suppressedByTradeWorkspace =
+            value;
+
+        if (value)
+        {
+            if (IsVisible)
+            {
+                Hide();
+            }
+
+            return;
+        }
+
+        PositionOverlay();
+
+        if (targetWindow == IntPtr.Zero
+            || !IsLoaded
+            || currentRoute is null
+            || OverlayVisibilityState.SuppressAll
+            || OverlayVisibilityState.SuppressActivity
+            || !WindowsAPI.IsWindow(targetWindow)
+            || !WindowsAPI.IsWindowVisible(targetWindow)
+            || WindowsAPI.IsIconic(targetWindow))
+        {
+            return;
+        }
+
+        IntPtr foreground =
+            WindowsAPI.GetForegroundWindow();
+
+        bool focused =
+            foreground == targetWindow
+            || WindowsAPI.IsOverlayWindow(
+                foreground);
+
+        if (focused
+            && !IsVisible)
+        {
+            Show();
+        }
     }
 
     public void SetChromeStyle(string? value)
@@ -92,26 +138,72 @@ public partial class PinnedRouteOverlay : Window
         PositionOverlay();
     }
 
-    public void PinTradeRoute(TradeRoute tradeRoute)
+    public TradeRouteProgressTracker PinTradeRoute(
+        TradeRoute tradeRoute,
+        bool preserveExecution = false)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
-        currentRoute = tradeRoute;
-        fromSystem = tradeRoute.CardHeader.FromStation.System;
-        fromStation = tradeRoute.CardHeader.FromStation.Name;
-        toSystem = tradeRoute.CardHeader.ToStation.System;
-        toStation = tradeRoute.CardHeader.ToStation.Name;
+        ObjectDisposedException.ThrowIf(
+            disposed,
+            this);
+
+        currentRoute =
+            tradeRoute;
+
+        fromSystem =
+            tradeRoute.CardHeader.FromStation.System;
+
+        fromStation =
+            tradeRoute.CardHeader.FromStation.Name;
+
+        toSystem =
+            tradeRoute.CardHeader.ToStation.System;
+
+        toStation =
+            tradeRoute.CardHeader.ToStation.Name;
+
         ApplyRouteEndpoints();
-        progressTracker?.Dispose();
-        progressTracker = new TradeRouteProgressTracker(tradeRoute);
-        progressTracker.ProgressChanged += OnProgressChanged;
-        ApplyProgress(progressTracker.Current);
+
+        if (progressTracker is null
+            || !preserveExecution)
+        {
+            if (progressTracker is not null)
+            {
+                progressTracker.ProgressChanged -=
+                    OnProgressChanged;
+
+                progressTracker.Dispose();
+            }
+
+            progressTracker =
+                new TradeRouteProgressTracker(
+                    tradeRoute);
+
+            progressTracker.ProgressChanged +=
+                OnProgressChanged;
+        }
+        else
+        {
+            progressTracker.UpdateRoute(
+                tradeRoute,
+                preserveExecution:
+                    true);
+        }
+
+        ApplyProgress(
+            progressTracker.Current);
+
         PositionOverlay();
-        Show();
+
+        if (!suppressedByTradeWorkspace)
+        {
+            Show();
+        }
 
         Logger.Logger.LogUserAction(
             $"Trade route pinned: {tradeRoute.CardHeader.FromStation.System} -> {tradeRoute.CardHeader.ToStation.System}");
-    }
 
+        return progressTracker;
+    }
     private void OnProgressChanged(object? sender, TradeRouteProgressChangedEventArgs e)
     {
         Dispatcher.BeginInvoke(new Action(() => ApplyProgress(e.Progress)));
@@ -168,6 +260,17 @@ public partial class PinnedRouteOverlay : Window
         {
             return;
         }
+
+        if (suppressedByTradeWorkspace)
+        {
+            if (IsVisible)
+            {
+                Hide();
+            }
+
+            return;
+        }
+
         if (OverlayVisibilityState.SuppressAll || OverlayVisibilityState.SuppressActivity)
         {
             if (IsVisible) Hide();

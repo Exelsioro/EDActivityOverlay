@@ -69,7 +69,7 @@ public sealed class ThemeStyleTests
         string engineeringMarkup = File.ReadAllText(Path.Combine(
             repository, "EDActivityOverlay", "Windows", "EngineeringWindow.xaml"));
         Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", engineeringMarkup, StringComparison.Ordinal);
-        Assert.Equal(5, engineeringMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(6, engineeringMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
 
         XElement dataGridRowStyle = Assert.Single(styles.Descendants(),
             element => element.Name.LocalName == "Style"
@@ -78,7 +78,10 @@ public sealed class ThemeStyleTests
         string dataGridRowMarkup = dataGridRowStyle.ToString(SaveOptions.DisableFormatting);
         Assert.Contains("Property=\"IsMouseOver\"", dataGridRowMarkup, StringComparison.Ordinal);
         Assert.Contains("Property=\"IsSelected\"", dataGridRowMarkup, StringComparison.Ordinal);
-        Assert.Contains("DynamicResource ButtonBackgroundColorBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource RowHoverBackgroundBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource SelectedRowBackgroundBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource SelectedRowBorderBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource SelectedRowTextBrush", dataGridRowMarkup, StringComparison.Ordinal);
     }
 
     [Fact]

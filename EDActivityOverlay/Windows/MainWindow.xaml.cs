@@ -113,7 +113,7 @@ namespace EDActivityOverlay
             SetupOverlay();
             notificationOverlayWindow = new NotificationOverlayWindow(targetWindow);
             shipStatusOverlayWindow = new ShipStatusOverlayWindow(targetWindow);
-            shipStatusOverlayWindow.SetContextSuppression(IsTradeSurfaceVisible);
+            shipStatusOverlayWindow.SetContextSuppression(null);
             SetupUpdateTimer();
             LoadConfiguredSettings();
             RestoreMainOverlayCollapsedState();
@@ -427,23 +427,7 @@ namespace EDActivityOverlay
                         "Resetting forceVisible flag after successful show");
                 }
 
-                if (!activityHiddenByHotkey
-                    && !OverlayVisibilityState.SuppressActivity
-                    && isToggleActive
-                    && tradeRouteWindow != null
-                    && !tradeRouteWindow.IsVisible)
-                {
-                    tradeRouteWindow.Show();
-                }
 
-                if (!activityHiddenByHotkey
-                    && !OverlayVisibilityState.SuppressActivity
-                    && isResultsActive
-                    && resultsOverlayWindow != null
-                    && !resultsOverlayWindow.IsVisible)
-                {
-                    resultsOverlayWindow.Show();
-                }
 
                 if (!overlaysSuppressedByHotkey
                     && !activityHiddenByHotkey
@@ -467,17 +451,7 @@ namespace EDActivityOverlay
 
                 Hide();
 
-                if (tradeRouteWindow != null
-                    && tradeRouteWindow.IsVisible)
-                {
-                    tradeRouteWindow.Hide();
-                }
 
-                if (resultsOverlayWindow != null
-                    && resultsOverlayWindow.IsVisible)
-                {
-                    resultsOverlayWindow.Hide();
-                }
 
                 if (engineeringOverlayWindow?.IsVisible == true)
                 {
@@ -915,7 +889,15 @@ namespace EDActivityOverlay
             interactiveModeActive = true;
             interactiveModeEnteredAtUtc = DateTime.UtcNow;
             interactiveFocusLossGraceUntilUtc = DateTime.MaxValue;
-            engineeringOverlayWindow?.Activate();
+            if (activityWorkspaceWindow?.IsVisible == true)
+            {
+                activityWorkspaceWindow.Activate();
+            }
+            else
+            {
+                engineeringOverlayWindow?.Activate();
+            }
+
             UpdateOverlayInteractionModes();
             UpdateInteractionStatusUi();
             Logger.Logger.Info("Exclusive overlay interaction enabled for a full overlay assistant.");

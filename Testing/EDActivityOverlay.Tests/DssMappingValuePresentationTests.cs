@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Xunit;
 
@@ -14,7 +14,12 @@ public sealed class DssMappingValuePresentationTests
                 FindWorkspaceCode());
 
         Assert.Contains(
-            "EstimatedMappingValue",
+            "ExplorationPresentationValueResolver",
+            code,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "ResolveMappingEstimate",
             code,
             StringComparison.Ordinal);
 

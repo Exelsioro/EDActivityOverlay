@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using EDActivityOverlay.Models;
@@ -140,9 +140,16 @@ public sealed class JournalBootstrapLiveSplitTests
             explorationLog,
             StringComparison.Ordinal);
 
+        string compactTrade =
+            trade
+                .Replace(" ", string.Empty)
+                .Replace("\t", string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
         Assert.Contains(
-            "e.Origin == JournalEventOrigin.Bootstrap",
-            trade,
+            "e.Origin==JournalEventOrigin.Bootstrap",
+            compactTrade,
             StringComparison.Ordinal);
     }
 

@@ -1,4 +1,4 @@
-using EDActivityOverlay.Models;
+﻿using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Exploration;
 
 namespace EDActivityOverlay.Services;
@@ -7,15 +7,15 @@ public static class ShipStatusPresentationBuilder
 {
     public static ShipStatusPresentation Build(GameStateSnapshot state)
     {
+        NavRouteProgress route =
+            NavRouteProgressResolver.Resolve(
+                state);
+
         NavRouteStar? currentRouteStar =
-            state.NavRoute.FirstOrDefault(
-                star =>
-                    star.System.Equals(
-                        state.StarSystem,
-                        StringComparison.OrdinalIgnoreCase));
+            route.Current;
 
         NavRouteStar? next =
-            state.NavRoute.Skip(1).FirstOrDefault();
+            route.Next;
 
         string currentStarClass =
             !string.IsNullOrWhiteSpace(
@@ -33,18 +33,21 @@ public static class ShipStatusPresentationBuilder
             {
                 FuelRouteSeverity.Critical =>
                     ShipStatusAdvisoryKind.FuelCritical,
+
                 _ when next is { } star
                        && (star.IsNeutron
                            || star.IsWhiteDwarf) =>
                     ShipStatusAdvisoryKind.HazardousNextStar,
-                _ when state.NavRoute.Count > 2
-                       && state.NavRoute.Skip(1)
-                           .All(
-                               star =>
-                                   !star.IsScoopable) =>
+
+                _ when route.RemainingJumps >= 2
+                       && route.Ahead.All(
+                           star =>
+                               !star.IsScoopable) =>
                     ShipStatusAdvisoryKind.NoScoopableStars,
+
                 FuelRouteSeverity.Caution =>
                     ShipStatusAdvisoryKind.FuelCaution,
+
                 _ =>
                     ShipStatusAdvisoryKind.None
             };
@@ -56,15 +59,14 @@ public static class ShipStatusPresentationBuilder
                 ?? string.Empty,
                 next?.StarClass
                 ?? string.Empty,
-                Math.Max(
-                    0,
-                    state.NavRoute.Count - 1),
+                route.RemainingJumps,
                 next?.IsScoopable == true,
                 fuel.FuelPercent,
                 advisory)
             {
                 CurrentStarClass =
                     currentStarClass,
+
                 CurrentStarScoopable =
                     IsScoopableStarClass(
                         currentStarClass)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace EDActivityOverlay.Models.Trading
 {
@@ -6,6 +6,7 @@ public class TradeLeg
     {
         public Commodity SellCommodity { get; set; } = new Commodity();
         public Commodity BuyCommodity { get; set; } = new Commodity();
+        public int PlannedQuantity { get; set; }
         public int ProfitPerUnit { get; set; }
         public string LastUpdate { get; set; } = "";
     }
@@ -34,6 +35,8 @@ public class TradeLeg
     }
 public class Station
     {
+        public long MarketId { get; set; }
+        public long SystemAddress { get; set; }
         public string Name { get; set; } = "";
         public string System { get; set; } = "";
         public double DistanceFromStar { get; set; }
@@ -48,6 +51,7 @@ public class Station
 
     public class Commodity
     {
+        public string InternalName { get; set; } = "";
         public string Name { get; set; } = "";
         public int Price { get; set; }
         public string Supply { get; set; } = "";

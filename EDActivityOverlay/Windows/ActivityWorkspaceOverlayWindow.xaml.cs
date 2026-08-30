@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -63,6 +63,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         this.parentWindow = parentWindow;
         activity = initialActivity;
         InitializeComponent();
+        InitializeTradeWorkspace();
         DssTargetComboBox.ItemsSource = Enumerable.Range(
             DssProbePatternCatalog.MinimumTarget,
             DssProbePatternCatalog.MaximumTarget - DssProbePatternCatalog.MinimumTarget + 1);
@@ -95,6 +96,13 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         {
             CloseFullExplorationView();
         }
+
+        if (activity == ActivityType.Trade
+            && value != ActivityType.Trade)
+        {
+            LeaveTradeWorkspace();
+        }
+
         activity = value;
         RefreshContent(JournalMonitorService.Instance.Current);
     }
@@ -125,17 +133,48 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     public void ApplyInteractionMode(bool enabled, bool showCursor)
     {
-        interactive = enabled;
-        showCursorWhenInteractive = showCursor;
-        WindowsAPI.SetClickThrough(this, !enabled);
-        InteractionHint.Text = enabled ? Loc.Get("Loc_DRAG_TO_MOVE") : Loc.Get("Loc_CTRL_6_INTERACT");
-        DragHandle.Cursor = enabled ? Cursors.SizeAll : Cursors.Arrow;
-        if (enabled && showCursor && IsVisible)
+        interactive =
+            enabled;
+
+        showCursorWhenInteractive =
+            showCursor;
+
+        WindowsAPI.SetClickThrough(
+            this,
+            !enabled);
+
+        IsHitTestVisible =
+            enabled;
+
+        ForceCursor =
+            !enabled;
+
+        Cursor =
+            enabled
+            && showCursor
+                ? Cursors.Arrow
+                : Cursors.None;
+
+        InteractionHint.Text =
+            enabled
+                ? Loc.Get(
+                    "Loc_DRAG_TO_MOVE")
+                : Loc.Get(
+                    "Loc_CTRL_6_INTERACT");
+
+        DragHandle.Cursor =
+            enabled
+                ? Cursors.SizeAll
+                : Cursors.None;
+
+        if (enabled
+            && showCursor
+            && IsVisible)
         {
-            WindowsAPI.EnsureCursorVisibleOnWindow(this);
+            WindowsAPI.EnsureCursorVisibleOnWindow(
+                this);
         }
     }
-
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         WindowsAPI.SetupOverlayWindow(this);
@@ -148,6 +187,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private void RefreshContent(GameStateSnapshot state)
     {
+        if (activity == ActivityType.Trade)
+        {
+            RefreshTradeWorkspace(state);
+            return;
+        }
+
         bool exploration = activity == ActivityType.Exploration;
 
         LocationText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
@@ -430,23 +475,47 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                         : null))
             .ToArray();
 
-        ExplorationBodiesGrid.ItemsSource = rows;
+        CatalogRow? previousSelection =
+            ExplorationBodiesGrid.SelectedItem
+            as CatalogRow;
 
-        CatalogCountText.Text = Loc.Format(
-            "Loc_Exploration_catalog_count_format",
-            rows.Length,
-            catalog.Bodies.Count);
+        ExplorationBodiesGrid.ItemsSource =
+            rows;
 
-        if (rows.Length > 0)
+        CatalogCountText.Text =
+            Loc.Format(
+                "Loc_Exploration_catalog_count_format",
+                rows.Length,
+                catalog.Bodies.Count);
+
+        CatalogRow? preservedSelection =
+            previousSelection is null
+                ? null
+                : rows.FirstOrDefault(
+                    row =>
+                        previousSelection.Body.BodyId >= 0
+                            ? row.Body.BodyId
+                              == previousSelection.Body.BodyId
+                            : row.Name.Equals(
+                                previousSelection.Name,
+                                StringComparison.OrdinalIgnoreCase));
+
+        if (preservedSelection is not null)
         {
-            ExplorationBodiesGrid.SelectedIndex = 0;
+            ExplorationBodiesGrid.SelectedItem =
+                preservedSelection;
+        }
+        else if (rows.Length > 0)
+        {
+            ExplorationBodiesGrid.SelectedIndex =
+                0;
         }
         else
         {
-            ShowSelectedBody(null);
+            ShowSelectedBody(
+                null);
         }
     }
-
     private static Dictionary<int, ExplorationVisitDisposition>
         BuildVisitDispositionMap(
             GameStateSnapshot state,
@@ -1719,14 +1788,9 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         long localValue =
             state.ExplorationBodies
-                .Sum(body => body.EstimatedScanValue)
-            + state.ExplorationBodies
-                .Where(body => body.IsMapped)
-                .Sum(body =>
-                    body.MappingEfficient
-                        ? body.EstimatedEfficientMappingValue
-                        : body.EstimatedMappingValue);
-
+                .Sum(
+                    ExplorationPresentationValueResolver
+                        .ResolveCurrentVisitValue);
         if (localValue > 0)
         {
             result += "  •  "
@@ -2427,6 +2491,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         }
 
         ApplyRoutePanelState();
+        tradeWorkspaceControl?.RefreshLocalization();
         RefreshContent(
             JournalMonitorService.Instance.Current);
     }
@@ -2456,7 +2521,15 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         PositionOverlay();
         IntPtr foreground = WindowsAPI.GetForegroundWindow();
-        bool focused = foreground == targetWindow || WindowsAPI.IsOverlayWindow(foreground);
+        WindowsAPI.GetWindowThreadProcessId(
+            targetWindow,
+            out uint targetProcessId);
+
+        bool focused =
+            WindowsAPI.IsWindowOwnedByProcess(
+                foreground,
+                targetProcessId)
+            || WindowsAPI.IsOverlayWindow(foreground);
         bool visible = WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow) && focused;
         if (visible && !IsVisible) Show();
         else if (!visible && IsVisible) Hide();
@@ -2468,7 +2541,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         if (targetWindow == IntPtr.Zero || !WindowsAPI.TryGetWindowRectDips(targetWindow, out WindowsAPI.RECT rect)) return;
         double targetWidth = rect.Right - rect.Left;
         double targetHeight = rect.Bottom - rect.Top;
-        if (fullExplorationVisible)
+        if (fullExplorationVisible
+            || IsTradeFullWorkspace)
         {
             Width = Math.Min(1180, Math.Max(MinWidth, targetWidth - 64));
             Height = Math.Min(760, Math.Max(MinHeight, targetHeight - 64));
@@ -2517,6 +2591,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         if (disposed) return;
         disposed = true;
         if (fullExplorationVisible) parentWindow?.EndExclusiveOverlayInteraction();
+        DisposeTradeWorkspace();
         updateTimer.Stop();
         updateTimer.Tick -= UpdateTimer_Tick;
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;

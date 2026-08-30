@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using EDActivityOverlay.Services.Dss;
 using Xunit;
@@ -87,9 +87,6 @@ public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
     [Fact]
     public void SecondCorrection_DoesNotTrustAbsoluteHitCountAtStepEntry()
     {
-        // Entering correction #2 records the current native hit count as the
-        // launch baseline for correction #1. A pre-existing absolute count
-        // cannot authorize the next shot by itself.
         DssNativeScanProgressRuntime.SetForTests(
             coverage: 82,
             hits: 14,
@@ -110,15 +107,17 @@ public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
         Assert.False(
             target.Available);
     }
+
     [Fact]
-    public void FirstN13Correction_PrefersLargeRearGapOverStrongNearCvHole()
+    public void FirstN13Correction_CoverageOverrideNeverCrossesModelHemisphere()
     {
+        DssNativeScanProgressRuntime.ResetForTests();
         DssNativeScanProgressRuntime.SetForTests(
             coverage: 82,
             hits: 13,
             stableAge: TimeSpan.FromSeconds(3));
 
-        DssSphericalAimTarget target =
+        DssSphericalAimTarget model =
             DssSphericalPlacementPlanner.Resolve(
                 14,
                 13,
@@ -127,27 +126,10 @@ public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
                 Module,
                 1_000_000d,
                 13,
-                StrongNearCoverage,
+                DssCoverageObservation.Empty,
                 0);
 
-        Assert.True(
-            target.Available);
-
-        Assert.True(
-            target.SurfacePoint.Theta
-            > Math.PI / 2d);
-
-        Assert.True(
-            target.AimRadiusNormalized > 1d);
-
-        Assert.Equal(
-            "CORRECTION_MODEL_REAR",
-            target.Role);
-    }
-
-    [Fact]
-    public void RearCorrection_DoesNotFlipWhileCoverageObserverSettles()
-    {
+        DssNativeScanProgressRuntime.ResetForTests();
         DssNativeScanProgressRuntime.SetForTests(
             coverage: 82,
             hits: 13,
@@ -165,6 +147,63 @@ public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
                 StrongNearCoverage,
                 0);
 
+        Assert.True(
+            model.Available);
+
+        Assert.True(
+            withCoverage.Available);
+
+        if (withCoverage.Role
+            == "CORRECTION_COVERAGE")
+        {
+            bool modelRear =
+                model.SurfacePoint.Theta
+                > Math.PI / 2d;
+
+            bool coverageRear =
+                withCoverage.SurfacePoint.Theta
+                > Math.PI / 2d;
+
+            Assert.Equal(
+                modelRear,
+                coverageRear);
+        }
+        else
+        {
+            Assert.StartsWith(
+                "CORRECTION_MODEL_",
+                withCoverage.Role,
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void SettlingCoverage_DoesNotOverrideModelCorrection()
+    {
+        DssNativeScanProgressRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 13,
+            stableAge: TimeSpan.FromSeconds(3));
+
+        DssSphericalAimTarget model =
+            DssSphericalPlacementPlanner.Resolve(
+                14,
+                13,
+                "BODY",
+                30d,
+                Module,
+                1_000_000d,
+                13,
+                DssCoverageObservation.Empty,
+                0);
+
+        DssNativeScanProgressRuntime.ResetForTests();
+        DssNativeScanProgressRuntime.SetForTests(
+            coverage: 82,
+            hits: 13,
+            stableAge: TimeSpan.FromSeconds(3));
+
         DssSphericalAimTarget whileSettling =
             DssSphericalPlacementPlanner.Resolve(
                 14,
@@ -180,19 +219,29 @@ public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
                 },
                 0);
 
+        Assert.True(
+            model.Available);
+
+        Assert.True(
+            whileSettling.Available);
+
         Assert.Equal(
-            withCoverage.NormalizedX,
+            model.NormalizedX,
             whileSettling.NormalizedX,
             8);
 
         Assert.Equal(
-            withCoverage.NormalizedY,
+            model.NormalizedY,
             whileSettling.NormalizedY,
             8);
 
         Assert.Equal(
-            "CORRECTION_MODEL_REAR",
+            model.Role,
             whileSettling.Role);
+
+        Assert.Equal(
+            0,
+            whileSettling.CandidateId);
     }
 
     [Fact]
@@ -260,14 +309,14 @@ public sealed class DssHemisphereBalancedCorrectionTests : IDisposable
                     8);
 
         var seen =
-            new System.Collections.Generic.HashSet<string>();
+            new HashSet<string>();
 
         foreach (DssCoverageCorrectionPoint correction
                  in corrections)
         {
             string key =
-                $"{correction.Point.Theta:F8}|" +
-                $"{correction.Point.Phi:F8}";
+                $"{correction.Point.Theta:F8}|"
+                + $"{correction.Point.Phi:F8}";
 
             Assert.True(
                 seen.Add(

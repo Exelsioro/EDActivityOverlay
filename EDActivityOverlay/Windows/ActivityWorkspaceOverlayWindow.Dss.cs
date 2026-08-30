@@ -1028,10 +1028,15 @@ public partial class ActivityWorkspaceOverlayWindow
         }
 
         string value =
-            body?.EstimatedMappingValue > 0
+            body is not null
+            && ExplorationPresentationValueResolver
+                .ResolveMappingEstimate(
+                    body) > 0
                 ? Loc.Format(
                     "Loc_Credits_Short_Format",
-                    body.EstimatedMappingValue)
+                    ExplorationPresentationValueResolver
+                        .ResolveMappingEstimate(
+                            body))
                 : "—";
 
         return

@@ -28,6 +28,11 @@ public sealed record MarketItemSnapshot(
     int Supply,
     int Demand);
 
+public sealed record CargoCommoditySnapshot(
+    string CommodityId,
+    string DisplayName,
+    int Count);
+
 public sealed record ProspectedMaterialSnapshot(string Name, double Proportion);
 
 public sealed record ProspectedAsteroidSnapshot(
@@ -120,7 +125,7 @@ public sealed record OrganicScanProgressSnapshot(
     public string VariantKey { get; init; } = string.Empty;
 }
 
-public sealed record GameStateSnapshot
+public sealed partial record GameStateSnapshot
 {
     /// <summary>Selected Elite UI screen from Status.json; Galaxy Map is 6.</summary>
     public int GuiFocus { get; init; }
@@ -186,10 +191,15 @@ public sealed record GameStateSnapshot
     public string DestinationName { get; init; } = string.Empty;
     public IReadOnlyDictionary<string, int> Cargo { get; init; } =
         new ReadOnlyDictionary<string, int>(new Dictionary<string, int>());
+    public IReadOnlyDictionary<string, CargoCommoditySnapshot> CargoByCommodityId { get; init; } =
+        new ReadOnlyDictionary<string, CargoCommoditySnapshot>(new Dictionary<string, CargoCommoditySnapshot>());
     public IReadOnlyDictionary<string, MarketItemSnapshot> Market { get; init; } =
+        new ReadOnlyDictionary<string, MarketItemSnapshot>(new Dictionary<string, MarketItemSnapshot>());
+    public IReadOnlyDictionary<string, MarketItemSnapshot> MarketByCommodityId { get; init; } =
         new ReadOnlyDictionary<string, MarketItemSnapshot>(new Dictionary<string, MarketItemSnapshot>());
     public string MarketSystem { get; init; } = string.Empty;
     public string MarketStation { get; init; } = string.Empty;
+    public long? MarketSnapshotId { get; init; }
     public DateTimeOffset? MarketUpdatedUtc { get; init; }
     public double FuelMain { get; init; }
     public double FuelReservoir { get; init; }

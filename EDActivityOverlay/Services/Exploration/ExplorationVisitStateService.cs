@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Journal;
@@ -419,25 +419,47 @@ public sealed class ExplorationVisitStateService : IDisposable
             result.Append("|B:")
                 .Append(body.BodyId)
                 .Append(':')
+                .Append(body.Name)
+                .Append(':')
                 .Append(body.IsScanned ? '1' : '0')
                 .Append(body.IsMapped ? '1' : '0')
                 .Append(body.MappingEfficient ? '1' : '0')
                 .Append(':')
+                .Append(body.WasDiscovered ? '1' : '0')
+                .Append(body.WasMapped ? '1' : '0')
+                .Append(':')
+                .Append(body.BodyType)
+                .Append(':')
+                .Append(body.BodyClass)
+                .Append(':')
+                .Append(body.Terraformable ? '1' : '0')
+                .Append(':')
+                .Append(body.Landable ? '1' : '0')
+                .Append(':')
+                .Append(body.DistanceFromArrivalLs)
+                .Append(':')
+                .Append(body.GravityG)
+                .Append(':')
                 .Append(body.BiologicalSignals)
                 .Append(':')
+                .Append(body.EstimatedScanValue)
+                .Append(':')
                 .Append(body.EstimatedMappingValue)
+                .Append(':')
+                .Append(body.EstimatedEfficientMappingValue)
                 .Append(':')
                 .Append(string.Join(
                     ",",
                     body.GenusKeys.Count > 0
                         ? body.GenusKeys.OrderBy(
-                            value => value,
+                            value =>
+                                value,
                             StringComparer.OrdinalIgnoreCase)
                         : body.Genuses.OrderBy(
-                            value => value,
+                            value =>
+                                value,
                             StringComparer.OrdinalIgnoreCase)));
         }
-
         foreach (OrganicScanProgressSnapshot organic in
                  state.OrganicProgress
                      .OrderBy(item => item.BodyId)
