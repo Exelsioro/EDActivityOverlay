@@ -138,14 +138,16 @@ namespace EDActivityOverlay
         {
             if (!overlaysSuppressedByHotkey)
             {
-                restoreTradeVisible = tradeRouteWindow?.IsVisible == true;
-                restoreResultsVisible = resultsOverlayWindow?.IsVisible == true;
+                restoreTradeVisible = false;
+                restoreResultsVisible = false;
                 restorePinnedVisible = pinnedRouteOverlay?.IsVisible == true;
                 restoreEngineeringVisible = engineeringOverlayWindow?.IsVisible == true;
                 restoreActivityWorkspaceVisible = activityWorkspaceWindow?.IsVisible == true;
 
-                bool anyOverlayVisible = restoreTradeVisible || restoreResultsVisible || restorePinnedVisible
-                    || restoreEngineeringVisible || restoreActivityWorkspaceVisible;
+                bool anyOverlayVisible =
+                    restorePinnedVisible
+                    || restoreEngineeringVisible
+                    || restoreActivityWorkspaceVisible;
                 if (!anyOverlayVisible)
                 {
                     SelectActivity(currentActivity);
@@ -168,41 +170,9 @@ namespace EDActivityOverlay
             }
         }
 
-        private void ToggleTradeRouteWindowLegacy()
-        {
-            isToggleActive = !isToggleActive;
-            UpdateToggleButtonState();
-
-            Logger.Logger.Info($"Toggle state changed: {(isToggleActive ? "Active" : "Inactive")}");
-            Logger.Logger.LogUserAction("Toggle action performed", new { IsActive = isToggleActive });
-
-            if (isToggleActive)
-            {
-                if (tradeRouteWindow == null || !tradeRouteWindow.IsLoaded)
-                {
-                    Logger.Logger.Info("Creating new TradeRouteWindow instance");
-                    tradeRouteWindow = new TradeRouteWindow(this);
-                    Logger.Logger.Info($"TradeRouteWindow created, IsLoaded: {tradeRouteWindow.IsLoaded}");
-                    tradeRouteWindow.SetTargetWindow(targetWindow, targetProcessId);
-                    tradeRouteWindow.ApplyInteractionMode(interactionModeEnabled && interactiveModeActive, showCursorWhenInteractive);
-                    Logger.Logger.Info($"TradeRouteWindow target set, IsLoaded: {tradeRouteWindow.IsLoaded}");
-                }
-
-                if (!tradeRouteWindow.IsVisible)
-                {
-                    Logger.Logger.Info($"Showing TradeRouteWindow, targetWindow: {targetWindow}, targetProcessId: {targetProcessId}");
-                    tradeRouteWindow.SetTargetWindow(targetWindow, targetProcessId);
-                    tradeRouteWindow.ApplyInteractionMode(interactionModeEnabled && interactiveModeActive, showCursorWhenInteractive);
-                    tradeRouteWindow.Show();
-                    Logger.Logger.Info($"TradeRouteWindow.Show() called, IsVisible: {tradeRouteWindow.IsVisible}");
-                }
-            }
-            else if (tradeRouteWindow != null && tradeRouteWindow.IsVisible)
-            {
-                Logger.Logger.Info("Hiding TradeRouteWindow");
-                tradeRouteWindow.Hide();
-            }
-        }
+        private void ToggleTradeRouteWindowLegacy() =>
+            ToggleActivityFromHotkey(
+                ActivityType.Trade);
 
         private void HideAllOverlaysForHotkey()
         {
@@ -239,15 +209,7 @@ namespace EDActivityOverlay
 
         private void RestoreOverlaysAfterHotkey()
         {
-            if (restoreTradeVisible && tradeRouteWindow != null)
-            {
-                tradeRouteWindow.Show();
-            }
 
-            if (restoreResultsVisible && resultsOverlayWindow != null)
-            {
-                resultsOverlayWindow.Show();
-            }
 
             if (restorePinnedVisible && pinnedRouteOverlay != null)
             {

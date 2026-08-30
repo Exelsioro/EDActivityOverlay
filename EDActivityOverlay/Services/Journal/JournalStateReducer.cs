@@ -351,6 +351,7 @@ internal sealed class JournalStateReducer
                     Ship = GetString(root, "Ship", current.Ship),
                     ShipName = GetString(root, "ShipName", current.ShipName),
                     CargoCapacity = TryGetInt32(root, "CargoCapacity", current.CargoCapacity),
+                    UnladenMassTonnes = TryGetDouble(root, "UnladenMass", current.UnladenMassTonnes),
                     FuelCapacityMain = mainCapacity,
                     FuelCapacityReservoir = reserveCapacity,
                     MaxJumpRangeLy = TryGetDouble(root, "MaxJumpRange", current.MaxJumpRangeLy)

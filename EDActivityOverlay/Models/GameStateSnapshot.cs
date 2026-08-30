@@ -120,7 +120,7 @@ public sealed record OrganicScanProgressSnapshot(
     public string VariantKey { get; init; } = string.Empty;
 }
 
-public sealed record GameStateSnapshot
+public sealed partial record GameStateSnapshot
 {
     /// <summary>Selected Elite UI screen from Status.json; Galaxy Map is 6.</summary>
     public int GuiFocus { get; init; }

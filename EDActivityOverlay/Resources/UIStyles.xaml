@@ -15,6 +15,10 @@
     <Color x:Key="FailureColor">#FFFF6D4D</Color>
     <Color x:Key="MutedTextColor">#CC9A5B1F</Color>
     <Color x:Key="SecondaryTextColor">#FFF5A94A</Color>
+    <Color x:Key="SelectedRowBackgroundColor">#E06A2A00</Color>
+    <Color x:Key="SelectedRowBorderColor">#FFFFD080</Color>
+    <Color x:Key="SelectedRowTextColor">#FFFFFFFF</Color>
+    <Color x:Key="RowHoverBackgroundColor">#99502605</Color>
     
     <!-- Brush Resources -->
     <SolidColorBrush x:Key="PrimaryBackgroundColorBrush" Color="{DynamicResource PrimaryBackgroundColor}"/>
@@ -30,6 +34,10 @@
 
     <SolidColorBrush x:Key="SecondaryTextColorBrush" Color="{DynamicResource SecondaryTextColor}"/>
     <SolidColorBrush x:Key="MutedTextColorBrush" Color="{DynamicResource MutedTextColor}"/>
+    <SolidColorBrush x:Key="SelectedRowBackgroundBrush" Color="{DynamicResource SelectedRowBackgroundColor}"/>
+    <SolidColorBrush x:Key="SelectedRowBorderBrush" Color="{DynamicResource SelectedRowBorderColor}"/>
+    <SolidColorBrush x:Key="SelectedRowTextBrush" Color="{DynamicResource SelectedRowTextColor}"/>
+    <SolidColorBrush x:Key="RowHoverBackgroundBrush" Color="{DynamicResource RowHoverBackgroundColor}"/>
     
     <!-- Font Size Resources -->
     <sys:Double x:Key="HeaderFontSize" xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Double>
@@ -262,6 +270,7 @@
         <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource HighlightBackgroundBrush}"/>
         <Setter Property="AutoGenerateColumns" Value="False"/>
         <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="SelectionUnit" Value="FullRow"/>
         <Setter Property="CanUserAddRows" Value="False"/>
         <Setter Property="HeadersVisibility" Value="Column"/>
         <Setter Property="RowBackground" Value="{DynamicResource SecondaryBackgroundColorBrush}"/>
@@ -285,8 +294,8 @@
         <Setter Property="Padding" Value="7,5"/>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ButtonBackgroundColorBrush}"/>
-                <Setter Property="Foreground" Value="{DynamicResource AccentColorBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{DynamicResource SelectedRowTextBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -301,12 +310,15 @@
                 <Setter Property="Background" Value="{DynamicResource HighlightBackgroundBrush}"/>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ButtonBackgroundColorBrush}"/>
-                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColorBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource RowHoverBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColorBrush}"/>
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ButtonBackgroundColorBrush}"/>
-                <Setter Property="Foreground" Value="{DynamicResource AccentColorBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource SelectedRowBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource SelectedRowTextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectedRowBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="4,0,0,1"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
             </Trigger>
         </Style.Triggers>
     </Style>

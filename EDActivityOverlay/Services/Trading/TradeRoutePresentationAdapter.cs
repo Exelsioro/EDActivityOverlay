@@ -2,7 +2,7 @@ using EDActivityOverlay.Models.Trading;
 
 namespace EDActivityOverlay.Services.Trading;
 
-public static class TradeRoutePresentationAdapter
+public static partial class TradeRoutePresentationAdapter
 {
     public static TradeRoute ToPresentation(TradeRouteCandidate candidate)
     {

@@ -24,7 +24,8 @@ public sealed partial class ArdentApiClient
     private static readonly HttpClient SharedHttpClient = CreateSharedHttpClient();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
     };
 
     private readonly HttpClient httpClient;

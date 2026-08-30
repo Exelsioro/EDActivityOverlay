@@ -78,7 +78,10 @@ public sealed class ThemeStyleTests
         string dataGridRowMarkup = dataGridRowStyle.ToString(SaveOptions.DisableFormatting);
         Assert.Contains("Property=\"IsMouseOver\"", dataGridRowMarkup, StringComparison.Ordinal);
         Assert.Contains("Property=\"IsSelected\"", dataGridRowMarkup, StringComparison.Ordinal);
-        Assert.Contains("DynamicResource ButtonBackgroundColorBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource RowHoverBackgroundBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource SelectedRowBackgroundBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource SelectedRowBorderBrush", dataGridRowMarkup, StringComparison.Ordinal);
+        Assert.Contains("DynamicResource SelectedRowTextBrush", dataGridRowMarkup, StringComparison.Ordinal);
     }
 
     [Fact]

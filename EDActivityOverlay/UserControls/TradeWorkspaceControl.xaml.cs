@@ -15,13 +15,15 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
     private sealed record TradeRow(
         TradeRouteCandidate Candidate,
         string Key,
-        string HeldMarker,
+        string HeldLabel,
         string Commodity,
         string Source,
         string Target,
         string ProfitPerTon,
         string ProfitPerTrip,
         string TradeLegDistance,
+        string TravelTime,
+        string CreditsPerHour,
         string Age);
 
     private sealed class SessionState
@@ -39,18 +41,25 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         public int MinDemand { get; set; } = 1;
         public bool AdvancedOpen { get; set; }
         public string Sort { get; set; } = "profit";
+        public string RouteMode { get; set; } = "oneway";
     }
+
+    private const int PageSize = 10;
+    private const int SearchResultPoolSize = 100;
 
     private static readonly SessionState Session = new();
 
     private readonly TradeSearchService searchService = new();
+    private readonly TradeTravelTimeEstimator travelTimeEstimator = new();
     private CancellationTokenSource? searchCancellation;
     private List<TradeRouteCandidate> currentCandidates = new();
+    private int currentPage;
     private TradeRouteCandidate? selectedCandidate;
     private GameStateSnapshot currentJournal = new();
     private bool applyingJournal;
     private bool systemOverridden;
     private bool cargoOverridden;
+    private bool advancedFiltersOpen;
     private bool disposed;
 
     public TradeWorkspaceControl()
@@ -68,6 +77,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             MinSupplyComboBox.SelectedIndex = 0;
             MinDemandComboBox.SelectedIndex = 0;
             SortComboBox.SelectedIndex = 0;
+            RouteModeComboBox.SelectedIndex = 0;
         }
         finally
         {
@@ -80,6 +90,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             {
                 systemOverridden = true;
                 CaptureSession();
+                RefreshCompactPresentation();
             }
         };
 
@@ -89,36 +100,52 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             {
                 cargoOverridden = true;
                 CaptureSession();
+                RefreshCompactPresentation();
             }
         };
 
-        SourceRadiusComboBox.SelectionChanged += (_, _) => CaptureSession();
-        TargetRadiusComboBox.SelectionChanged += (_, _) => CaptureSession();
-        MaxAgeComboBox.SelectionChanged += (_, _) => CaptureSession();
-        MinPadComboBox.SelectionChanged += (_, _) => CaptureSession();
-        MaxStationDistanceComboBox.SelectionChanged += (_, _) => CaptureSession();
-        MinSupplyComboBox.SelectionChanged += (_, _) => CaptureSession();
-        MinDemandComboBox.SelectionChanged += (_, _) => CaptureSession();
-        FleetCarriersCheckBox.Checked += (_, _) => CaptureSession();
-        FleetCarriersCheckBox.Unchecked += (_, _) => CaptureSession();
-        AdvancedFiltersExpander.Expanded += (_, _) => CaptureSession();
-        AdvancedFiltersExpander.Collapsed += (_, _) => CaptureSession();
+        SourceRadiusComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        TargetRadiusComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        MaxAgeComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        MinPadComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        MaxStationDistanceComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        MinSupplyComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        MinDemandComboBox.SelectionChanged += TradeFilter_SelectionChanged;
+        FleetCarriersCheckBox.Checked += TradeFilter_CheckChanged;
+        FleetCarriersCheckBox.Unchecked += TradeFilter_CheckChanged;
 
         if (Session.HasValues)
         {
             ApplySession();
         }
 
-        UpdateJournalState(JournalMonitorService.Instance.Current);
+        SetFullMode(
+            false,
+            raiseEvent: false);
+
+        UpdateJournalState(
+            JournalMonitorService.Instance.Current);
+
+        UpdateAdvancedFiltersUi();
+        UpdateRouteModeUi();
+        UpdatePaginationUi();
         RefreshFooter();
+        RefreshCompactPresentation();
     }
 
+    public bool IsFullMode { get; private set; }
+
     public event Action? CloseRequested;
+    public event Action? DragRequested;
+    public event Action<bool>? ViewModeChanged;
     public event Action<TradeRouteCandidate>? PinRequested;
 
-    public void UpdateJournalState(GameStateSnapshot state)
+    public void UpdateJournalState(
+        GameStateSnapshot state)
     {
         currentJournal = state;
+        RefreshTravelProfileIfChanged(
+            state);
 
         string ship =
             string.IsNullOrWhiteSpace(state.ShipName)
@@ -138,10 +165,16 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                     state.CargoCapacity)
                 : Loc.Get("Loc_cargo_unknown");
 
-        JournalContextText.Text =
+        string journalLine =
             $"{location}  •  "
             + $"{(string.IsNullOrWhiteSpace(ship) ? Loc.Get("Loc_ship_unknown") : ship)}"
             + $"  •  {cargo}";
+
+        JournalContextText.Text =
+            journalLine;
+
+        CompactJournalContextText.Text =
+            journalLine;
 
         applyingJournal = true;
         try
@@ -150,28 +183,38 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 && !Session.HasValues
                 && !string.IsNullOrWhiteSpace(state.StarSystem))
             {
-                AnchorSystemTextBox.Text = state.StarSystem;
+                AnchorSystemTextBox.Text =
+                    state.StarSystem;
             }
 
             if (!cargoOverridden
                 && !Session.HasValues
                 && state.CargoCapacity > 0)
             {
-                CargoTextBox.Text = state.FreeCargo.ToString(
-                    CultureInfo.CurrentCulture);
+                CargoTextBox.Text =
+                    state.FreeCargo.ToString(
+                        CultureInfo.CurrentCulture);
             }
         }
         finally
         {
             applyingJournal = false;
         }
+
+        RefreshCompactPresentation();
     }
 
     public void RefreshLocalization()
     {
-        UpdateJournalState(currentJournal);
-        ShowSelectedCandidate(selectedCandidate);
+        UpdateJournalState(
+            currentJournal);
+
+        ShowSelectedCandidate(
+            selectedCandidate);
+
+        UpdateAdvancedFiltersUi();
         RefreshFooter();
+        RefreshCompactPresentation();
     }
 
     public void Dispose()
@@ -182,12 +225,171 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         }
 
         disposed = true;
+
         searchCancellation?.Cancel();
         searchCancellation?.Dispose();
         searchCancellation = null;
     }
 
-    private void SyncJournalButton_Click(object sender, RoutedEventArgs e)
+    private void OpenFullButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        SetFullMode(
+            true);
+
+    private void CollapseButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        SetFullMode(
+            false);
+
+    private void SetFullMode(
+        bool full,
+        bool raiseEvent = true)
+    {
+        if (IsFullMode == full
+            && CompactTradePanel.Visibility
+               == (full
+                    ? Visibility.Collapsed
+                    : Visibility.Visible))
+        {
+            return;
+        }
+
+        IsFullMode =
+            full;
+
+        CompactTradePanel.Visibility =
+            full
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        FullTradePanel.Visibility =
+            full
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (full)
+        {
+            UpdateAdvancedFiltersUi();
+        }
+        else
+        {
+            RefreshCompactPresentation();
+        }
+
+        if (raiseEvent)
+        {
+            ViewModeChanged?.Invoke(
+                full);
+        }
+    }
+
+    private void AdvancedFiltersButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        advancedFiltersOpen =
+            !advancedFiltersOpen;
+
+        ApplyAdvancedFiltersVisibility();
+        CaptureSession();
+    }
+
+    private void ApplyAdvancedFiltersVisibility()
+    {
+        AdvancedFiltersPanel.Visibility =
+            advancedFiltersOpen
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        AdvancedFiltersArrowText.Text =
+            advancedFiltersOpen
+                ? "▲"
+                : "▼";
+
+        UpdateAdvancedFiltersUi();
+    }
+
+    private void UpdateAdvancedFiltersUi()
+    {
+        int active =
+            CountActiveAdvancedFilters();
+
+        AdvancedFiltersButtonText.Text =
+            Loc.Format(
+                advancedFiltersOpen
+                    ? "Loc_TRADE_ADVANCED_OPEN_FORMAT"
+                    : "Loc_TRADE_ADVANCED_CLOSED_FORMAT",
+                active);
+    }
+
+    private int CountActiveAdvancedFilters()
+    {
+        int count = 0;
+
+        if (SelectedInt(
+                MinPadComboBox,
+                1) > 1)
+        {
+            count++;
+        }
+
+        if (SelectedInt(
+                MaxStationDistanceComboBox,
+                0) > 0)
+        {
+            count++;
+        }
+
+        if (SelectedLong(
+                MinSupplyComboBox,
+                1) > 1)
+        {
+            count++;
+        }
+
+        if (SelectedLong(
+                MinDemandComboBox,
+                1) > 1)
+        {
+            count++;
+        }
+
+        return
+            count;
+    }
+
+    private void TradeFilter_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (applyingJournal)
+        {
+            return;
+        }
+
+        CaptureSession();
+        UpdateAdvancedFiltersUi();
+        RefreshCompactPresentation();
+    }
+
+    private void TradeFilter_CheckChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (applyingJournal)
+        {
+            return;
+        }
+
+        CaptureSession();
+        RefreshCompactPresentation();
+    }
+
+    private void SyncJournalButton_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         systemOverridden = false;
         cargoOverridden = false;
@@ -196,9 +398,11 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         applyingJournal = true;
         try
         {
-            if (!string.IsNullOrWhiteSpace(currentJournal.StarSystem))
+            if (!string.IsNullOrWhiteSpace(
+                    currentJournal.StarSystem))
             {
-                AnchorSystemTextBox.Text = currentJournal.StarSystem;
+                AnchorSystemTextBox.Text =
+                    currentJournal.StarSystem;
             }
 
             if (currentJournal.CargoCapacity > 0)
@@ -214,15 +418,35 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         }
 
         CaptureSession();
+        RefreshCompactPresentation();
     }
 
-    private async void SearchButton_Click(object sender, RoutedEventArgs e)
+    private async void SearchButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await StartOrCancelSearchAsync();
+
+    private async void CompactActionButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
+        await StartOrCancelSearchAsync();
+
+    private async Task StartOrCancelSearchAsync()
     {
         if (searchCancellation is not null)
         {
             searchCancellation.Cancel();
+
+            string cancelling =
+                Loc.Get(
+                    "Loc_TRADE_SEARCH_CANCELLING");
+
             SearchStatusText.Text =
-                Loc.Get("Loc_TRADE_SEARCH_CANCELLING");
+                cancelling;
+
+            CompactStatusText.Text =
+                cancelling;
+
             return;
         }
 
@@ -230,53 +454,94 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 out TradeSearchConstraints constraints,
                 out string error))
         {
-            SearchStatusText.Text = error;
+            SearchStatusText.Text =
+                error;
+
+            CompactStatusText.Text =
+                error;
+
             return;
         }
 
         CaptureSession();
 
-        var cancellation = new CancellationTokenSource();
-        searchCancellation = cancellation;
-        currentCandidates = new List<TradeRouteCandidate>();
-        selectedCandidate = null;
-        RoutesGrid.ItemsSource = null;
-        ShowSelectedCandidate(null);
-        SetSearchRunning(true);
+        var cancellation =
+            new CancellationTokenSource();
+
+        searchCancellation =
+            cancellation;
+
+        currentCandidates =
+            new List<TradeRouteCandidate>();
+
+        roundTripByOutboundKey.Clear();
+
+        currentPage =
+            0;
+
+        selectedCandidate =
+            null;
+
+        RoutesList.ItemsSource =
+            null;
+
+        UpdatePaginationUi();
+
+        ShowSelectedCandidate(
+            null);
+
+        SetSearchRunning(
+            true);
+
+        RefreshCompactPresentation();
 
         try
         {
-            await foreach (TradeSearchProgress progress
-                           in searchService.SearchProgressAsync(
-                               constraints,
-                               cancellation.Token))
-            {
-                ApplyProgress(progress);
-            }
+            await RunSelectedSearchModeAsync(
+                constraints,
+                cancellation.Token);
         }
         catch (OperationCanceledException)
         {
-            SearchStatusText.Text =
+            string cancelled =
                 Loc.Format(
                     "Loc_TRADE_SEARCH_CANCELLED",
                     currentCandidates.Count);
+
+            SearchStatusText.Text =
+                cancelled;
+
+            CompactStatusText.Text =
+                cancelled;
         }
         catch (ArdentApiException ex)
         {
-            SearchStatusText.Text =
+            string message =
                 Loc.Format(
                     "Loc_TRADE_SEARCH_ERROR",
                     $"{(int)ex.StatusCode} {ex.StatusCode}");
+
+            SearchStatusText.Text =
+                message;
+
+            CompactStatusText.Text =
+                message;
 
             Logger.Logger.Error(
                 $"Unified Trade workspace Ardent search failed: {ex}");
         }
         catch (Exception ex)
         {
-            SearchStatusText.Text =
+            string message =
                 Loc.Format(
                     "Loc_TRADE_SEARCH_ERROR",
                     ex.Message);
+
+            SearchStatusText.Text =
+                message;
+
+            CompactStatusText.Text =
+                message;
 
             Logger.Logger.Error(
                 $"Unified Trade workspace search failed: {ex}");
@@ -287,31 +552,55 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                     searchCancellation,
                     cancellation))
             {
-                searchCancellation = null;
+                searchCancellation =
+                    null;
             }
 
             cancellation.Dispose();
-            SetSearchRunning(false);
+
+            SetSearchRunning(
+                false);
+
             RefreshFooter();
+            RefreshCompactPresentation();
         }
     }
 
-    private void ApplyProgress(TradeSearchProgress progress)
+    private void ApplyProgress(
+        TradeSearchProgress progress)
     {
+        string status;
+
         switch (progress.Stage)
         {
             case TradeSearchStage.ResolvingOrigin:
+                status =
+                    Loc.Get(
+                        "Loc_TRADE_SEARCH_RESOLVING");
+
                 SearchStatusText.Text =
-                    Loc.Get("Loc_TRADE_SEARCH_RESOLVING");
+                    status;
+
+                CompactStatusText.Text =
+                    status;
+
                 return;
 
             case TradeSearchStage.LoadingCommodityReports:
+                status =
+                    Loc.Get(
+                        "Loc_TRADE_SEARCH_LOADING_MARKET");
+
                 SearchStatusText.Text =
-                    Loc.Get("Loc_TRADE_SEARCH_LOADING_MARKET");
+                    status;
+
+                CompactStatusText.Text =
+                    status;
+
                 return;
 
             case TradeSearchStage.Searching:
-                SearchStatusText.Text =
+                status =
                     progress.FailedCommodities > 0
                         ? Loc.Format(
                             "Loc_TRADE_SEARCH_PROGRESS_FAILED",
@@ -325,9 +614,16 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                             progress.TotalCommodities,
                             progress.BestCandidates.Count);
 
+                SearchStatusText.Text =
+                    status;
+
+                CompactStatusText.Text =
+                    status;
+
                 if (progress.BestCandidates.Count > 0)
                 {
-                    ApplyCandidates(progress.BestCandidates);
+                    ApplyCandidates(
+                        progress.BestCandidates);
                 }
 
                 FooterText.Text =
@@ -337,21 +633,41 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                         progress.TotalCommodities,
                         progress.Elapsed.TotalSeconds);
 
+                CompactFooterText.Text =
+                    Loc.Format(
+                        "Loc_TRADE_COMPACT_PROGRESS",
+                        progress.CompletedCommodities,
+                        progress.TotalCommodities,
+                        progress.Elapsed.TotalSeconds);
+
+                RefreshCompactPresentation(
+                    preserveStatus: true);
+
                 return;
 
             case TradeSearchStage.Completed:
                 if (progress.BestCandidates.Count > 0)
                 {
-                    ApplyCandidates(progress.BestCandidates);
+                    ApplyCandidates(
+                        progress.BestCandidates);
                 }
 
-                SearchStatusText.Text =
+                status =
                     Loc.Format(
                         "Loc_TRADE_SEARCH_DONE",
                         currentCandidates.Count,
                         progress.Elapsed.TotalSeconds);
 
+                SearchStatusText.Text =
+                    status;
+
+                CompactStatusText.Text =
+                    status;
+
                 RefreshFooter();
+                RefreshCompactPresentation(
+                    preserveStatus: true);
+
                 return;
         }
     }
@@ -362,51 +678,168 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         string? selectedKey =
             selectedCandidate is null
                 ? null
-                : Key(selectedCandidate);
+                : Key(
+                    selectedCandidate);
 
         currentCandidates =
-            candidates.ToList();
+            candidates
+                .Take(
+                    SearchResultPoolSize)
+                .ToList();
 
-        IEnumerable<TradeRouteCandidate> ordered =
-            SortTag() switch
+        if (selectedKey is not null)
+        {
+            TradeRouteCandidate? updatedSelection =
+                currentCandidates.FirstOrDefault(
+                    candidate =>
+                        Key(candidate).Equals(
+                            selectedKey,
+                            StringComparison.Ordinal));
+
+            if (updatedSelection is not null)
             {
-                "perton" =>
-                    currentCandidates
-                        .OrderByDescending(item => item.ProfitPerTon)
-                        .ThenByDescending(item => item.ProfitPerTrip)
-                        .ThenBy(item => item.SourceToTargetDistanceLy),
+                selectedCandidate =
+                    updatedSelection;
+            }
+        }
 
-                "distance" =>
-                    currentCandidates
-                        .OrderBy(item => item.SourceToTargetDistanceLy)
-                        .ThenByDescending(item => item.ProfitPerTrip),
+        RefreshCurrentPage(
+            selectFirstWhenEmpty: selectedCandidate is null);
 
-                _ =>
-                    currentCandidates
-                        .OrderByDescending(item => item.ProfitPerTrip)
-                        .ThenByDescending(item => item.ProfitPerTon)
-                        .ThenBy(item => item.SourceToTargetDistanceLy)
-            };
+        RefreshCompactPresentation();
+    }
 
-        var displayed =
-            ordered.ToList();
+    private IEnumerable<TradeRouteCandidate> SortedCandidates() =>
+        SortTag() switch
+        {
+            "perhour" =>
+                currentCandidates
+                    .OrderByDescending(
+                        item =>
+                            EstimatedProfitPerHour(
+                                item))
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTrip)
+                    .ThenBy(
+                        item =>
+                            item.SourceToTargetDistanceLy),
+
+            "time" =>
+                currentCandidates
+                    .OrderBy(
+                        item =>
+                            EstimatedTravelSeconds(
+                                item))
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTrip),
+
+            "freshness" =>
+                currentCandidates
+                    .OrderBy(
+                        item =>
+                            item.WorstDataAge)
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTrip),
+
+            "perton" =>
+                currentCandidates
+                    .OrderByDescending(
+                        item =>
+                            item.ProfitPerTon)
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTrip)
+                    .ThenBy(
+                        item =>
+                            item.SourceToTargetDistanceLy),
+
+            "distance" =>
+                currentCandidates
+                    .OrderBy(
+                        item =>
+                            item.SourceToTargetDistanceLy)
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTrip),
+
+            _ =>
+                currentCandidates
+                    .OrderByDescending(
+                        item =>
+                            item.ProfitPerTrip)
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTon)
+                    .ThenBy(
+                        item =>
+                            item.SourceToTargetDistanceLy)
+        };
+
+    private void RefreshCurrentPage(
+        bool selectFirstWhenEmpty = false)
+    {
+        List<TradeRouteCandidate> sorted =
+            SortedCandidates()
+                .ToList();
+
+        int pageCount =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    sorted.Count
+                    / (double)PageSize));
+
+        currentPage =
+            Math.Clamp(
+                currentPage,
+                0,
+                pageCount - 1);
+
+        int naturalStart =
+            currentPage
+            * PageSize;
+
+        List<TradeRouteCandidate> page =
+            sorted
+                .Skip(
+                    naturalStart)
+                .Take(
+                    PageSize)
+                .ToList();
+
+        string? selectedKey =
+            selectedCandidate is null
+                ? null
+                : Key(
+                    selectedCandidate);
 
         bool heldSelection =
             selectedCandidate is not null
-            && displayed.All(
-                item =>
-                    !Key(item).Equals(
+            && page.All(
+                candidate =>
+                    !Key(candidate).Equals(
                         selectedKey,
                         StringComparison.Ordinal));
 
         if (heldSelection
             && selectedCandidate is not null)
         {
-            displayed.Add(selectedCandidate);
+            if (page.Count >= PageSize)
+            {
+                page.RemoveAt(
+                    page.Count - 1);
+            }
+
+            page.Insert(
+                0,
+                selectedCandidate);
         }
 
         TradeRow[] rows =
-            displayed
+            page
                 .Select(
                     candidate =>
                         ToRow(
@@ -418,81 +851,250 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                                 StringComparison.Ordinal)))
                 .ToArray();
 
-        RoutesGrid.ItemsSource = rows;
+        RoutesList.ItemsSource =
+            rows;
 
         TradeRow? selection =
             selectedKey is null
-                ? rows.FirstOrDefault()
+                ? null
                 : rows.FirstOrDefault(
                     row =>
                         row.Key.Equals(
                             selectedKey,
-                            StringComparison.Ordinal))
-                  ?? rows.FirstOrDefault();
+                            StringComparison.Ordinal));
 
-        RoutesGrid.SelectedItem = selection;
+        if (selection is null
+            && selectFirstWhenEmpty)
+        {
+            selection =
+                rows.FirstOrDefault();
+        }
+
+        RoutesList.SelectedItem =
+            selection;
 
         if (selection is not null)
         {
-            selectedCandidate = selection.Candidate;
-            ShowSelectedCandidate(selectedCandidate);
+            selectedCandidate =
+                selection.Candidate;
+
+            ShowSelectedCandidate(
+                selectedCandidate);
         }
+
+        int firstRank =
+            sorted.Count == 0
+                ? 0
+                : naturalStart + 1;
+
+        int lastRank =
+            Math.Min(
+                naturalStart + PageSize,
+                sorted.Count);
+
+        RoutesSummaryText.Text =
+            Loc.Format(
+                "Loc_TRADE_RESULTS_PAGING_SUMMARY",
+                sorted.Count,
+                firstRank,
+                lastRank);
+
+        PageIndicatorText.Text =
+            $"{currentPage + 1} / {pageCount}";
+
+        PreviousPageButton.IsEnabled =
+            currentPage > 0;
+
+        NextPageButton.IsEnabled =
+            currentPage + 1 < pageCount;
     }
 
-    private static TradeRow ToRow(
-        TradeRouteCandidate candidate,
-        bool held) =>
-        new(
-            candidate,
-            Key(candidate),
-            held ? "★" : string.Empty,
-            candidate.Source.CommodityName,
-            $"{candidate.Source.SystemName} / {candidate.Source.StationName}",
-            $"{candidate.Target.SystemName} / {candidate.Target.StationName}",
-            $"{candidate.ProfitPerTon:N0}",
-            $"{candidate.ProfitPerTrip:N0}",
-            $"{candidate.SourceToTargetDistanceLy:0.0} LY",
-            $"{candidate.WorstDataAge.TotalHours:0.#} h");
+    private void UpdatePaginationUi()
+    {
+        int pageCount =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    currentCandidates.Count
+                    / (double)PageSize));
 
-    private void RoutesGrid_SelectionChanged(
+        PageIndicatorText.Text =
+            $"{Math.Min(currentPage + 1, pageCount)} / {pageCount}";
+
+        RoutesSummaryText.Text =
+            Loc.Format(
+                "Loc_TRADE_RESULTS_PAGING_SUMMARY",
+                currentCandidates.Count,
+                0,
+                0);
+
+        PreviousPageButton.IsEnabled =
+            false;
+
+        NextPageButton.IsEnabled =
+            false;
+    }
+
+    private TradeRow ToRow(
+        TradeRouteCandidate candidate,
+        bool held)
+    {
+        if (TryBuildRoundTripRow(
+                candidate,
+                held,
+                out TradeRow roundTripRow))
+        {
+            return
+                roundTripRow;
+        }
+
+        return
+            new TradeRow(
+                candidate,
+                Key(
+                    candidate),
+                held
+                    ? Loc.Get(
+                        "Loc_TRADE_HELD_SELECTION")
+                    : string.Empty,
+                candidate.Source.CommodityName.ToUpperInvariant(),
+                $"{candidate.Source.SystemName} / {candidate.Source.StationName}",
+                $"→ {candidate.Target.SystemName} / {candidate.Target.StationName}",
+                Loc.Format(
+                    "Loc_TRADE_ROW_PROFIT_T_FORMAT",
+                    candidate.ProfitPerTon),
+                Loc.Format(
+                    "Loc_TRADE_ROW_PROFIT_TRIP_FORMAT",
+                    candidate.ProfitPerTrip),
+                Loc.Format(
+                    "Loc_TRADE_ROW_DISTANCE_FORMAT",
+                    candidate.SourceToTargetDistanceLy),
+                FormatEstimatedTravelTime(
+                    candidate),
+                FormatCreditsPerHour(
+                    EstimatedProfitPerHour(
+                        candidate)),
+                Loc.Format(
+                    "Loc_TRADE_ROW_AGE_FORMAT",
+                    candidate.WorstDataAge.TotalHours));
+    }
+
+    private void RoutesList_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (RoutesGrid.SelectedItem is TradeRow row)
+        if (RoutesList.SelectedItem
+            is TradeRow row)
         {
-            selectedCandidate = row.Candidate;
-            ShowSelectedCandidate(selectedCandidate);
+            selectedCandidate =
+                row.Candidate;
+
+            ShowSelectedCandidate(
+                selectedCandidate);
         }
+    }
+
+    private void PreviousPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (currentPage <= 0)
+        {
+            return;
+        }
+
+        currentPage--;
+        selectedCandidate =
+            null;
+
+        RefreshCurrentPage(
+            selectFirstWhenEmpty: true);
+    }
+
+    private void NextPageButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        int pageCount =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    currentCandidates.Count
+                    / (double)PageSize));
+
+        if (currentPage + 1 >= pageCount)
+        {
+            return;
+        }
+
+        currentPage++;
+        selectedCandidate =
+            null;
+
+        RefreshCurrentPage(
+            selectFirstWhenEmpty: true);
     }
 
     private void SortComboBox_SelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
+        if (applyingJournal)
+        {
+            return;
+        }
+
         CaptureSession();
 
         if (currentCandidates.Count > 0)
         {
-            ApplyCandidates(currentCandidates);
+            currentPage =
+                0;
+
+            RefreshCurrentPage(
+                selectFirstWhenEmpty: selectedCandidate is null);
         }
     }
 
     private void ShowSelectedCandidate(
         TradeRouteCandidate? candidate)
     {
-        PinRouteButton.IsEnabled = candidate is not null;
+        PinRouteButton.IsEnabled =
+            candidate is not null;
 
         if (candidate is null)
         {
             SelectedCommodityText.Text =
-                Loc.Get("Loc_TRADE_SELECT_ROUTE");
+                Loc.Get(
+                    "Loc_TRADE_SELECT_ROUTE");
 
-            SelectedProfitText.Text = string.Empty;
-            SelectedSourceText.Text = string.Empty;
-            SelectedSourceMetaText.Text = string.Empty;
-            SelectedTargetText.Text = string.Empty;
-            SelectedTargetMetaText.Text = string.Empty;
-            SelectedRouteEconomicsText.Text = string.Empty;
+            SelectedProfitText.Text =
+                string.Empty;
+
+            SelectedSourceText.Text =
+                string.Empty;
+
+            SelectedSourceMetaText.Text =
+                string.Empty;
+
+            SelectedTargetText.Text =
+                string.Empty;
+
+            SelectedTargetMetaText.Text =
+                string.Empty;
+
+            SelectedRouteEconomicsText.Text =
+                string.Empty;
+
+            SelectedTravelEstimateText.Text =
+                string.Empty;
+
+            return;
+        }
+
+        if (TryShowRoundTripCandidate(
+                candidate))
+        {
             return;
         }
 
@@ -528,7 +1130,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         string demand =
             candidate.Target.HasInfiniteDemand
                 ? "∞"
-                : candidate.Target.Demand.ToString("N0");
+                : candidate.Target.Demand.ToString(
+                    "N0");
 
         SelectedRouteEconomicsText.Text =
             Loc.Format(
@@ -539,6 +1142,10 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 demand,
                 candidate.TradableAmount,
                 candidate.SourceToTargetDistanceLy);
+
+        SelectedTravelEstimateText.Text =
+            FormatTravelDetail(
+                candidate);
     }
 
     private static string BuildStationMeta(
@@ -564,42 +1171,31 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             + $"  •  {age.TotalHours:0.#} h";
     }
 
-    private void PinRouteButton_Click(object sender, RoutedEventArgs e)
+    private void PinRouteButton_Click(
+        object sender,
+        RoutedEventArgs e)
     {
         if (selectedCandidate is null)
         {
             return;
         }
 
-        PinRequested?.Invoke(selectedCandidate);
+        PinSelectedCandidate();
     }
 
-    private void CloseButton_Click(object sender, RoutedEventArgs e) =>
+    private void CloseButton_Click(
+        object sender,
+        RoutedEventArgs e) =>
         CloseRequested?.Invoke();
 
-    private void TradeDragHandle_MouseLeftButtonDown(
+    private void CompactTradeDragHandle_MouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed)
+        if (e.LeftButton
+            == MouseButtonState.Pressed)
         {
-            return;
-        }
-
-        Window? window =
-            Window.GetWindow(this);
-
-        if (window is null)
-        {
-            return;
-        }
-
-        try
-        {
-            window.DragMove();
-        }
-        catch (InvalidOperationException)
-        {
+            DragRequested?.Invoke();
         }
     }
 
@@ -607,17 +1203,24 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         out TradeSearchConstraints constraints,
         out string error)
     {
-        constraints = null!;
-        error = string.Empty;
+        constraints =
+            null!;
+
+        error =
+            string.Empty;
 
         string anchor =
             AnchorSystemTextBox.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(anchor))
+        if (string.IsNullOrWhiteSpace(
+                anchor))
         {
             error =
-                Loc.Get("Loc_TRADE_VALIDATION_SYSTEM");
-            return false;
+                Loc.Get(
+                    "Loc_TRADE_VALIDATION_SYSTEM");
+
+            return
+                false;
         }
 
         if (!int.TryParse(
@@ -628,8 +1231,11 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             || cargo < 1)
         {
             error =
-                Loc.Get("Loc_TRADE_VALIDATION_CARGO");
-            return false;
+                Loc.Get(
+                    "Loc_TRADE_VALIDATION_CARGO");
+
+            return
+                false;
         }
 
         long address =
@@ -648,59 +1254,115 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         constraints =
             new TradeSearchConstraints
             {
-                OriginSystemName = anchor,
-                OriginSystemAddress = address,
-                CargoCapacity = cargo,
+                OriginSystemName =
+                    anchor,
+                OriginSystemAddress =
+                    address,
+                CargoCapacity =
+                    cargo,
                 SourceSearchRadiusLy =
-                    SelectedInt(SourceRadiusComboBox, 30),
+                    SelectedInt(
+                        SourceRadiusComboBox,
+                        30),
                 TargetSearchRadiusLy =
-                    SelectedInt(TargetRadiusComboBox, 80),
+                    SelectedInt(
+                        TargetRadiusComboBox,
+                        80),
                 MaxDataAge =
                     TimeSpan.FromHours(
-                        SelectedInt(MaxAgeComboBox, 72)),
+                        SelectedInt(
+                            MaxAgeComboBox,
+                            72)),
                 MinLandingPadSize =
-                    SelectedInt(MinPadComboBox, 3),
+                    SelectedInt(
+                        MinPadComboBox,
+                        3),
                 MaxStationDistanceLs =
                     stationDistance <= 0
                         ? null
                         : stationDistance,
                 IncludeFleetCarriers =
-                    FleetCarriersCheckBox.IsChecked == true,
+                    FleetCarriersCheckBox.IsChecked
+                    == true,
                 MinSupply =
-                    SelectedLong(MinSupplyComboBox, 1),
+                    SelectedLong(
+                        MinSupplyComboBox,
+                        1),
                 MinDemand =
-                    SelectedLong(MinDemandComboBox, 1),
-                MaxCommodityCandidates = 50,
-                MaxResults = 50,
-                MaxConcurrentCommoditySearches = 6
+                    SelectedLong(
+                        MinDemandComboBox,
+                        1),
+                MaxCommodityCandidates =
+                    50,
+                MaxResults =
+                    SearchResultPoolSize,
+                MaxConcurrentCommoditySearches =
+                    6
             };
 
         try
         {
             constraints.Validate();
-            return true;
+
+            return
+                true;
         }
         catch (Exception ex)
         {
-            error = ex.Message;
-            constraints = null!;
-            return false;
+            error =
+                ex.Message;
+
+            constraints =
+                null!;
+
+            return
+                false;
         }
     }
 
-    private void SetSearchRunning(bool running)
+    private void SetSearchRunning(
+        bool running)
     {
-        AnchorSystemTextBox.IsEnabled = !running;
-        CargoTextBox.IsEnabled = !running;
-        SourceRadiusComboBox.IsEnabled = !running;
-        TargetRadiusComboBox.IsEnabled = !running;
-        MaxAgeComboBox.IsEnabled = !running;
-        FleetCarriersCheckBox.IsEnabled = !running;
-        SyncJournalButton.IsEnabled = !running;
-        AdvancedFiltersExpander.IsEnabled = !running;
-        SortComboBox.IsEnabled = true;
+        AnchorSystemTextBox.IsEnabled =
+            !running;
+
+        CargoTextBox.IsEnabled =
+            !running;
+
+        SourceRadiusComboBox.IsEnabled =
+            !running;
+
+        TargetRadiusComboBox.IsEnabled =
+            !running;
+
+        MaxAgeComboBox.IsEnabled =
+            !running;
+
+        FleetCarriersCheckBox.IsEnabled =
+            !running;
+
+        RouteModeComboBox.IsEnabled =
+            !running;
+
+        SyncJournalButton.IsEnabled =
+            !running;
+
+        AdvancedFiltersButton.IsEnabled =
+            !running;
+
+        AdvancedFiltersPanel.IsEnabled =
+            !running;
+
+        SortComboBox.IsEnabled =
+            true;
 
         SearchButton.SetResourceReference(
+            ContentControl.ContentProperty,
+            running
+                ? "Loc_TRADE_CANCEL"
+                : "Loc_SEARCH_ROUTES");
+
+        CompactActionButton.SetResourceReference(
             ContentControl.ContentProperty,
             running
                 ? "Loc_TRADE_CANCEL"
@@ -716,49 +1378,136 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             return;
         }
 
-        Session.HasValues = true;
-        Session.Anchor = AnchorSystemTextBox.Text.Trim();
-        Session.Cargo = CargoTextBox.Text.Trim();
-        Session.SourceRadius = SelectedInt(SourceRadiusComboBox, 30);
-        Session.TargetRadius = SelectedInt(TargetRadiusComboBox, 80);
-        Session.MaxAgeHours = SelectedInt(MaxAgeComboBox, 72);
-        Session.IncludeCarriers = FleetCarriersCheckBox.IsChecked == true;
-        Session.MinPad = SelectedInt(MinPadComboBox, 3);
-        Session.MaxStationDistance = SelectedInt(MaxStationDistanceComboBox, 0);
-        Session.MinSupply = (int)SelectedLong(MinSupplyComboBox, 1);
-        Session.MinDemand = (int)SelectedLong(MinDemandComboBox, 1);
-        Session.AdvancedOpen = AdvancedFiltersExpander.IsExpanded;
-        Session.Sort = SortTag();
+        Session.HasValues =
+            true;
+
+        Session.Anchor =
+            AnchorSystemTextBox.Text.Trim();
+
+        Session.Cargo =
+            CargoTextBox.Text.Trim();
+
+        Session.SourceRadius =
+            SelectedInt(
+                SourceRadiusComboBox,
+                30);
+
+        Session.TargetRadius =
+            SelectedInt(
+                TargetRadiusComboBox,
+                80);
+
+        Session.MaxAgeHours =
+            SelectedInt(
+                MaxAgeComboBox,
+                72);
+
+        Session.IncludeCarriers =
+            FleetCarriersCheckBox.IsChecked
+            == true;
+
+        Session.MinPad =
+            SelectedInt(
+                MinPadComboBox,
+                3);
+
+        Session.MaxStationDistance =
+            SelectedInt(
+                MaxStationDistanceComboBox,
+                0);
+
+        Session.MinSupply =
+            (int)SelectedLong(
+                MinSupplyComboBox,
+                1);
+
+        Session.MinDemand =
+            (int)SelectedLong(
+                MinDemandComboBox,
+                1);
+
+        Session.AdvancedOpen =
+            advancedFiltersOpen;
+
+        Session.Sort =
+            SortTag();
+
+        Session.RouteMode =
+            RouteModeTag();
     }
 
     private void ApplySession()
     {
-        applyingJournal = true;
+        applyingJournal =
+            true;
+
         try
         {
-            AnchorSystemTextBox.Text = Session.Anchor;
-            CargoTextBox.Text = Session.Cargo;
-            SelectTag(SourceRadiusComboBox, Session.SourceRadius);
-            SelectTag(TargetRadiusComboBox, Session.TargetRadius);
-            SelectTag(MaxAgeComboBox, Session.MaxAgeHours);
-            FleetCarriersCheckBox.IsChecked = Session.IncludeCarriers;
-            SelectTag(MinPadComboBox, Session.MinPad);
-            SelectTag(MaxStationDistanceComboBox, Session.MaxStationDistance);
-            SelectTag(MinSupplyComboBox, Session.MinSupply);
-            SelectTag(MinDemandComboBox, Session.MinDemand);
-            AdvancedFiltersExpander.IsExpanded = Session.AdvancedOpen;
-            SelectTag(SortComboBox, Session.Sort);
+            AnchorSystemTextBox.Text =
+                Session.Anchor;
+
+            CargoTextBox.Text =
+                Session.Cargo;
+
+            SelectTag(
+                SourceRadiusComboBox,
+                Session.SourceRadius);
+
+            SelectTag(
+                TargetRadiusComboBox,
+                Session.TargetRadius);
+
+            SelectTag(
+                MaxAgeComboBox,
+                Session.MaxAgeHours);
+
+            FleetCarriersCheckBox.IsChecked =
+                Session.IncludeCarriers;
+
+            SelectTag(
+                MinPadComboBox,
+                Session.MinPad);
+
+            SelectTag(
+                MaxStationDistanceComboBox,
+                Session.MaxStationDistance);
+
+            SelectTag(
+                MinSupplyComboBox,
+                Session.MinSupply);
+
+            SelectTag(
+                MinDemandComboBox,
+                Session.MinDemand);
+
+            SelectTag(
+                SortComboBox,
+                Session.Sort);
+
+            SelectTag(
+                RouteModeComboBox,
+                Session.RouteMode);
+
+            advancedFiltersOpen =
+                Session.AdvancedOpen;
+
+            ApplyAdvancedFiltersVisibility();
         }
         finally
         {
-            applyingJournal = false;
+            applyingJournal =
+                false;
         }
 
         systemOverridden =
-            !string.IsNullOrWhiteSpace(Session.Anchor);
+            !string.IsNullOrWhiteSpace(
+                Session.Anchor);
 
         cargoOverridden =
-            !string.IsNullOrWhiteSpace(Session.Cargo);
+            !string.IsNullOrWhiteSpace(
+                Session.Cargo);
+
+        UpdateRouteModeUi();
     }
 
     private void RefreshFooter()
@@ -766,13 +1515,16 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         if (currentCandidates.Count == 0)
         {
             FooterText.Text =
-                Loc.Get("Loc_TRADE_WORKSPACE_IDLE_FOOTER");
+                Loc.Get(
+                    "Loc_TRADE_WORKSPACE_IDLE_FOOTER");
+
             return;
         }
 
         long best =
             currentCandidates.Max(
-                item => item.ProfitPerTrip);
+                item =>
+                    item.ProfitPerTrip);
 
         FooterText.Text =
             Loc.Format(
@@ -781,31 +1533,125 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 best);
     }
 
+    private void RefreshCompactPresentation(
+        bool preserveStatus = false)
+    {
+        string anchor =
+            string.IsNullOrWhiteSpace(
+                AnchorSystemTextBox.Text)
+                ? "—"
+                : AnchorSystemTextBox.Text.Trim();
+
+        CompactFiltersText.Text =
+            Loc.Format(
+                "Loc_TRADE_COMPACT_FILTERS_FORMAT",
+                anchor,
+                SelectedInt(
+                    SourceRadiusComboBox,
+                    30),
+                SelectedInt(
+                    TargetRadiusComboBox,
+                    80),
+                CountActiveAdvancedFilters());
+
+        TradeRouteCandidate? best =
+            currentCandidates
+                .OrderByDescending(
+                    item =>
+                        item.ProfitPerTrip)
+                .ThenByDescending(
+                    item =>
+                        item.ProfitPerTon)
+                .ThenBy(
+                    item =>
+                        item.SourceToTargetDistanceLy)
+                .FirstOrDefault();
+
+        if (best is null)
+        {
+            CompactBestRouteText.Text =
+                Loc.Get(
+                    "Loc_TRADE_COMPACT_NO_RESULTS");
+
+            if (!preserveStatus
+                && searchCancellation is null)
+            {
+                CompactStatusText.Text =
+                    Loc.Get(
+                        "Loc_TRADE_COMPACT_READY");
+            }
+
+            CompactFooterText.Text =
+                Loc.Get(
+                    "Loc_TRADE_WORKSPACE_IDLE_FOOTER");
+
+            return;
+        }
+
+        if (TryRenderRoundTripCompact(
+                best,
+                preserveStatus))
+        {
+            return;
+        }
+
+        CompactBestRouteText.Text =
+            Loc.Format(
+                "Loc_TRADE_COMPACT_BEST_FORMAT",
+                best.Source.CommodityName.ToUpperInvariant(),
+                best.Source.SystemName,
+                best.Target.SystemName,
+                best.ProfitPerTrip,
+                best.SourceToTargetDistanceLy);
+
+        if (!preserveStatus
+            && searchCancellation is null)
+        {
+            CompactStatusText.Text =
+                Loc.Format(
+                    "Loc_TRADE_COMPACT_RESULTS_FORMAT",
+                    currentCandidates.Count);
+        }
+
+        CompactFooterText.Text =
+            Loc.Format(
+                "Loc_TRADE_COMPACT_BEST_META",
+                best.ProfitPerTon,
+                best.TradableAmount,
+                best.WorstDataAge.TotalHours)
+            + Environment.NewLine
+            + FormatCompactTravel(
+                best);
+    }
+
     private string SortTag() =>
-        (SortComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+        (SortComboBox.SelectedItem
+            as ComboBoxItem)?.Tag?.ToString()
         ?? "profit";
 
     private static int SelectedInt(
         ComboBox comboBox,
         int fallback) =>
         int.TryParse(
-            (comboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString(),
+            (comboBox.SelectedItem
+                as ComboBoxItem)?.Tag?.ToString(),
             NumberStyles.Integer,
             CultureInfo.InvariantCulture,
             out int value)
-            ? value
-            : fallback;
+                ? value
+                : fallback;
 
     private static long SelectedLong(
         ComboBox comboBox,
         long fallback) =>
         long.TryParse(
-            (comboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString(),
+            (comboBox.SelectedItem
+                as ComboBoxItem)?.Tag?.ToString(),
             NumberStyles.Integer,
             CultureInfo.InvariantCulture,
             out long value)
-            ? value
-            : fallback;
+                ? value
+                : fallback;
 
     private static void SelectTag(
         ComboBox comboBox,
@@ -821,13 +1667,16 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
              index < comboBox.Items.Count;
              index++)
         {
-            if (comboBox.Items[index] is ComboBoxItem item
+            if (comboBox.Items[index]
+                is ComboBoxItem item
                 && string.Equals(
                     item.Tag?.ToString(),
                     expected,
                     StringComparison.OrdinalIgnoreCase))
             {
-                comboBox.SelectedIndex = index;
+                comboBox.SelectedIndex =
+                    index;
+
                 return;
             }
         }
