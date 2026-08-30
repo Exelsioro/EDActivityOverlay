@@ -104,19 +104,33 @@ public sealed class TradeV9cExecutionTests
                 "Trading",
                 "TradeRoutePresentationAdapter.RoundTrip.cs");
 
+        string compactOneWay =
+            oneWay
+                .Replace(" ", string.Empty)
+                .Replace("\t", string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
+        string compactRoundTrip =
+            roundTrip
+                .Replace(" ", string.Empty)
+                .Replace("\t", string.Empty)
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty);
+
         Assert.Contains(
-            "PlannedQuantity = candidate.TradableAmount",
-            oneWay,
+            "PlannedQuantity=candidate.TradableAmount",
+            compactOneWay,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "PlannedQuantity = outbound.TradableAmount",
-            roundTrip,
+            "PlannedQuantity=outbound.TradableAmount",
+            compactRoundTrip,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "PlannedQuantity = candidate.ReturnTradableAmount",
-            roundTrip,
+            "PlannedQuantity=candidate.ReturnTradableAmount",
+            compactRoundTrip,
             StringComparison.Ordinal);
     }
 

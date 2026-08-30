@@ -12,6 +12,8 @@ public partial class TradeWorkspaceControl
         CargoSaleCandidate Candidate,
         string Key,
         string HeldLabel,
+        string Confidence,
+        string ConfidenceLevel,
         string Commodity,
         string Source,
         string Target,
@@ -322,6 +324,8 @@ public partial class TradeWorkspaceControl
                 candidate.SellableUnits,
                 candidate.TotalCargoUnits,
                 candidate.CoverageRatio * 100),
+            string.Empty,
+            string.Empty,
             commodity,
             Loc.Format(
                 "Loc_TRADE_CARGO_ROW_SOURCE",
@@ -348,6 +352,8 @@ public partial class TradeWorkspaceControl
     {
         PinRouteButton.IsEnabled =
             false;
+
+        ClearConfidence();
 
         if (candidate is null)
         {

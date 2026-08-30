@@ -16,6 +16,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         TradeRouteCandidate Candidate,
         string Key,
         string HeldLabel,
+        string Confidence,
+        string ConfidenceLevel,
         string Commodity,
         string Source,
         string Target,
@@ -753,6 +755,19 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                         item =>
                             item.ProfitPerTrip),
 
+            "confidence" =>
+                currentCandidates
+                    .OrderByDescending(
+                        item =>
+                            ConfidenceScore(
+                                item))
+                    .ThenByDescending(
+                        item =>
+                            item.ProfitPerTrip)
+                    .ThenBy(
+                        item =>
+                            item.WorstDataAge),
+
             "freshness" =>
                 currentCandidates
                     .OrderBy(
@@ -788,6 +803,10 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                     .OrderByDescending(
                         item =>
                             item.ProfitPerTrip)
+                    .ThenByDescending(
+                        item =>
+                            ConfidenceScore(
+                                item))
                     .ThenByDescending(
                         item =>
                             item.ProfitPerTon)
@@ -979,6 +998,10 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 roundTripRow;
         }
 
+        TradeRouteConfidence confidence =
+            ConfidenceFor(
+                candidate);
+
         return
             new TradeRow(
                 candidate,
@@ -988,6 +1011,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                     ? Loc.Get(
                         "Loc_TRADE_HELD_SELECTION")
                     : string.Empty,
+                ConfidenceBadge(
+                    confidence),
+                confidence.Level.ToString(),
                 candidate.Source.CommodityName.ToUpperInvariant(),
                 $"{candidate.Source.SystemName} / {candidate.Source.StationName}",
                 $"→ {candidate.Target.SystemName} / {candidate.Target.StationName}",
@@ -1139,6 +1165,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             SelectedTravelEstimateText.Text =
                 string.Empty;
 
+            ClearConfidence();
+
             return;
         }
 
@@ -1196,6 +1224,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         SelectedTravelEstimateText.Text =
             FormatTravelDetail(
                 candidate);
+
+        ShowConfidence(
+            candidate);
     }
 
     private static string BuildStationMeta(

@@ -1125,6 +1125,25 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_EXEC_SELL_PROGRESS">SOLD {0:N0}/{1:N0} t · actual avg {2:N0} CR/t · revenue {3:N0} CR · realized P&amp;L {4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_EXEC_COMPLETED">TRADE COMPLETED ✓ · actual {0:N0} CR · plan {1:N0} CR · Δ {2:+0.0;-0.0;0.0}%</sys:String>
     <sys:String x:Key="Loc_TRADE_EXEC_FOOTER">To {0}: {1:0.0} LY · ~{2} · {3} jumps&#10;Realized P&amp;L {4:N0} CR · projected {5:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_CONFIDENCE">Reliability</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TITLE">RELIABILITY / MARKET RISK</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_HIGH">RELIABLE</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_MEDIUM">MEDIUM</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_LOW">HIGH RISK</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_BADGE">● {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SCORE">{0} · {1}/100</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_ROUND_SCORES">Outbound {0}/100 · return {1}/100</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_OUTBOUND">OUTBOUND</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_RETURN">RETURN</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SOURCE_AGE">source data {0:0.#} h old</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TARGET_AGE">target data {0:0.#} h old</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SOURCE_LIQUIDITY">stock ×{0:0.0} of planned trade</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TARGET_LIQUIDITY">demand ×{0:0.0} of planned trade</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_INFINITE_DEMAND">target demand ∞</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_PARTIAL_FILL">market depth supports only {0:0}% of requested cargo</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_MARGIN">margin {0:0.0}% of buy price</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SOURCE_CARRIER">supplier is a Fleet Carrier</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TARGET_CARRIER">buyer is a Fleet Carrier</sys:String>
 </ResourceDictionary>
 
 

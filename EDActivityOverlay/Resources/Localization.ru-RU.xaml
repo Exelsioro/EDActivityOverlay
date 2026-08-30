@@ -1125,6 +1125,25 @@
     <sys:String x:Key="Loc_TRADE_EXEC_SELL_PROGRESS">ПРОДАНО {0:N0}/{1:N0} т · факт avg {2:N0} кр./т · выручка {3:N0} кр. · realized P&amp;L {4:N0} кр.</sys:String>
     <sys:String x:Key="Loc_TRADE_EXEC_COMPLETED">СДЕЛКА ЗАВЕРШЕНА ✓ · факт {0:N0} кр. · план {1:N0} кр. · Δ {2:+0.0;-0.0;0.0}%</sys:String>
     <sys:String x:Key="Loc_TRADE_EXEC_FOOTER">До {0}: {1:0.0} LY · ~{2} · прыжков {3}&#10;Realized P&amp;L {4:N0} кр. · прогноз {5:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_CONFIDENCE">Надёжность</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TITLE">НАДЁЖНОСТЬ / РИСК РЫНКА</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_HIGH">НАДЁЖНО</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_MEDIUM">СРЕДНЯЯ</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_LOW">ВЫСОКИЙ РИСК</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_BADGE">● {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SCORE">{0} · {1}/100</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_ROUND_SCORES">Туда {0}/100 · обратно {1}/100</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_OUTBOUND">ТУДА</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_RETURN">ОБРАТНО</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SOURCE_AGE">данные поставщика: {0:0.#} ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TARGET_AGE">данные покупателя: {0:0.#} ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SOURCE_LIQUIDITY">запас ×{0:0.0} от объёма сделки</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TARGET_LIQUIDITY">спрос ×{0:0.0} от объёма сделки</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_INFINITE_DEMAND">спрос покупателя ∞</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_PARTIAL_FILL">глубина рынка покрывает только {0:0}% запрошенного трюма</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_MARGIN">маржа {0:0.0}% от цены покупки</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_SOURCE_CARRIER">поставщик — Fleet Carrier</sys:String>
+    <sys:String x:Key="Loc_TRADE_CONFIDENCE_TARGET_CARRIER">покупатель — Fleet Carrier</sys:String>
 </ResourceDictionary>
 
 

@@ -480,6 +480,7 @@
                             <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_FASTEST}" Tag="time"/>
                             <ComboBoxItem x:Name="PerTonSortItem" Content="{DynamicResource Loc_TRADE_SORT_PER_TON}" Tag="perton"/>
                             <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_DISTANCE}" Tag="distance"/>
+                            <ComboBoxItem x:Name="ConfidenceSortItem" Content="{DynamicResource Loc_TRADE_SORT_CONFIDENCE}" Tag="confidence"/>
                             <ComboBoxItem Content="{DynamicResource Loc_TRADE_SORT_FRESHEST}" Tag="freshness"/>
                         </ComboBox>
                     </StackPanel>
@@ -586,6 +587,11 @@
                                                            FontSize="8"
                                                            Foreground="{DynamicResource MutedTextColorBrush}"
                                                            Text="{Binding HeldLabel}"/>
+                                                <TextBlock Margin="0,2,0,0"
+                                                           FontSize="8"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource AccentColorBrush}"
+                                                           Text="{Binding Confidence}"/>
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
@@ -750,6 +756,26 @@
                                         <TextBlock x:Name="SelectedRouteEconomicsText"
                                                    TextWrapping="Wrap"
                                                    Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                                    </Border>
+
+                                    <Border x:Name="SelectedConfidencePanel"
+                                            Visibility="Collapsed"
+                                            Padding="9,9"
+                                            Margin="0,7,0,0"
+                                            Background="{DynamicResource HighlightBackgroundBrush}"
+                                            BorderBrush="{DynamicResource AccentColorBrush}"
+                                            BorderThickness="2,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{DynamicResource Loc_TRADE_CONFIDENCE_TITLE}"
+                                                       FontSize="9"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource AccentColorBrush}"/>
+                                            <TextBlock x:Name="SelectedConfidenceText"
+                                                       Margin="0,4,0,0"
+                                                       FontSize="9"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                                        </StackPanel>
                                     </Border>
 
                                     <Border Padding="9,9"

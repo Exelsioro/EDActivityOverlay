@@ -58,6 +58,14 @@ public static class TradeCandidateRetention
             distinct
                 .OrderBy(item => item.WorstDataAge)
                 .ThenByDescending(item => item.ProfitPerTrip)
+                .ToArray(),
+            distinct
+                .OrderByDescending(item =>
+                    TradeRouteConfidenceCalculator.Evaluate(
+                        item,
+                        item.TradableAmount)
+                    .Score)
+                .ThenByDescending(item => item.ProfitPerTrip)
                 .ToArray()
         };
 

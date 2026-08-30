@@ -213,6 +213,10 @@ public partial class TradeWorkspaceControl
                 false;
         }
 
+        TradeRouteConfidence confidence =
+            ConfidenceFor(
+                candidate);
+
         row =
             new TradeRow(
                 candidate,
@@ -223,6 +227,9 @@ public partial class TradeWorkspaceControl
                         "Loc_TRADE_HELD_SELECTION")
                     : Loc.Get(
                         "Loc_TRADE_ROUND_BADGE"),
+                ConfidenceBadge(
+                    confidence),
+                confidence.Level.ToString(),
                 Loc.Format(
                     "Loc_TRADE_ROUND_ROW_COMMODITIES",
                     roundTrip.Outbound.Source.CommodityName.ToUpperInvariant(),
@@ -334,6 +341,9 @@ public partial class TradeWorkspaceControl
             FormatTravelDetail(
                 roundTrip);
 
+        ShowConfidence(
+            roundTrip);
+
         return
             true;
     }
@@ -442,6 +452,7 @@ public partial class TradeWorkspaceControl
     private void UpdateRouteModeUi()
     {
         UpdateCargoSaleSortLabels();
+        UpdateConfidenceSortAvailability();
         ApplyCargoSaleControlAvailability(
             searchCancellation is not null);
 
