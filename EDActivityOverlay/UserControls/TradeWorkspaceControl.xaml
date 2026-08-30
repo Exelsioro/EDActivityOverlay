@@ -143,6 +143,8 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock Text="{DynamicResource Loc_TRADE_WORKSPACE_TITLE}"
@@ -158,12 +160,21 @@
                             MinWidth="96"
                             Height="34"
                             Padding="10,3"
+                            Content="{DynamicResource Loc_TRADE_HISTORY}"
+                            Foreground="{DynamicResource PrimaryTextColorBrush}"
+                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                            BorderBrush="{DynamicResource BorderColorBrush}"
+                            Click="HistoryButton_Click"/>
+                    <Button Grid.Column="3"
+                            MinWidth="96"
+                            Height="34"
+                            Padding="10,3"
                             Content="{DynamicResource Loc_TRADE_COLLAPSE}"
                             Foreground="{DynamicResource PrimaryTextColorBrush}"
                             Background="{DynamicResource SecondaryBackgroundColorBrush}"
                             BorderBrush="{DynamicResource BorderColorBrush}"
                             Click="CollapseButton_Click"/>
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="5"
                             MinWidth="88"
                             Height="34"
                             Padding="10,3"
@@ -807,6 +818,214 @@
                                     Background="{DynamicResource SecondaryBackgroundColorBrush}"
                                     BorderBrush="{DynamicResource AccentColorBrush}"
                                     Click="PinRouteButton_Click"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Grid x:Name="TradeHistoryPanel"
+                      Grid.Row="1"
+                      Grid.RowSpan="4"
+                      Panel.ZIndex="50"
+                      Visibility="Collapsed"
+                      Margin="0,9,0,0"
+                      Background="{DynamicResource PrimaryBackgroundColorBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc_TRADE_HISTORY_TITLE}"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentColorBrush}"/>
+                            <TextBlock x:Name="HistorySummaryMetaText"
+                                       Margin="0,3,0,0"
+                                       FontSize="9"
+                                       Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                MinWidth="130"
+                                Height="30"
+                                Content="{DynamicResource Loc_TRADE_HISTORY_BACK}"
+                                Foreground="{DynamicResource PrimaryTextColorBrush}"
+                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                Click="CloseHistoryButton_Click"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1" Margin="0,10,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Padding="10,7"
+                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_TRADE_HISTORY_SESSION_PROFIT}"
+                                           FontSize="8"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                <TextBlock x:Name="HistorySessionProfitText"
+                                           Margin="0,2,0,0"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource SuccessColorBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                Padding="10,7"
+                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_TRADE_HISTORY_SESSION_TRADES}"
+                                           FontSize="8"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                <TextBlock x:Name="HistorySessionTradesText"
+                                           Margin="0,2,0,0"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="4"
+                                Padding="10,7"
+                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_TRADE_HISTORY_ALL_PROFIT}"
+                                           FontSize="8"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                <TextBlock x:Name="HistoryAllProfitText"
+                                           Margin="0,2,0,0"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource SuccessColorBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="6"
+                                Padding="10,7"
+                                Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc_TRADE_HISTORY_AVG_RATE}"
+                                           FontSize="8"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                <TextBlock x:Name="HistoryAverageRateText"
+                                           Margin="0,2,0,0"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentColorBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Grid.Row="2"
+                            Padding="8"
+                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                            BorderBrush="{DynamicResource BorderColorBrush}"
+                            BorderThickness="1">
+                        <Grid>
+                            <TextBlock x:Name="HistoryEmptyText"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Text="{DynamicResource Loc_TRADE_HISTORY_EMPTY}"
+                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+
+                            <ListBox x:Name="TradeHistoryList"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,0,0,3"/>
+                                        <Setter Property="IsHitTestVisible" Value="False"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="9,7"
+                                                Background="{DynamicResource HighlightBackgroundBrush}"
+                                                BorderBrush="{DynamicResource BorderColorBrush}"
+                                                BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="0.75*"/>
+                                                    <ColumnDefinition Width="1.25*"/>
+                                                    <ColumnDefinition Width="2.2*"/>
+                                                    <ColumnDefinition Width="0.7*"/>
+                                                    <ColumnDefinition Width="1.1*"/>
+                                                    <ColumnDefinition Width="0.9*"/>
+                                                    <ColumnDefinition Width="1.15*"/>
+                                                    <ColumnDefinition Width="0.65*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Text="{Binding Time}"
+                                                           FontSize="9"
+                                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Commodity}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                                                    <TextBlock Text="{Binding Meta}"
+                                                               Margin="0,2,0,0"
+                                                               FontSize="8"
+                                                               Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Margin="8,0"
+                                                           Text="{Binding Route}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                                                <TextBlock Grid.Column="3"
+                                                           HorizontalAlignment="Right"
+                                                           Text="{Binding Cargo}"
+                                                           Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                                                <TextBlock Grid.Column="4"
+                                                           HorizontalAlignment="Right"
+                                                           FontWeight="Bold"
+                                                           Text="{Binding Profit}"
+                                                           Foreground="{DynamicResource SuccessColorBrush}"/>
+                                                <TextBlock Grid.Column="5"
+                                                           HorizontalAlignment="Right"
+                                                           Text="{Binding Duration}"
+                                                           Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                                                <TextBlock Grid.Column="6"
+                                                           HorizontalAlignment="Right"
+                                                           Text="{Binding ProfitPerHour}"
+                                                           Foreground="{DynamicResource AccentColorBrush}"/>
+                                                <TextBlock Grid.Column="7"
+                                                           HorizontalAlignment="Right"
+                                                           Text="{Binding PlanVariance}"
+                                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                         </Grid>
                     </Border>
                 </Grid>

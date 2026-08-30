@@ -1194,6 +1194,16 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_RETRY">RETRY PLAN</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_STOP">STOP</sys:String>
     <sys:String x:Key="Loc_TRADE_FILTERS_CHANGED">FILTERS CHANGED В· current list is from the previous search В· press Search to apply</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY">HISTORY</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_TITLE">TRADE HISTORY</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_BACK">BACK TO SEARCH</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SESSION_PROFIT">SESSION PROFIT</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SESSION_TRADES">SESSION TRADES</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_ALL_PROFIT">ALL-TIME PROFIT</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_AVG_RATE">ALL-TIME ACTUAL CR/H</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_EMPTY">Completed pinned trade routes will appear here.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SUMMARY_META">Sold {0:N0} t · tracked time {1} · best trade {2:N0} CR</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_REROUTES">reroutes {0}</sys:String>
 </ResourceDictionary>
 
 

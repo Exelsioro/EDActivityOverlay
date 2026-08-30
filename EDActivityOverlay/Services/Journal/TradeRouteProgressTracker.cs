@@ -65,6 +65,14 @@ public sealed class TradeRouteProgressTracker : IDisposable
     private long completedPurchaseCost;
     private long completedSaleRevenue;
     private long completedRealizedProfit;
+    private readonly List<TradeHistoryLegRecord> completedHistoryLegs =
+        new();
+    private DateTimeOffset routeStartedUtc;
+    private DateTimeOffset legStartedUtc;
+    private DateTimeOffset? completedUtc;
+    private long initialPlannedProfit;
+    private int rerouteCount;
+    private bool historyRecorded;
     private bool completed;
     private bool disposed;
 
@@ -85,6 +93,15 @@ public sealed class TradeRouteProgressTracker : IDisposable
         this.journal =
             journal
             ?? JournalMonitorService.Instance;
+
+        routeStartedUtc =
+            DateTimeOffset.UtcNow;
+
+        legStartedUtc =
+            routeStartedUtc;
+
+        initialPlannedProfit =
+            route.TotalProfitPerTrip;
 
         legs =
             BuildLegs(
@@ -140,6 +157,26 @@ public sealed class TradeRouteProgressTracker : IDisposable
             completedRealizedProfit =
                 0;
 
+            completedHistoryLegs.Clear();
+
+            routeStartedUtc =
+                DateTimeOffset.UtcNow;
+
+            legStartedUtc =
+                routeStartedUtc;
+
+            completedUtc =
+                null;
+
+            initialPlannedProfit =
+                updatedRoute.TotalProfitPerTrip;
+
+            rerouteCount =
+                0;
+
+            historyRecorded =
+                false;
+
             completed =
                 false;
 
@@ -174,6 +211,11 @@ public sealed class TradeRouteProgressTracker : IDisposable
             throw new InvalidOperationException(
                 "Cannot preserve trade execution across a reroute with a different commodity.");
         }
+
+        rerouteCount =
+            checked(
+                rerouteCount
+                + 1);
 
         route =
             updatedRoute;
@@ -285,16 +327,29 @@ public sealed class TradeRouteProgressTracker : IDisposable
 
             if (saleComplete)
             {
+                DateTimeOffset completedAt =
+                    JournalTimestamp(
+                        e.Data);
+
+                FinalizeCurrentHistoryLeg(
+                    completedAt);
+
                 if (currentLegIndex + 1
                     < legs.Length)
                 {
                     AdvanceToNextLeg(
                         journal.Current);
+
+                    legStartedUtc =
+                        completedAt;
                 }
                 else
                 {
                     completed =
                         true;
+
+                    completedUtc =
+                        completedAt;
                 }
             }
         }
@@ -402,6 +457,8 @@ public sealed class TradeRouteProgressTracker : IDisposable
                 };
 
             RaiseChanged();
+
+            RecordHistoryIfNeeded();
 
             return;
         }
@@ -615,6 +672,127 @@ public sealed class TradeRouteProgressTracker : IDisposable
             };
 
         RaiseChanged();
+    }
+
+    private void FinalizeCurrentHistoryLeg(
+        DateTimeOffset completedAt)
+    {
+        if (currentLegIndex < 0
+            || currentLegIndex >= legs.Length
+            || completedHistoryLegs.Any(item =>
+                item.LegNumber
+                == currentLegIndex + 1))
+        {
+            return;
+        }
+
+        RouteLeg leg =
+            legs[currentLegIndex];
+
+        completedHistoryLegs.Add(
+            new TradeHistoryLegRecord
+            {
+                LegNumber =
+                    currentLegIndex + 1,
+                FromMarketId =
+                    leg.FromMarketId,
+                ToMarketId =
+                    leg.ToMarketId,
+                FromSystem =
+                    leg.FromSystem,
+                FromStation =
+                    leg.FromStation,
+                ToSystem =
+                    leg.ToSystem,
+                ToStation =
+                    leg.ToStation,
+                CommodityId =
+                    leg.CommodityId,
+                Commodity =
+                    leg.CommodityDisplayName,
+                PlannedQuantity =
+                    leg.PlannedQuantity,
+                PurchasedQuantity =
+                    execution.PurchasedQuantity,
+                SoldQuantity =
+                    execution.SoldQuantity,
+                PlannedBuyPrice =
+                    leg.BuyPrice,
+                PlannedSellPrice =
+                    leg.SellPrice,
+                AverageBuyPrice =
+                    execution.AverageBuyPrice,
+                AverageSellPrice =
+                    execution.AverageSellPrice,
+                PurchaseCost =
+                    execution.PurchaseCost,
+                SaleRevenue =
+                    execution.SaleRevenue,
+                ActualProfit =
+                    execution.RealizedProfit,
+                StartedAtUtc =
+                    legStartedUtc,
+                CompletedAtUtc =
+                    completedAt
+            });
+    }
+
+    private void RecordHistoryIfNeeded()
+    {
+        if (historyRecorded
+            || !completed)
+        {
+            return;
+        }
+
+        historyRecorded =
+            true;
+
+        DateTimeOffset finished =
+            completedUtc
+            ?? DateTimeOffset.UtcNow;
+
+        TradeHistoryService.Instance.Record(
+            new TradeHistoryRecord
+            {
+                RouteKind =
+                    route.IsRoundTrip
+                        ? "roundtrip"
+                        : "oneway",
+                StartedAtUtc =
+                    routeStartedUtc,
+                CompletedAtUtc =
+                    finished,
+                RerouteCount =
+                    rerouteCount,
+                InitialPlannedProfit =
+                    initialPlannedProfit,
+                FinalPlannedProfit =
+                    route.TotalProfitPerTrip,
+                ActualProfit =
+                    TotalRealizedProfit(),
+                PurchaseCost =
+                    TotalPurchaseCost(),
+                SaleRevenue =
+                    TotalSaleRevenue(),
+                Legs =
+                    completedHistoryLegs.ToArray()
+            });
+    }
+
+    private static DateTimeOffset JournalTimestamp(
+        JsonElement data)
+    {
+        string timestamp =
+            GetString(
+                data,
+                "timestamp");
+
+        return DateTimeOffset.TryParse(
+            timestamp,
+            out DateTimeOffset parsed)
+                ? parsed
+                : DateTimeOffset.UtcNow;
     }
 
     private long PlannedFutureLegProfit()

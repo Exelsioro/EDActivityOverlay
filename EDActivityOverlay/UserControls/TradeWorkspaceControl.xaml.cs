@@ -67,6 +67,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
     public TradeWorkspaceControl()
     {
         InitializeComponent();
+        InitializeTradeHistory();
 
         applyingJournal = true;
         try
@@ -230,6 +231,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         UpdateAdvancedFiltersUi();
         UpdateRouteModeUi();
+        RefreshTradeHistory();
         RefreshFooter();
         RefreshCompactPresentation();
     }
@@ -245,6 +247,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         CaptureSession();
         CaptureResultSnapshot();
+        DisposeTradeHistory();
         DisposeContinuousPlanning();
         DetachExecutionTracker();
 

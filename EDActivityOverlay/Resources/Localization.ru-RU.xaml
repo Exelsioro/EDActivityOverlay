@@ -1194,6 +1194,16 @@
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_RETRY">ПОВТОРИТЬ ПЛАН</sys:String>
     <sys:String x:Key="Loc_TRADE_CONTINUOUS_STOP">СТОП</sys:String>
     <sys:String x:Key="Loc_TRADE_FILTERS_CHANGED">Р¤РР›Р¬РўР Р« РР—РњР•РќР•РќР« В· СЃРїРёСЃРѕРє РѕС‚ РїСЂРѕС€Р»РѕРіРѕ РїРѕРёСЃРєР° В· РЅР°Р¶РјРё РџРѕРёСЃРє, С‡С‚РѕР±С‹ РїСЂРёРјРµРЅРёС‚СЊ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY">ИСТОРИЯ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_TITLE">ИСТОРИЯ ТОРГОВЛИ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_BACK">К ПОИСКУ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SESSION_PROFIT">ПРИБЫЛЬ СЕССИИ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SESSION_TRADES">СДЕЛОК В СЕССИИ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_ALL_PROFIT">ПРИБЫЛЬ ЗА ВСЁ ВРЕМЯ</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_AVG_RATE">ФАКТИЧЕСКИЙ CR/Ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_EMPTY">Завершённые закреплённые торговые маршруты появятся здесь.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_SUMMARY_META">Продано {0:N0} т · учтённое время {1} · лучшая сделка {2:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_HISTORY_REROUTES">перестроений {0}</sys:String>
 </ResourceDictionary>
 
 
