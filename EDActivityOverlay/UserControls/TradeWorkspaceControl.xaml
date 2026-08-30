@@ -294,6 +294,7 @@
                                       SelectionChanged="RouteModeComboBox_SelectionChanged">
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_ONE_WAY}" Tag="oneway"/>
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_ROUND_TRIP}" Tag="roundtrip"/>
+                                <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_CONTINUOUS}" Tag="continuous"/>
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_SELL_CARGO}" Tag="cargo"/>
                             </ComboBox>
                         </StackPanel>

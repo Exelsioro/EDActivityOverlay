@@ -44,6 +44,9 @@ public partial class TradeWorkspaceControl
 
         ResetCargoSaleResults();
 
+        AdoptPinnedContinuation(
+            candidate);
+
         AttachExecutionTracker(
             tracker);
 
@@ -73,6 +76,8 @@ public partial class TradeWorkspaceControl
             candidate.Outbound;
 
         ResetCargoSaleResults();
+
+        DisableContinuousForRoundTrip();
 
         AttachExecutionTracker(
             tracker);
@@ -173,6 +178,7 @@ public partial class TradeWorkspaceControl
     }
     public void ClearActiveTradeRouteFromHost()
     {
+        DisableContinuousForRoundTrip();
         DetachExecutionTracker();
 
         activeTradeSession =
@@ -209,6 +215,10 @@ public partial class TradeWorkspaceControl
         activeTradeSession.Update(
             state);
 
+        UpdateContinuousPlanningForActiveTrade(
+            activeTradeSession,
+            executionProgress);
+
         RefreshActiveTradeCompact();
     }
 
@@ -227,6 +237,14 @@ public partial class TradeWorkspaceControl
 
         TradeRouteProgress? execution =
             executionProgress;
+
+        if (TryRenderContinuousCompletion(
+                session,
+                execution))
+        {
+            UpdateCompactModeButtons();
+            return;
+        }
 
         string legBadge =
             session.IsReturnLeg
@@ -272,6 +290,8 @@ public partial class TradeWorkspaceControl
             BuildActiveFooter(
                 session,
                 execution);
+
+        AppendContinuousPreviewToActiveHud();
 
         UpdateCompactModeButtons();
     }
@@ -494,6 +514,14 @@ public partial class TradeWorkspaceControl
             return;
         }
 
+        if (activeContinuousRoute
+            && IsActiveTradeCompletedForContinuation())
+        {
+            await HandleCompletedContinuousActionAsync();
+
+            return;
+        }
+
         if (activeTradeSession.ShouldOfferReroute)
         {
             await RerouteActiveTradeAsync();
@@ -509,6 +537,13 @@ public partial class TradeWorkspaceControl
         object sender,
         RoutedEventArgs e)
     {
+        if (activeContinuousRoute
+            && IsActiveTradeCompletedForContinuation())
+        {
+            ShowContinuationOptionsFull();
+            return;
+        }
+
         if (activeTradeSession is not null
             && activeTradeSession.ShouldOfferReroute)
         {
@@ -527,6 +562,13 @@ public partial class TradeWorkspaceControl
         object sender,
         RoutedEventArgs e)
     {
+        if (activeContinuousRoute
+            && IsActiveTradeCompletedForContinuation())
+        {
+            StopContinuousTrade();
+            return;
+        }
+
         if (activeTradeSession is not null
             || !HasCurrentCargo(
                 currentJournal))
@@ -595,6 +637,17 @@ public partial class TradeWorkspaceControl
                 rerouted,
                 currentJournal);
 
+            if (activeContinuousRoute)
+            {
+                ResetActiveContinuationPreview(
+                    keepPlannedLookahead:
+                        false);
+
+                UpdateContinuousPlanningForActiveTrade(
+                    activeTradeSession,
+                    executionProgress);
+            }
+
             selectedCandidate =
                 rerouted;
 
@@ -625,6 +678,7 @@ public partial class TradeWorkspaceControl
     private void ClearActiveTradeRoute(
         bool notifyHost)
     {
+        DisableContinuousForRoundTrip();
         DetachExecutionTracker();
 
         activeTradeSession =
@@ -657,6 +711,14 @@ public partial class TradeWorkspaceControl
             && !rerouteRunning
             && HasCurrentCargo(
                 currentJournal);
+
+        if (active
+            && activeContinuousRoute
+            && IsActiveTradeCompletedForContinuation())
+        {
+            UpdateContinuousCompletionButtons();
+            return;
+        }
 
         if (!active)
         {

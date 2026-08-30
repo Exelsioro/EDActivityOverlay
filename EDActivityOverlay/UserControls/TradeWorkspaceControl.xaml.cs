@@ -91,8 +91,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             if (!applyingJournal)
             {
                 systemOverridden = true;
-                CaptureSession();
-                RefreshCompactPresentation();
+                MarkSearchInputsDirty();
             }
         };
 
@@ -101,8 +100,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             if (!applyingJournal)
             {
                 cargoOverridden = true;
-                CaptureSession();
-                RefreshCompactPresentation();
+                MarkSearchInputsDirty();
             }
         };
 
@@ -131,6 +129,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         UpdateAdvancedFiltersUi();
         UpdateRouteModeUi();
         UpdatePaginationUi();
+        RestoreResultSnapshot();
         RefreshFooter();
         RefreshCompactPresentation();
     }
@@ -244,6 +243,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         disposed = true;
 
+        CaptureSession();
+        CaptureResultSnapshot();
+        DisposeContinuousPlanning();
         DetachExecutionTracker();
 
         searchCancellation?.Cancel();
@@ -390,9 +392,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             return;
         }
 
-        CaptureSession();
         UpdateAdvancedFiltersUi();
-        RefreshCompactPresentation();
+        MarkSearchInputsDirty();
     }
 
     private void TradeFilter_CheckChanged(
@@ -404,8 +405,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             return;
         }
 
-        CaptureSession();
-        RefreshCompactPresentation();
+        MarkSearchInputsDirty();
     }
 
     private void SyncJournalButton_Click(
@@ -495,6 +495,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         roundTripByOutboundKey.Clear();
         ResetCargoSaleResults();
+        ResetContinuousResults();
+        ClearResultSnapshot();
 
         currentPage =
             0;
@@ -724,7 +726,10 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         }
 
         RefreshCurrentPage(
-            selectFirstWhenEmpty: selectedCandidate is null);
+            selectFirstWhenEmpty: false);
+
+        CaptureResultSnapshot(
+            freshResults: true);
 
         RefreshCompactPresentation();
     }
@@ -826,8 +831,10 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         }
 
         List<TradeRouteCandidate> sorted =
-            SortedCandidates()
-                .ToList();
+            (IsContinuousMode
+                ? SortedContinuousCandidates()
+                : SortedCandidates())
+            .ToList();
 
         int pageCount =
             Math.Max(
@@ -925,6 +932,14 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             ShowSelectedCandidate(
                 selectedCandidate);
         }
+        else
+        {
+            selectedCandidate =
+                null;
+
+            ShowSelectedCandidate(
+                null);
+        }
 
         int firstRank =
             sorted.Count == 0
@@ -989,6 +1004,15 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         TradeRouteCandidate candidate,
         bool held)
     {
+        if (TryBuildContinuousRow(
+                candidate,
+                held,
+                out TradeRow continuousRow))
+        {
+            return
+                continuousRow;
+        }
+
         if (TryBuildRoundTripRow(
                 candidate,
                 held,
@@ -1051,6 +1075,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             ShowSelectedCargoSaleCandidate(
                 cargoRow.Candidate);
 
+            CaptureResultSnapshot();
             return;
         }
 
@@ -1064,6 +1089,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
             ShowSelectedCandidate(
                 selectedCandidate);
+
+            CaptureResultSnapshot();
         }
     }
     private void PreviousPageButton_Click(
@@ -1082,7 +1109,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             null;
 
         RefreshCurrentPage(
-            selectFirstWhenEmpty: true);
+            selectFirstWhenEmpty: false);
+
+        CaptureResultSnapshot();
     }
     private void NextPageButton_Click(
         object sender,
@@ -1107,7 +1136,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             null;
 
         RefreshCurrentPage(
-            selectFirstWhenEmpty: true);
+            selectFirstWhenEmpty: false);
+
+        CaptureResultSnapshot();
     }
     private void SortComboBox_SelectionChanged(
         object sender,
@@ -1126,10 +1157,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 0;
 
             RefreshCurrentPage(
-                selectFirstWhenEmpty:
-                    IsCargoSaleMode
-                        ? selectedCargoSaleCandidate is null
-                        : selectedCandidate is null);
+                selectFirstWhenEmpty: false);
+
+            CaptureResultSnapshot();
         }
     }
     private void ShowSelectedCandidate(
@@ -1167,6 +1197,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
             ClearConfidence();
 
+            return;
+        }
+
+        if (TryShowContinuousCandidate(
+                candidate))
+        {
             return;
         }
 
@@ -1284,6 +1320,13 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         out TradeSearchConstraints constraints,
         out string error)
     {
+        if (IsContinuousMode)
+        {
+            return TryBuildContinuousConstraints(
+                out constraints,
+                out error);
+        }
+
         if (IsCargoSaleMode)
         {
             return TryBuildCargoSaleConstraints(
@@ -1454,6 +1497,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         ApplyCargoSaleControlAvailability(
             running);
+        ApplyContinuousControlAvailability(
+            running);
 
         SearchButton.SetResourceReference(
             ContentControl.ContentProperty,
@@ -1613,6 +1658,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
     private void RefreshFooter()
     {
+        if (IsContinuousMode)
+        {
+            RefreshContinuousFooter();
+            return;
+        }
+
         if (IsCargoSaleMode)
         {
             RefreshCargoSaleFooter();
@@ -1652,6 +1703,13 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         if (IsCargoSaleMode)
         {
             RefreshCargoSaleCompact(
+                preserveStatus);
+            return;
+        }
+
+        if (IsContinuousMode)
+        {
+            RefreshContinuousCompact(
                 preserveStatus);
             return;
         }
