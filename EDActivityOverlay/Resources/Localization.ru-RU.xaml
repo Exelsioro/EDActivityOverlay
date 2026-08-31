@@ -1289,6 +1289,9 @@
     <sys:String x:Key="Loc_Notification_Mining_Field_Declining">Качество последних проспектов упало. Стоит сместиться по полю.</sys:String>
     <sys:String x:Key="Loc_Notification_Mining_Near_Full_Format">Трюм почти заполнен: свободно {0:N0} т.</sys:String>
     <sys:String x:Key="Loc_Notification_Mining_Collectors_TopUp_Format">Сборщики ~{0}/{1}. Стоит добавить ~{2}.</sys:String>
+    <sys:String x:Key="Loc_MINING_ENG_SESSION_FORMAT">ИНЖЕНЕРИЯ +{0:N0} · {1}</sys:String>
+    <sys:String x:Key="Loc_MINING_ENG_TARGET_FORMAT">{0} +{1:N0} · {2:N0}/{3:N0} · осталось {4:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_ENG_GAIN_FORMAT">{0} +{1:N0}</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">т/ч считается по полному времени mining-сессии и появляется после 5 минут + 5 очищенных тонн. ETA приблизительный: расход лимпетов освобождает место в трюме.</sys:String>
 </ResourceDictionary>
 

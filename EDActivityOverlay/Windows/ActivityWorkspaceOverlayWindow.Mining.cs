@@ -10,7 +10,7 @@ namespace EDActivityOverlay.Windows;
 public partial class ActivityWorkspaceOverlayWindow
 {
     private const double MiningCompactWidth = 420;
-    private const double MiningCompactHeight = 405;
+    private const double MiningCompactHeight = 430;
     private const double MiningWorkspaceMinWidth = 940;
     private const double MiningWorkspaceMinHeight = 600;
 

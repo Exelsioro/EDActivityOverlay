@@ -23,6 +23,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         currentJournal = JournalMonitorService.Instance.Current;
         currentSession = MiningSessionService.Instance.Current;
         MiningSessionService.Instance.Changed += OnMiningSessionChanged;
+        MiningEngineeringMaterialTrackerService.Instance.Changed += OnMiningEngineeringMaterialsChanged;
         LoadTargetInputs();
         RefreshPresentation();
     }
@@ -63,6 +64,20 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             currentSession = e.Current;
             RefreshPresentation();
         }));
+    }
+
+    private void OnMiningEngineeringMaterialsChanged(
+        object? sender,
+        MiningEngineeringMaterialsChangedEventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            RefreshPresentation();
+            return;
+        }
+
+        Dispatcher.BeginInvoke(
+            new Action(RefreshPresentation));
     }
 
     private void RefreshPresentation()
@@ -155,6 +170,15 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             : Loc.Format("Loc_MINING_CARGO_UNKNOWN_FORMAT", limpets);
 
         IntelligenceText.Text = BuildIntelligenceText(intelligence);
+
+        string engineeringMaterials = BuildEngineeringMaterialsText(
+            MiningEngineeringMaterialTrackerService.Instance.Current);
+
+        EngineeringMaterialsText.Text = engineeringMaterials;
+        EngineeringMaterialsText.Visibility =
+            string.IsNullOrWhiteSpace(engineeringMaterials)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
 
         if (!currentSession.IsActive)
         {
@@ -357,5 +381,6 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
         disposed = true;
         MiningSessionService.Instance.Changed -= OnMiningSessionChanged;
+        MiningEngineeringMaterialTrackerService.Instance.Changed -= OnMiningEngineeringMaterialsChanged;
     }
 }
