@@ -13,6 +13,8 @@ public sealed class MiningWorkspaceV1bTests
             "EDActivityOverlay", "UserControls", "MiningWorkspaceControl.xaml");
         string code = ReadProjectFile(
             "EDActivityOverlay", "UserControls", "MiningWorkspaceControl.xaml.cs");
+        string loadoutCode = ReadProjectFile(
+            "EDActivityOverlay", "UserControls", "MiningWorkspaceControl.Loadout.cs");
 
         Assert.Contains("TargetCommodityTextBox", xaml, StringComparison.Ordinal);
         Assert.Contains("MinimumProportionTextBox", xaml, StringComparison.Ordinal);
@@ -21,7 +23,8 @@ public sealed class MiningWorkspaceV1bTests
         Assert.Contains("MiningSessionService.Instance.Changed", code, StringComparison.Ordinal);
         Assert.Contains("MiningProspectorAdvisor.Evaluate", code, StringComparison.Ordinal);
         Assert.Contains("MiningTargetAnalytics.Calculate", code, StringComparison.Ordinal);
-        Assert.Contains("Loc_MINING_METHOD_LIMITATION", code, StringComparison.Ordinal);
+        Assert.Contains("BuildLoadoutFooter()", code, StringComparison.Ordinal);
+        Assert.Contains("Loc_MINING_METHOD_LIMITATION", loadoutCode, StringComparison.Ordinal);
     }
 
     [Fact]

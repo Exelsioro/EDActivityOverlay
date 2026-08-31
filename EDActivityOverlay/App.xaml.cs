@@ -54,6 +54,7 @@ namespace EDActivityOverlay
             ExplorationLogService.Instance.Start();
             ExplorationRouteService.Instance.Start();
             ExplorationPoiService.Instance.Start();
+            MiningLoadoutService.Instance.Start();
             MiningSessionService.Instance.Start();
             X52IntegrationService.Instance.Start();
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
@@ -217,6 +218,7 @@ namespace EDActivityOverlay
                 ExplorationRouteService.Instance.Dispose();
                 ExplorationPoiService.Instance.Dispose();
                 MiningSessionService.Instance.Dispose();
+                MiningLoadoutService.Instance.Dispose();
                 X52IntegrationService.Instance.Dispose();
                 JournalMonitorService.Instance.Dispose();
                 LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;

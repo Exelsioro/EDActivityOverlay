@@ -185,7 +185,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
                     stats.BestProportion);
         }
 
-        FooterText.Text = Loc.Get("Loc_MINING_METHOD_LIMITATION");
+        FooterText.Text = BuildLoadoutFooter();
     }
 
     private static string BuildProspectHeadline(
