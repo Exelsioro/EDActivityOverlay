@@ -29,6 +29,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
     public event Action? CloseRequested;
     public event Action? DragRequested;
+    public event Action? FullRequested;
 
     public void SetChromeStyle(string? style)
     {
@@ -321,6 +322,9 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) =>
         CloseRequested?.Invoke();
+
+    private void FullAnalyticsButton_Click(object sender, RoutedEventArgs e) =>
+        FullRequested?.Invoke();
 
     private void CompactMiningDragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {

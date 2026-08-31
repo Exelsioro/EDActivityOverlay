@@ -2565,7 +2565,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         double targetWidth = rect.Right - rect.Left;
         double targetHeight = rect.Bottom - rect.Top;
         if (fullExplorationVisible
-            || IsTradeFullWorkspace)
+            || IsTradeFullWorkspace
+            || IsMiningFullWorkspace)
         {
             Width = Math.Min(1180, Math.Max(MinWidth, targetWidth - 64));
             Height = Math.Min(760, Math.Max(MinHeight, targetHeight - 64));

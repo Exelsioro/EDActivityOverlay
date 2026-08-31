@@ -1239,6 +1239,31 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_TARGET_FORMAT">{0} ≥ {1:0.#}%</sys:String>
     <sys:String x:Key="Loc_MINING_TARGET_STATS_FORMAT">hit {0:0}% · accepted {1:0}% · avg {2:0.#}% · median {3:0.#}% · best {4:0.#}%</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_LIMITATION">Journal reliably exposes laser composition and motherlodes; surface/subsurface deposits are not guessed.</sys:String>
+    <sys:String x:Key="Loc_MINING_MORE">ANALYTICS</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_TITLE">MINING ANALYTICS</sys:String>
+    <sys:String x:Key="Loc_MINING_BACK">BACK</sys:String>
+    <sys:String x:Key="Loc_MINING_PRODUCTION">PRODUCTION</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_QUALITY">PROSPECT QUALITY</sys:String>
+    <sys:String x:Key="Loc_MINING_CARGO_EFFICIENCY">CARGO / EFFICIENCY</sys:String>
+    <sys:String x:Key="Loc_MINING_RATE_VALUE">{0:0.0} t/h</sys:String>
+    <sys:String x:Key="Loc_MINING_RATE_WARMING">WARMING UP</sys:String>
+    <sys:String x:Key="Loc_MINING_RATE_META">{0:N0} t refined · {1} elapsed · {2:0.00} refinements/min</sys:String>
+    <sys:String x:Key="Loc_MINING_QUALITY_VALUE">hit {0:0}% · accepted {1:0}%</sys:String>
+    <sys:String x:Key="Loc_MINING_QUALITY_META">avg {0:0.#}% · median {1:0.#}% · p75 {2:0.#}% · best {3:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_CARGO">{0:N0}/{1:N0} t · {2:0}% full</sys:String>
+    <sys:String x:Key="Loc_MINING_EFFICIENCY_META">prospects/t {0:0.00} · prospectors/t {1:0.00} · cores/h {2:0.00} · ETA full {3}</sys:String>
+    <sys:String x:Key="Loc_MINING_YIELD_DISTRIBUTION">TARGET YIELD DISTRIBUTION</sys:String>
+    <sys:String x:Key="Loc_MINING_REFINED_COMPOSITION">REFINED THIS SESSION</sys:String>
+    <sys:String x:Key="Loc_MINING_TONS_VALUE">{0:N0} t</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_TITLE">SESSION HISTORY</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_EMPTY">Completed mining sessions will appear here.</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_SUMMARY">{0} sessions · {1:N0} t · {2} tracked · avg {3:0.0} t/h · best {4:0.0} t/h · {5}</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_WHEN">WHEN</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_LOCATION">LOCATION</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_TONS">TONS</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_RATE">RATE</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_PROSPECTS">PROSPECTS</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">t/h uses wall-clock mining-session time and appears after 5 minutes + 5 refined tons. ETA is an estimate and changes as limpets free cargo space.</sys:String>
 </ResourceDictionary>
 
 

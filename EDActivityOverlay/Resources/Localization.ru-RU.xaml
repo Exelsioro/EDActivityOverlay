@@ -1239,6 +1239,31 @@
     <sys:String x:Key="Loc_MINING_TARGET_FORMAT">{0} ≥ {1:0.#}%</sys:String>
     <sys:String x:Key="Loc_MINING_TARGET_STATS_FORMAT">найдено {0:0}% · принято {1:0}% · ср. {2:0.#}% · медиана {3:0.#}% · макс. {4:0.#}%</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_LIMITATION">Журнал надёжно даёт лазерный состав и материнскую жилу; поверхностные/подповерхностные залежи не угадываем.</sys:String>
+    <sys:String x:Key="Loc_MINING_MORE">АНАЛИТИКА</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_TITLE">АНАЛИТИКА МАЙНИНГА</sys:String>
+    <sys:String x:Key="Loc_MINING_BACK">НАЗАД</sys:String>
+    <sys:String x:Key="Loc_MINING_PRODUCTION">ДОБЫЧА</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_QUALITY">КАЧЕСТВО ПРОСПЕКТОВ</sys:String>
+    <sys:String x:Key="Loc_MINING_CARGO_EFFICIENCY">ТРЮМ / ЭФФЕКТИВНОСТЬ</sys:String>
+    <sys:String x:Key="Loc_MINING_RATE_VALUE">{0:0.0} т/ч</sys:String>
+    <sys:String x:Key="Loc_MINING_RATE_WARMING">СОБИРАЮ ВЫБОРКУ</sys:String>
+    <sys:String x:Key="Loc_MINING_RATE_META">очищено {0:N0} т · прошло {1} · {2:0.00} т/мин</sys:String>
+    <sys:String x:Key="Loc_MINING_QUALITY_VALUE">найдено {0:0}% · принято {1:0}%</sys:String>
+    <sys:String x:Key="Loc_MINING_QUALITY_META">ср. {0:0.#}% · медиана {1:0.#}% · p75 {2:0.#}% · макс. {3:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_CARGO">{0:N0}/{1:N0} т · заполнено {2:0}%</sys:String>
+    <sys:String x:Key="Loc_MINING_EFFICIENCY_META">проспектов/т {0:0.00} · проспекторов/т {1:0.00} · ядер/ч {2:0.00} · ETA до полного {3}</sys:String>
+    <sys:String x:Key="Loc_MINING_YIELD_DISTRIBUTION">РАСПРЕДЕЛЕНИЕ СОДЕРЖАНИЯ ЦЕЛИ</sys:String>
+    <sys:String x:Key="Loc_MINING_REFINED_COMPOSITION">ОЧИЩЕНО ЗА СЕССИЮ</sys:String>
+    <sys:String x:Key="Loc_MINING_TONS_VALUE">{0:N0} т</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_TITLE">ИСТОРИЯ СЕССИЙ</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_EMPTY">Завершённые сессии майнинга появятся здесь.</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_SUMMARY">сессий {0} · {1:N0} т · {2} учтено · ср. {3:0.0} т/ч · макс. {4:0.0} т/ч · {5}</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_WHEN">КОГДА</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_LOCATION">МЕСТО</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_TONS">ТОННЫ</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_RATE">ТЕМП</sys:String>
+    <sys:String x:Key="Loc_MINING_HISTORY_PROSPECTS">ПРОСПЕКТЫ</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">т/ч считается по полному времени mining-сессии и появляется после 5 минут + 5 очищенных тонн. ETA приблизительный: расход лимпетов освобождает место в трюме.</sys:String>
 </ResourceDictionary>
 
 

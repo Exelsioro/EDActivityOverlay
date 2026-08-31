@@ -165,12 +165,28 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock x:Name="FooterText"
-                       Grid.Row="4"
-                       Margin="0,7,0,0"
-                       FontSize="8"
-                       TextWrapping="Wrap"
-                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+            <Grid Grid.Row="4" Margin="0,7,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="FooterText"
+                           VerticalAlignment="Center"
+                           Margin="0,0,8,0"
+                           FontSize="8"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                <Button x:Name="FullAnalyticsButton"
+                        Grid.Column="1"
+                        MinWidth="74"
+                        Height="25"
+                        Padding="8,2"
+                        Content="{DynamicResource Loc_MINING_MORE}"
+                        Foreground="{DynamicResource PrimaryTextColorBrush}"
+                        Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                        BorderBrush="{DynamicResource BorderColorBrush}"
+                        Click="FullAnalyticsButton_Click"/>
+            </Grid>
         </Grid>
     </Border>
 </UserControl>
