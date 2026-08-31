@@ -597,7 +597,12 @@
 
                                 <CheckBox x:Name="EnableX52LedCheckBox" Content="{DynamicResource Loc_Control_X52_lighting_from_game_state}" Margin="14,0,0,9" />
 
-                                <CheckBox x:Name="EnableX52ControlsCheckBox" Content="{DynamicResource Loc_Use_X52_MFD_wheel_for_activity_widgets}" Margin="14,0,0,14" />
+                                <CheckBox x:Name="EnableX52ControlsCheckBox" Content="{DynamicResource Loc_Use_X52_MFD_wheel_for_activity_widgets}" Margin="14,0,0,9" />
+
+                                <CheckBox x:Name="EnableExperimentalX52MiningCopilotCheckBox"
+                                          Content="{DynamicResource Loc_X52_MINING_COPILOT_EXPERIMENTAL}"
+                                          Foreground="{DynamicResource AccentColorBrush}"
+                                          Margin="14,0,0,14" />
 
                                 <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" />
 

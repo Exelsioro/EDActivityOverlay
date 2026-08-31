@@ -482,6 +482,19 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"X52 settings updated: enabled={enabled}, mfd={mfd}, leds={leds}, controls={mfdControls}");
         }
 
+        public void SetExperimentalX52MiningCopilot(bool enabled)
+        {
+            if (_settings.EnableExperimentalX52MiningCopilot == enabled)
+            {
+                return;
+            }
+
+            _settings.EnableExperimentalX52MiningCopilot = enabled;
+            SaveSettings();
+            Logger.Logger.Info(
+                $"Experimental X52 Mining Copilot updated: enabled={enabled}");
+        }
+
         public void SetLanguage(string language)
         {
             string normalized = LocalizationService.Normalize(language);
@@ -700,6 +713,9 @@ namespace EDActivityOverlay.Services
 
         /// <summary>Uses the MFD wheel to switch and toggle activity widgets.</summary>
         public bool EnableX52MfdControls { get; set; } = true;
+
+        /// <summary>Shows Mining-specific MFD and LED copilot cues. Experimental and opt-in.</summary>
+        public bool EnableExperimentalX52MiningCopilot { get; set; }
     }
 
     /// <summary>

@@ -923,6 +923,8 @@ namespace EDActivityOverlay.Windows
             EnableX52MfdCheckBox.IsChecked = settings.EnableX52Mfd;
             EnableX52LedCheckBox.IsChecked = settings.EnableX52LedState;
             EnableX52ControlsCheckBox.IsChecked = settings.EnableX52MfdControls;
+            EnableExperimentalX52MiningCopilotCheckBox.IsChecked =
+                settings.EnableExperimentalX52MiningCopilot;
             RefreshX52Status();
         }
 
@@ -933,6 +935,10 @@ namespace EDActivityOverlay.Windows
                 EnableX52MfdCheckBox.IsChecked == true,
                 EnableX52LedCheckBox.IsChecked == true,
                 EnableX52ControlsCheckBox.IsChecked == true);
+
+            SettingsService.Instance.SetExperimentalX52MiningCopilot(
+                EnableExperimentalX52MiningCopilotCheckBox.IsChecked == true);
+
             RefreshX52Status();
         }
 
