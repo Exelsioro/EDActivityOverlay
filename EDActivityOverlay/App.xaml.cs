@@ -6,6 +6,7 @@ using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Engineering;
 using EDActivityOverlay.Services.Exploration;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Services.Mining;
 using EDActivityOverlay.Services.Notifications;
 using EDActivityOverlay.Services.Hardware;
 using System.Runtime.Versioning;
@@ -53,6 +54,7 @@ namespace EDActivityOverlay
             ExplorationLogService.Instance.Start();
             ExplorationRouteService.Instance.Start();
             ExplorationPoiService.Instance.Start();
+            MiningSessionService.Instance.Start();
             X52IntegrationService.Instance.Start();
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
             if (settings.EnableJournalIntegration)
@@ -214,6 +216,7 @@ namespace EDActivityOverlay
                 ExplorationLogService.Instance.Dispose();
                 ExplorationRouteService.Instance.Dispose();
                 ExplorationPoiService.Instance.Dispose();
+                MiningSessionService.Instance.Dispose();
                 X52IntegrationService.Instance.Dispose();
                 JournalMonitorService.Instance.Dispose();
                 LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;

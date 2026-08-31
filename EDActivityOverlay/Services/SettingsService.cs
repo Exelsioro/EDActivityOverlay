@@ -313,6 +313,27 @@ namespace EDActivityOverlay.Services
                 $"Trade history directory updated: customDirectory={!string.IsNullOrWhiteSpace(directory)}");
         }
 
+        public void SetMiningCopilotSettings(string targetCommodity, double minimumProportion)
+        {
+            targetCommodity = targetCommodity?.Trim() ?? string.Empty;
+            minimumProportion = Math.Clamp(minimumProportion, 0, 100);
+
+            if (string.Equals(
+                    _settings.MiningTargetCommodity,
+                    targetCommodity,
+                    StringComparison.OrdinalIgnoreCase)
+                && Math.Abs(_settings.MiningMinimumProportion - minimumProportion) < 0.0001)
+            {
+                return;
+            }
+
+            _settings.MiningTargetCommodity = targetCommodity;
+            _settings.MiningMinimumProportion = minimumProportion;
+            SaveSettings();
+            Logger.Logger.Info(
+                $"Mining copilot target updated: target={targetCommodity}, minimum={minimumProportion:0.#}%");
+        }
+
         public void SetJournalSettings(bool enabled, string directory)
         {
             directory = directory?.Trim() ?? string.Empty;
@@ -557,6 +578,12 @@ namespace EDActivityOverlay.Services
         public string ExplorationHotkeyKey { get; set; } = "D3";
         public string MiningHotkeyModifiers { get; set; } = "Ctrl";
         public string MiningHotkeyKey { get; set; } = "D4";
+
+        /// <summary>Commodity tracked by the compact Mining prospector advisor. Empty disables MINE/SKIP targeting.</summary>
+        public string MiningTargetCommodity { get; set; } = string.Empty;
+
+        /// <summary>Minimum laser-minable proportion accepted by the Mining prospector advisor.</summary>
+        public double MiningMinimumProportion { get; set; } = 25;
 
         /// <summary>Displays non-interactive journal notifications over the game.</summary>
         public bool EnableOverlayNotifications { get; set; } = true;

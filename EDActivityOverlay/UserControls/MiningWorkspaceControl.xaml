@@ -1,0 +1,176 @@
+<UserControl x:Class="EDActivityOverlay.UserControls.MiningWorkspaceControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border x:Name="CompactMiningPanel"
+            Padding="14,11"
+            Background="{DynamicResource PrimaryBackgroundColorBrush}"
+            BorderBrush="{DynamicResource BorderColorBrush}"
+            BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid x:Name="CompactMiningDragHandle"
+                  MouseLeftButtonDown="CompactMiningDragHandle_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc_MINING_COPILOT_TITLE}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                    <TextBlock x:Name="CompactJournalContextText"
+                               Margin="0,2,0,0"
+                               FontSize="9"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource AccentColorBrush}"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Width="30"
+                        Height="26"
+                        Padding="0"
+                        Content="×"
+                        Foreground="{DynamicResource AccentColorBrush}"
+                        Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                        BorderBrush="{DynamicResource BorderColorBrush}"
+                        Click="CloseButton_Click"/>
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Margin="0,9,0,7"
+                    Padding="9,7"
+                    Background="{DynamicResource HighlightBackgroundBrush}"
+                    BorderBrush="{DynamicResource AccentColorBrush}"
+                    BorderThickness="2,0,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="58"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="70"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Loc_MINING_TARGET}"
+                                   FontSize="8"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource MutedTextColorBrush}"/>
+                        <TextBox x:Name="TargetCommodityTextBox"
+                                 Margin="0,3,0,0"
+                                 Height="25"
+                                 Padding="5,2"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="TargetInput_KeyDown"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="{DynamicResource Loc_MINING_THRESHOLD}"
+                                   FontSize="8"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource MutedTextColorBrush}"/>
+                        <TextBox x:Name="MinimumProportionTextBox"
+                                 Margin="0,3,0,0"
+                                 Height="25"
+                                 Padding="5,2"
+                                 TextAlignment="Right"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="TargetInput_KeyDown"/>
+                    </StackPanel>
+                    <Button Grid.Column="4"
+                            Margin="0,14,0,0"
+                            Height="25"
+                            Content="{DynamicResource Loc_MINING_APPLY}"
+                            Foreground="{DynamicResource PrimaryTextColorBrush}"
+                            Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                            BorderBrush="{DynamicResource AccentColorBrush}"
+                            Click="ApplyTargetButton_Click"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2"
+                    Margin="0,0,0,7"
+                    Padding="9,7"
+                    Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                    BorderBrush="{DynamicResource BorderColorBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="ProspectMetaText"
+                               FontSize="9"
+                               Foreground="{DynamicResource MutedTextColorBrush}"/>
+                    <Grid Grid.Row="1" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="ProspectHeadlineText"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                        <TextBlock x:Name="DecisionText"
+                                   Grid.Column="1"
+                                   Margin="10,0,0,0"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentColorBrush}"/>
+                    </Grid>
+                    <TextBlock x:Name="ProspectMaterialsText"
+                               Grid.Row="2"
+                               Margin="0,4,0,0"
+                               FontSize="10"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                    <TextBlock x:Name="MethodText"
+                               Grid.Row="3"
+                               Margin="0,5,0,0"
+                               FontSize="9"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource AccentColorBrush}"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="3"
+                    Padding="9,7"
+                    Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                    BorderBrush="{DynamicResource BorderColorBrush}"
+                    BorderThickness="1,0,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="CargoText"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                    <TextBlock x:Name="SessionText"
+                               Margin="0,4,0,0"
+                               FontSize="9"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                    <TextBlock x:Name="TargetStatsText"
+                               Margin="0,3,0,0"
+                               FontSize="9"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextColorBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="FooterText"
+                       Grid.Row="4"
+                       Margin="0,7,0,0"
+                       FontSize="8"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+        </Grid>
+    </Border>
+</UserControl>

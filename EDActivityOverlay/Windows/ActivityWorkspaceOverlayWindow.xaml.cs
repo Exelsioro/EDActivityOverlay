@@ -64,6 +64,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         activity = initialActivity;
         InitializeComponent();
         InitializeTradeWorkspace();
+        InitializeMiningWorkspace();
         DssTargetComboBox.ItemsSource = Enumerable.Range(
             DssProbePatternCatalog.MinimumTarget,
             DssProbePatternCatalog.MaximumTarget - DssProbePatternCatalog.MinimumTarget + 1);
@@ -103,6 +104,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             LeaveTradeWorkspace();
         }
 
+        if (activity == ActivityType.Mining
+            && value != ActivityType.Mining)
+        {
+            LeaveMiningWorkspace();
+        }
+
         activity = value;
         RefreshContent(JournalMonitorService.Instance.Current);
     }
@@ -134,6 +141,9 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             chromeStyle);
 
         tradeWorkspaceControl?.SetChromeStyle(
+            chromeStyle);
+
+        miningWorkspaceControl?.SetChromeStyle(
             chromeStyle);
     }
 
@@ -196,6 +206,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         if (activity == ActivityType.Trade)
         {
             RefreshTradeWorkspace(state);
+            return;
+        }
+
+        if (activity == ActivityType.Mining)
+        {
+            RefreshMiningWorkspace(state);
             return;
         }
 
@@ -2498,6 +2514,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         ApplyRoutePanelState();
         tradeWorkspaceControl?.RefreshLocalization();
+        miningWorkspaceControl?.RefreshLocalization();
         RefreshContent(
             JournalMonitorService.Instance.Current);
     }
@@ -2598,6 +2615,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         disposed = true;
         if (fullExplorationVisible) parentWindow?.EndExclusiveOverlayInteraction();
         DisposeTradeWorkspace();
+        DisposeMiningWorkspace();
         updateTimer.Stop();
         updateTimer.Tick -= UpdateTimer_Tick;
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;

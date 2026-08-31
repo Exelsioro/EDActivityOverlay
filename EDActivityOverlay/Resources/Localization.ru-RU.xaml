@@ -1213,6 +1213,32 @@
     <sys:String x:Key="Loc_TRADE_HISTORY_OPEN_FOLDER">ОТКРЫТЬ</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_SELECT_DIRECTORY">Выберите каталог истории торговли</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_CARGO_FORMAT">{0:N0} т</sys:String>
+    <sys:String x:Key="Loc_MINING_COPILOT_TITLE">ПОМОЩНИК МАЙНИНГА</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET">ЦЕЛЬ</sys:String>
+    <sys:String x:Key="Loc_MINING_THRESHOLD">МИН. %</sys:String>
+    <sys:String x:Key="Loc_MINING_APPLY">OK</sys:String>
+    <sys:String x:Key="Loc_MINING_WAITING_PROSPECT">ОЖИДАЮ ПРОСПЕКТОР</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET_HINT">Укажи ресурс, чтобы включить совет КОПАТЬ / ПРОПУСТИТЬ.</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_NO_TARGET">НЕТ ЦЕЛИ</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_MINE">КОПАТЬ</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_SKIP">ПРОПУСТИТЬ</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_CORE">ЯДРО</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_LASER">ЛАЗЕР</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_CORE">ЯДРО</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_UNKNOWN">НЕИЗВЕСТНО</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_FORMAT">ЛУЧШИЙ ИЗВЕСТНЫЙ СПОСОБ · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_WITH_SUBJECT_FORMAT">ЛУЧШИЙ ИЗВЕСТНЫЙ СПОСОБ · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_META_FORMAT">{0} · осталось {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_HEADLINE_FORMAT">{0} {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_CORE_FORMAT">МАТЕРИНСКАЯ ЖИЛА · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_CORE_MATERIAL_FORMAT">ЯДРО · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_CARGO_FORMAT">ТРЮМ {0:N0}/{1:N0} · ЛИМПЕТЫ {2:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_CARGO_UNKNOWN_FORMAT">ТРЮМ ? · ЛИМПЕТЫ {0:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_SESSION_IDLE">Сессия начнётся с первого проспектора или события добычи.</sys:String>
+    <sys:String x:Key="Loc_MINING_SESSION_META_FORMAT">{0} · проспектов {1} · очищено {2:N0} т · ядер {3} · P/C лимпеты {4}/{5}</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET_FORMAT">{0} ≥ {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET_STATS_FORMAT">найдено {0:0}% · принято {1:0}% · ср. {2:0.#}% · медиана {3:0.#}% · макс. {4:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_LIMITATION">Журнал надёжно даёт лазерный состав и материнскую жилу; поверхностные/подповерхностные залежи не угадываем.</sys:String>
 </ResourceDictionary>
 
 

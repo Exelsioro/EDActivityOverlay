@@ -1213,6 +1213,32 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_OPEN_FOLDER">OPEN</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_SELECT_DIRECTORY">Select trade history directory</sys:String>
     <sys:String x:Key="Loc_TRADE_HISTORY_CARGO_FORMAT">{0:N0} t</sys:String>
+    <sys:String x:Key="Loc_MINING_COPILOT_TITLE">MINING COPILOT</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET">TARGET</sys:String>
+    <sys:String x:Key="Loc_MINING_THRESHOLD">MIN %</sys:String>
+    <sys:String x:Key="Loc_MINING_APPLY">APPLY</sys:String>
+    <sys:String x:Key="Loc_MINING_WAITING_PROSPECT">WAITING FOR PROSPECTOR</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET_HINT">Set a target commodity to enable MINE / SKIP advice.</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_NO_TARGET">NO TARGET</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_MINE">MINE</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_SKIP">SKIP</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_CORE">CORE</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_LASER">LASER</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_CORE">CORE</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_UNKNOWN">UNKNOWN</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_FORMAT">BEST KNOWN METHOD · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_WITH_SUBJECT_FORMAT">BEST KNOWN METHOD · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_META_FORMAT">{0} · remaining {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_HEADLINE_FORMAT">{0} {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_PROSPECT_CORE_FORMAT">MOTHERLODE · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_CORE_MATERIAL_FORMAT">CORE · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_CARGO_FORMAT">CARGO {0:N0}/{1:N0} · LIMPETS {2:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_CARGO_UNKNOWN_FORMAT">CARGO ? · LIMPETS {0:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_SESSION_IDLE">Session starts on the first prospector or mining event.</sys:String>
+    <sys:String x:Key="Loc_MINING_SESSION_META_FORMAT">{0} · {1} prospects · {2:N0} t refined · {3} cores · P/C limpets {4}/{5}</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET_FORMAT">{0} ≥ {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGET_STATS_FORMAT">hit {0:0}% · accepted {1:0}% · avg {2:0.#}% · median {3:0.#}% · best {4:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_METHOD_LIMITATION">Journal reliably exposes laser composition and motherlodes; surface/subsurface deposits are not guessed.</sys:String>
 </ResourceDictionary>
 
 
