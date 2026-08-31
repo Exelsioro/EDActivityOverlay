@@ -68,6 +68,18 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     private void RefreshPresentation()
     {
         AppSettings settings = SettingsService.Instance.Settings;
+        MiningIntelligenceSnapshot intelligence =
+            MiningIntelligenceCalculator.Calculate(
+                currentSession,
+                MiningCollectorTrackerService.Instance.Current,
+                settings.MiningTargetCommodity,
+                settings.MiningMinimumProportion);
+
+        double effectiveThreshold =
+            intelligence.AdaptiveThreshold.Ready
+                ? intelligence.AdaptiveThreshold.Suggested
+                : settings.MiningMinimumProportion;
+
         string location = currentSession.IsActive && !string.IsNullOrWhiteSpace(currentSession.SystemName)
             ? currentSession.SystemName
             : currentJournal.StarSystem;
@@ -94,7 +106,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             MiningProspectAdvice advice = MiningProspectorAdvisor.Evaluate(
                 prospect,
                 settings.MiningTargetCommodity,
-                settings.MiningMinimumProportion);
+                effectiveThreshold);
 
             ProspectMetaText.Text = Loc.Format(
                 "Loc_MINING_PROSPECT_META_FORMAT",
@@ -142,6 +154,8 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             ? Loc.Format("Loc_MINING_CARGO_FORMAT", cargoUsed, cargoCapacity, limpets)
             : Loc.Format("Loc_MINING_CARGO_UNKNOWN_FORMAT", limpets);
 
+        IntelligenceText.Text = BuildIntelligenceText(intelligence);
+
         if (!currentSession.IsActive)
         {
             SessionText.Text = Loc.Get("Loc_MINING_SESSION_IDLE");
@@ -172,7 +186,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             MiningTargetStatistics stats = MiningTargetAnalytics.Calculate(
                 currentSession,
                 settings.MiningTargetCommodity,
-                settings.MiningMinimumProportion);
+                effectiveThreshold);
 
             TargetStatsText.Text = string.IsNullOrWhiteSpace(settings.MiningTargetCommodity)
                 ? Loc.Get("Loc_MINING_TARGET_HINT")

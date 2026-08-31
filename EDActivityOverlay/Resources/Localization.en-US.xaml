@@ -1263,6 +1263,32 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_HISTORY_TONS">TONS</sys:String>
     <sys:String x:Key="Loc_MINING_HISTORY_RATE">RATE</sys:String>
     <sys:String x:Key="Loc_MINING_HISTORY_PROSPECTS">PROSPECTS</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_IDLE">IDLE</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_SEARCHING">SEARCHING</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_PROSPECT">PROSPECT DECISION</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_MINING">MINING</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_NEAR_FULL">NEAR FULL</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_FULL">CARGO FULL</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_UNKNOWN">FIELD ?</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_GOOD">FIELD GOOD</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_STABLE">FIELD STABLE</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_DECLINING">FIELD DECLINING</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_THRESHOLD_WARMING">ADAPTIVE WARMING</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_THRESHOLD_FORMAT">ADAPTIVE {0:0.#}% · base {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_WARMING_FORMAT">LIMPETS {0:N0} · estimate warming</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_FORMAT">LIMPETS {0:N0} · need ~{1:N0} · excess ~{2:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_LOW_FORMAT">LIMPETS LOW {0:N0} · need ~{1:N0} · excess ~{2:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_CRITICAL_FORMAT">LIMPETS CRITICAL {0:N0} · need ~{1:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_COLLECTORS_UNKNOWN">COLLECTORS ?</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_COLLECTORS_TOPUP_FORMAT">COLLECTORS ~{0}/{1} · TOP UP ~{2}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_COLLECTORS_OK_FORMAT">COLLECTORS ~{0}/{1} · OK</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LEAVE_FULL">CARGO FULL · LEAVE</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LEAVE_NOW_FORMAT">{0:N0} t free · LEAVE NOW</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LEAVE_FINISH_FORMAT">{0:N0} t free · FINISH CURRENT ROCK</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Limpets_Critical_Format">Limpets critical: {0:N0} left, estimated need ~{1:N0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Field_Declining">Recent prospect quality has dropped. Consider moving within the field.</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Near_Full_Format">Cargo is nearly full: {0:N0} t free.</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Collectors_TopUp_Format">Collectors ~{0}/{1}. Consider topping up ~{2}.</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">t/h uses wall-clock mining-session time and appears after 5 minutes + 5 refined tons. ETA is an estimate and changes as limpets free cargo space.</sys:String>
 </ResourceDictionary>
 

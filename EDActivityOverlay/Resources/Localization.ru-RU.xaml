@@ -1263,6 +1263,32 @@
     <sys:String x:Key="Loc_MINING_HISTORY_TONS">ТОННЫ</sys:String>
     <sys:String x:Key="Loc_MINING_HISTORY_RATE">ТЕМП</sys:String>
     <sys:String x:Key="Loc_MINING_HISTORY_PROSPECTS">ПРОСПЕКТЫ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_IDLE">ОЖИДАНИЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_SEARCHING">ПОИСК</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_PROSPECT">РЕШЕНИЕ ПО ПРОСПЕКТУ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_MINING">ДОБЫЧА</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_NEAR_FULL">ТРЮМ ПОЧТИ ПОЛОН</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_PHASE_FULL">ТРЮМ ПОЛОН</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_UNKNOWN">ПОЛЕ ?</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_GOOD">ПОЛЕ ХОРОШЕЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_STABLE">ПОЛЕ СТАБИЛЬНО</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_DECLINING">ПОЛЕ УХУДШАЕТСЯ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_THRESHOLD_WARMING">АДАПТИВНЫЙ ПОРОГ · СОБИРАЮ ВЫБОРКУ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_THRESHOLD_FORMAT">АДАПТИВНЫЙ {0:0.#}% · база {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_WARMING_FORMAT">ЛИМПЕТЫ {0:N0} · собираю статистику расхода</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_FORMAT">ЛИМПЕТЫ {0:N0} · нужно ~{1:N0} · избыток ~{2:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_LOW_FORMAT">ЛИМПЕТОВ МАЛО {0:N0} · нужно ~{1:N0} · избыток ~{2:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LIMPETS_CRITICAL_FORMAT">ЛИМПЕТЫ КРИТИЧНО {0:N0} · нужно ~{1:N0}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_COLLECTORS_UNKNOWN">СБОРЩИКИ ?</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_COLLECTORS_TOPUP_FORMAT">СБОРЩИКИ ~{0}/{1} · ДОБАВИТЬ ~{2}</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_COLLECTORS_OK_FORMAT">СБОРЩИКИ ~{0}/{1} · OK</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LEAVE_FULL">ТРЮМ ПОЛОН · УЛЕТАТЬ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LEAVE_NOW_FORMAT">свободно {0:N0} т · ПОРА УЛЕТАТЬ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_LEAVE_FINISH_FORMAT">свободно {0:N0} т · ЗАКОНЧИТЬ ТЕКУЩИЙ КАМЕНЬ</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Limpets_Critical_Format">Лимпеты на исходе: осталось {0:N0}, ожидаемо нужно ~{1:N0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Field_Declining">Качество последних проспектов упало. Стоит сместиться по полю.</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Near_Full_Format">Трюм почти заполнен: свободно {0:N0} т.</sys:String>
+    <sys:String x:Key="Loc_Notification_Mining_Collectors_TopUp_Format">Сборщики ~{0}/{1}. Стоит добавить ~{2}.</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">т/ч считается по полному времени mining-сессии и появляется после 5 минут + 5 очищенных тонн. ETA приблизительный: расход лимпетов освобождает место в трюме.</sys:String>
 </ResourceDictionary>
 

@@ -55,7 +55,9 @@ namespace EDActivityOverlay
             ExplorationRouteService.Instance.Start();
             ExplorationPoiService.Instance.Start();
             MiningLoadoutService.Instance.Start();
+            MiningCollectorTrackerService.Instance.Start();
             MiningSessionService.Instance.Start();
+            MiningAlertService.Instance.Start();
             X52IntegrationService.Instance.Start();
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
             if (settings.EnableJournalIntegration)
@@ -217,7 +219,9 @@ namespace EDActivityOverlay
                 ExplorationLogService.Instance.Dispose();
                 ExplorationRouteService.Instance.Dispose();
                 ExplorationPoiService.Instance.Dispose();
+                MiningAlertService.Instance.Dispose();
                 MiningSessionService.Instance.Dispose();
+                MiningCollectorTrackerService.Instance.Dispose();
                 MiningLoadoutService.Instance.Dispose();
                 X52IntegrationService.Instance.Dispose();
                 JournalMonitorService.Instance.Dispose();
