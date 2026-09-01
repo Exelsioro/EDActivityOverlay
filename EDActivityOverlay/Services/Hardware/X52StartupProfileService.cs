@@ -477,16 +477,49 @@ public sealed class X52StartupProfileService
             return Path.GetFullPath(preferredProfilePath);
         }
 
-        if (!string.IsNullOrWhiteSpace(currentStartupPath)
-            && currentStartupPath.EndsWith(
-                ".pr0",
-                StringComparison.OrdinalIgnoreCase)
-            && File.Exists(currentStartupPath))
+        string? canonical = discovered
+            .Where(path =>
+                IsOverlayProfilePath(path)
+                && File.Exists(path))
+            .OrderBy(path =>
+                Path.GetFileName(path).Equals(
+                    "X52ProEliteV223EX_Overlay.pr0",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? 0
+                    : 1)
+            .ThenBy(
+                Path.GetFileName,
+                StringComparer.CurrentCultureIgnoreCase)
+            .FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(canonical))
         {
-            return Path.GetFullPath(currentStartupPath);
+            return Path.GetFullPath(canonical);
         }
 
-        return discovered.FirstOrDefault();
+        if (IsOverlayProfilePath(currentStartupPath)
+            && File.Exists(currentStartupPath!))
+        {
+            return Path.GetFullPath(currentStartupPath!);
+        }
+
+        return null;
+    }
+
+    internal static bool IsOverlayProfilePath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)
+            || !path.EndsWith(
+                ".pr0",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileName(path);
+        return fileName.EndsWith(
+            "_Overlay.pr0",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private X52StartupProfileBackup? LoadBackup()

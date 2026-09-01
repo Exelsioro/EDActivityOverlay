@@ -62,12 +62,15 @@
                                    FontSize="8"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource MutedTextColorBrush}"/>
-                        <TextBox x:Name="TargetCommodityTextBox"
-                                 Margin="0,3,0,0"
-                                 Height="25"
-                                 Padding="5,2"
-                                 VerticalContentAlignment="Center"
-                                 KeyDown="TargetInput_KeyDown"/>
+                        <ComboBox x:Name="TargetCommodityComboBox"
+                                  Margin="0,3,0,0"
+                                  Height="25"
+                                  Padding="5,2"
+                                  DisplayMemberPath="Label"
+                                  IsTextSearchEnabled="True"
+                                  TextSearch.TextPath="Label"
+                                  VerticalContentAlignment="Center"
+                                  KeyDown="TargetInput_KeyDown"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="{DynamicResource Loc_MINING_THRESHOLD}"

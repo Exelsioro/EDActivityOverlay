@@ -47,6 +47,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
     public void RefreshLocalization()
     {
+        LoadTargetInputs();
         RefreshPresentation();
     }
 
@@ -187,7 +188,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
                 ? Loc.Get("Loc_MINING_TARGET_HINT")
                 : Loc.Format(
                     "Loc_MINING_TARGET_FORMAT",
-                    settings.MiningTargetCommodity,
+                    MiningTargetCatalog.GetDisplayName(settings.MiningTargetCommodity),
                     settings.MiningMinimumProportion);
         }
         else
@@ -305,7 +306,19 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     private void LoadTargetInputs()
     {
         AppSettings settings = SettingsService.Instance.Settings;
-        TargetCommodityTextBox.Text = settings.MiningTargetCommodity;
+        IReadOnlyList<MiningTargetOption> targets =
+            MiningTargetCatalog.GetLocalizedOptions();
+
+        TargetCommodityComboBox.ItemsSource = targets;
+        TargetCommodityComboBox.SelectedItem =
+            MiningTargetCatalog.Find(settings.MiningTargetCommodity)
+            is { } selected
+                ? targets.FirstOrDefault(item =>
+                    item.CommodityId.Equals(
+                        selected.CommodityId,
+                        StringComparison.OrdinalIgnoreCase))
+                : targets.FirstOrDefault();
+
         MinimumProportionTextBox.Text = settings.MiningMinimumProportion.ToString(
             "0.#",
             CultureInfo.CurrentCulture);
@@ -329,7 +342,11 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
     private void ApplyTargetInputs()
     {
-        string target = TargetCommodityTextBox.Text.Trim();
+        string target =
+            (TargetCommodityComboBox.SelectedItem
+                as MiningTargetOption)?.CommodityId
+            ?? string.Empty;
+
         double threshold = ParseThreshold(
             MinimumProportionTextBox.Text,
             SettingsService.Instance.Settings.MiningMinimumProportion);

@@ -72,4 +72,18 @@ public sealed class X52StartupProfileServiceTests
                 @"C:\Users\Public\Documents\Logitech\X52 Professional\EDAO_Overlay.pr0",
                 @"c:\users\public\documents\logitech\x52 professional\EDAO_Overlay.pr0"));
     }
+
+    [Theory]
+    [InlineData(@"C:\Profiles\X52ProEliteV223EX_Overlay.pr0", true)]
+    [InlineData(@"C:\Profiles\Custom_Overlay.PR0", true)]
+    [InlineData(@"C:\Profiles\DCS.pr0", false)]
+    [InlineData(@"C:\Profiles\not-a-profile.txt", false)]
+    public void OverlayProfileDetectionIsExplicit(
+        string path,
+        bool expected)
+    {
+        Assert.Equal(
+            expected,
+            X52StartupProfileService.IsOverlayProfilePath(path));
+    }
 }

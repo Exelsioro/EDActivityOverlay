@@ -673,6 +673,9 @@
     <sys:String x:Key="Loc_X52_PROFILE_FILE">Logitech profile (.pr0)</sys:String>
     <sys:String x:Key="Loc_X52_SELECT_PROFILE">Select Logitech X52 profile</sys:String>
     <sys:String x:Key="Loc_X52_RESTORE_STARTUP_PROFILE">RESTORE PREVIOUS</sys:String>
+    <sys:String x:Key="Loc_X52_APPLY_PROFILE_NOW">APPLY NOW</sys:String>
+    <sys:String x:Key="Loc_X52_APPLY_NOW_RESTARTED">Logitech profiler restarted. The selected profile should be active now; reconnect the X52 if Logitech still shows the previous profile.</sys:String>
+    <sys:String x:Key="Loc_X52_APPLY_NOW_FALLBACK_FORMAT">Startup profile configured, but immediate activation was unavailable: {0}. Reconnect the X52 to load it.</sys:String>
     <sys:String x:Key="Loc_X52_STARTUP_PROFILE_HINT">EDAO configures Logitech's normal startup-profile registry entry. Reconnect the X52 once after enabling; future connections should load the profile automatically. No Logitech UI automation is used.</sys:String>
     <sys:String x:Key="Loc_X52_STARTUP_ACTIVE_FORMAT">Startup profile configured: {0} · controller {1}. Reconnect X52 once if the profile is not active yet.</sys:String>
     <sys:String x:Key="Loc_X52_STARTUP_READY_FORMAT">EDAO profile found: {0} · controller {1}. No startup profile is currently assigned.</sys:String>

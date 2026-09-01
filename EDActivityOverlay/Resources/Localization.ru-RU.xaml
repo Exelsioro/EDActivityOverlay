@@ -673,6 +673,9 @@
     <sys:String x:Key="Loc_X52_PROFILE_FILE">Профиль Logitech (.pr0)</sys:String>
     <sys:String x:Key="Loc_X52_SELECT_PROFILE">Выберите профиль Logitech X52</sys:String>
     <sys:String x:Key="Loc_X52_RESTORE_STARTUP_PROFILE">ВОССТАНОВИТЬ ПРЕДЫДУЩИЙ</sys:String>
+    <sys:String x:Key="Loc_X52_APPLY_PROFILE_NOW">ПРИМЕНИТЬ СЕЙЧАС</sys:String>
+    <sys:String x:Key="Loc_X52_APPLY_NOW_RESTARTED">Профилировщик Logitech перезапущен. Выбранный профиль должен быть активен; если Logitech всё ещё показывает прежний профиль, переподключите X52.</sys:String>
+    <sys:String x:Key="Loc_X52_APPLY_NOW_FALLBACK_FORMAT">Стартовый профиль настроен, но применить его сразу не удалось: {0}. Переподключите X52, чтобы загрузить профиль.</sys:String>
     <sys:String x:Key="Loc_X52_STARTUP_PROFILE_HINT">EDAO настраивает штатную запись startup-profile Logitech. После включения один раз переподключите X52; при следующих подключениях профиль должен загружаться автоматически. Автоматизация интерфейса Logitech не используется.</sys:String>
     <sys:String x:Key="Loc_X52_STARTUP_ACTIVE_FORMAT">Стартовый профиль настроен: {0} · контроллер {1}. Если профиль ещё не активен, один раз переподключите X52.</sys:String>
     <sys:String x:Key="Loc_X52_STARTUP_READY_FORMAT">Профиль EDAO найден: {0} · контроллер {1}. Стартовый профиль сейчас не назначен.</sys:String>

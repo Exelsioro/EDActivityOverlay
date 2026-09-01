@@ -634,19 +634,26 @@
                                            TextWrapping="Wrap"
                                            Foreground="{DynamicResource PrimaryTextColorBrush}" />
 
-                                <StackPanel Orientation="Horizontal" Margin="0,8,0,14">
+                                <WrapPanel Margin="0,8,0,14">
                                     <Button x:Name="ConfigureX52StartupProfileButton"
                                             Content="{DynamicResource Loc_X52_SET_STARTUP_PROFILE}"
                                             Height="30"
                                             Padding="10,3"
+                                            Margin="0,0,8,6"
                                             Click="ConfigureX52StartupProfileButton_Click" />
+                                    <Button x:Name="ApplyX52StartupProfileNowButton"
+                                            Content="{DynamicResource Loc_X52_APPLY_PROFILE_NOW}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="0,0,8,6"
+                                            Click="ApplyX52StartupProfileNowButton_Click" />
                                     <Button x:Name="RestoreX52StartupProfileButton"
                                             Content="{DynamicResource Loc_X52_RESTORE_STARTUP_PROFILE}"
                                             Height="30"
                                             Padding="10,3"
-                                            Margin="8,0,0,0"
+                                            Margin="0,0,0,6"
                                             Click="RestoreX52StartupProfileButton_Click" />
-                                </StackPanel>
+                                </WrapPanel>
 
                                 <TextBlock Text="{DynamicResource Loc_X52_STARTUP_PROFILE_HINT}"
                                            Margin="0,0,0,14"

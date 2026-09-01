@@ -970,10 +970,7 @@ namespace EDActivityOverlay.Windows
 
             string? preferred =
                 selectedPath
-                ?? (!string.IsNullOrWhiteSpace(
-                        current.CurrentStartupPath)
-                    ? current.CurrentStartupPath
-                    : current.ProfilePath);
+                ?? current.ProfilePath;
 
             if (!string.IsNullOrWhiteSpace(preferred)
                 && preferred.EndsWith(
@@ -993,8 +990,7 @@ namespace EDActivityOverlay.Windows
                 profiles.FirstOrDefault(item =>
                     X52StartupProfileService.PathsEqual(
                         item.ProfilePath,
-                        preferred))
-                ?? profiles.FirstOrDefault();
+                        preferred));
 
             RefreshX52StartupProfileStatus();
         }
@@ -1055,6 +1051,10 @@ namespace EDActivityOverlay.Windows
             ConfigureX52StartupProfileButton.IsEnabled =
                 state.Status == X52StartupProfileStatus.Ready;
 
+            ApplyX52StartupProfileNowButton.IsEnabled =
+                state.Status is X52StartupProfileStatus.Ready
+                    or X52StartupProfileStatus.Active;
+
             RestoreX52StartupProfileButton.IsEnabled =
                 state.HasBackup;
         }
@@ -1081,6 +1081,44 @@ namespace EDActivityOverlay.Windows
             object sender,
             SelectionChangedEventArgs e) =>
             RefreshX52StartupProfileStatus();
+
+        private void ApplyX52StartupProfileNowButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            string? profilePath =
+                SelectedX52StartupProfilePath();
+
+            if (string.IsNullOrWhiteSpace(profilePath))
+            {
+                RefreshX52StartupProfileStatus();
+                return;
+            }
+
+            X52ApplyNowResult result =
+                X52ProfileRuntimeActivator.ApplyNow(profilePath);
+
+            RefreshX52StartupProfileStatus(result.State);
+
+            if (result.ProfilerRestarted)
+            {
+                X52StartupProfileStatusText.Text +=
+                    Environment.NewLine
+                    + Loc.Get("Loc_X52_APPLY_NOW_RESTARTED");
+
+                X52IntegrationService.Instance.Reconnect();
+            }
+            else if (!string.IsNullOrWhiteSpace(result.Error)
+                     && result.State.Status
+                         == X52StartupProfileStatus.Active)
+            {
+                X52StartupProfileStatusText.Text +=
+                    Environment.NewLine
+                    + Loc.Format(
+                        "Loc_X52_APPLY_NOW_FALLBACK_FORMAT",
+                        result.Error);
+            }
+        }
 
         private void BrowseX52StartupProfileButton_Click(
             object sender,
