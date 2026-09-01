@@ -46,7 +46,7 @@ public sealed class MiningX52CopilotTests
 
         Assert.Equal(3, lines.Length);
         Assert.Contains("MINE", lines[0]);
-        Assert.Contains("32.8", lines[0]);
+        Assert.Contains(32.8.ToString("0.#"), lines[0]);
         Assert.Contains("C184/256", lines[1]);
         Assert.Contains("L61", lines[1]);
         Assert.All(

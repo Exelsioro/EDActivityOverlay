@@ -604,6 +604,56 @@
                                           Foreground="{DynamicResource AccentColorBrush}"
                                           Margin="14,0,0,14" />
 
+                                <TextBlock Text="{DynamicResource Loc_X52_STARTUP_PROFILE}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" />
+
+                                <TextBlock Text="{DynamicResource Loc_X52_PROFILE_FILE}"
+                                           Margin="0,6,0,4"
+                                           Foreground="{DynamicResource SecondaryTextColorBrush}" />
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <ComboBox x:Name="X52StartupProfileComboBox"
+                                              Height="30"
+                                              DisplayMemberPath="Label"
+                                              SelectionChanged="X52StartupProfileComboBox_SelectionChanged" />
+
+                                    <Button Grid.Column="1"
+                                            Content="{DynamicResource Loc_BROWSE}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="8,0,0,0"
+                                            Click="BrowseX52StartupProfileButton_Click" />
+                                </Grid>
+
+                                <TextBlock x:Name="X52StartupProfileStatusText"
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource PrimaryTextColorBrush}" />
+
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,14">
+                                    <Button x:Name="ConfigureX52StartupProfileButton"
+                                            Content="{DynamicResource Loc_X52_SET_STARTUP_PROFILE}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Click="ConfigureX52StartupProfileButton_Click" />
+                                    <Button x:Name="RestoreX52StartupProfileButton"
+                                            Content="{DynamicResource Loc_X52_RESTORE_STARTUP_PROFILE}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="8,0,0,0"
+                                            Click="RestoreX52StartupProfileButton_Click" />
+                                </StackPanel>
+
+                                <TextBlock Text="{DynamicResource Loc_X52_STARTUP_PROFILE_HINT}"
+                                           Margin="0,0,0,14"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"
+                                           FontSize="10" />
+
                                 <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" />
 
                                 <TextBlock x:Name="X52StatusText" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}" />

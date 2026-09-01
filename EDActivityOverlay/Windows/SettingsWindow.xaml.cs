@@ -926,6 +926,7 @@ namespace EDActivityOverlay.Windows
             EnableExperimentalX52MiningCopilotCheckBox.IsChecked =
                 settings.EnableExperimentalX52MiningCopilot;
             RefreshX52Status();
+            LoadX52StartupProfiles();
         }
 
         private void SaveX52Settings()
@@ -954,6 +955,157 @@ namespace EDActivityOverlay.Windows
                 X52ConnectionStatus.Error => Loc.Format("Loc_X52_status_error_format", current.Error),
                 _ => current.Status.ToString()
             };
+        }
+
+        private void LoadX52StartupProfiles(
+            string? selectedPath = null)
+        {
+            List<X52ProfileOption> profiles =
+                X52StartupProfileService.Instance
+                    .GetAvailableProfiles()
+                    .ToList();
+
+            X52StartupProfileState current =
+                X52StartupProfileService.Instance.Inspect();
+
+            string? preferred =
+                selectedPath
+                ?? (!string.IsNullOrWhiteSpace(
+                        current.CurrentStartupPath)
+                    ? current.CurrentStartupPath
+                    : current.ProfilePath);
+
+            if (!string.IsNullOrWhiteSpace(preferred)
+                && preferred.EndsWith(
+                    ".pr0",
+                    StringComparison.OrdinalIgnoreCase)
+                && File.Exists(preferred)
+                && profiles.All(item =>
+                    !X52StartupProfileService.PathsEqual(
+                        item.ProfilePath,
+                        preferred)))
+            {
+                profiles.Add(new X52ProfileOption(preferred));
+            }
+
+            X52StartupProfileComboBox.ItemsSource = profiles;
+            X52StartupProfileComboBox.SelectedItem =
+                profiles.FirstOrDefault(item =>
+                    X52StartupProfileService.PathsEqual(
+                        item.ProfilePath,
+                        preferred))
+                ?? profiles.FirstOrDefault();
+
+            RefreshX52StartupProfileStatus();
+        }
+
+        private string? SelectedX52StartupProfilePath() =>
+            (X52StartupProfileComboBox.SelectedItem
+                as X52ProfileOption)?.ProfilePath;
+
+        private void RefreshX52StartupProfileStatus(
+            X52StartupProfileState? supplied = null)
+        {
+            X52StartupProfileState state =
+                supplied
+                ?? X52StartupProfileService.Instance.Inspect(
+                    SelectedX52StartupProfilePath());
+
+            string profileName =
+                string.IsNullOrWhiteSpace(state.ProfilePath)
+                    ? string.Empty
+                    : Path.GetFileName(state.ProfilePath);
+
+            X52StartupProfileStatusText.Text =
+                state.Status switch
+                {
+                    X52StartupProfileStatus.Active =>
+                        Loc.Format(
+                            "Loc_X52_STARTUP_ACTIVE_FORMAT",
+                            profileName,
+                            state.ControllerId),
+                    X52StartupProfileStatus.Ready =>
+                        string.IsNullOrWhiteSpace(state.CurrentStartupPath)
+                            ? Loc.Format(
+                                "Loc_X52_STARTUP_READY_FORMAT",
+                                profileName,
+                                state.ControllerId)
+                            : Loc.Format(
+                                "Loc_X52_STARTUP_OTHER_FORMAT",
+                                Path.GetFileName(state.CurrentStartupPath),
+                                profileName,
+                                state.ControllerId),
+                    X52StartupProfileStatus.ProfileMissing =>
+                        Loc.Get("Loc_X52_STARTUP_PROFILE_MISSING"),
+                    X52StartupProfileStatus.ControllerMissing =>
+                        Loc.Get("Loc_X52_STARTUP_CONTROLLER_MISSING"),
+                    X52StartupProfileStatus.ControllerAmbiguous =>
+                        Loc.Get("Loc_X52_STARTUP_CONTROLLER_AMBIGUOUS"),
+                    X52StartupProfileStatus.RestoreConflict =>
+                        Loc.Format(
+                            "Loc_X52_STARTUP_RESTORE_CONFLICT_FORMAT",
+                            Path.GetFileName(state.CurrentStartupPath)),
+                    X52StartupProfileStatus.Error =>
+                        Loc.Format(
+                            "Loc_X52_STARTUP_ERROR_FORMAT",
+                            state.Error),
+                    _ => state.Status.ToString()
+                };
+
+            ConfigureX52StartupProfileButton.IsEnabled =
+                state.Status == X52StartupProfileStatus.Ready;
+
+            RestoreX52StartupProfileButton.IsEnabled =
+                state.HasBackup;
+        }
+
+        private void ConfigureX52StartupProfileButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            string? profilePath =
+                SelectedX52StartupProfilePath();
+
+            if (string.IsNullOrWhiteSpace(profilePath))
+            {
+                RefreshX52StartupProfileStatus();
+                return;
+            }
+
+            RefreshX52StartupProfileStatus(
+                X52StartupProfileService.Instance.Configure(
+                    profilePath));
+        }
+
+        private void X52StartupProfileComboBox_SelectionChanged(
+            object sender,
+            SelectionChangedEventArgs e) =>
+            RefreshX52StartupProfileStatus();
+
+        private void BrowseX52StartupProfileButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = Loc.Get("Loc_X52_SELECT_PROFILE"),
+                Filter = "Logitech X52 profile (*.pr0)|*.pr0|All files (*.*)|*.*",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(this) == true)
+            {
+                LoadX52StartupProfiles(dialog.FileName);
+            }
+        }
+
+        private void RestoreX52StartupProfileButton_Click(
+            object sender,
+            RoutedEventArgs e)
+        {
+            RefreshX52StartupProfileStatus(
+                X52StartupProfileService.Instance.RestorePrevious());
         }
 
         private void ReconnectX52Button_Click(object sender, RoutedEventArgs e)
