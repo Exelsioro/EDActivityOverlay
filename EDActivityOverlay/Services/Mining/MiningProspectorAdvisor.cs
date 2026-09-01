@@ -91,6 +91,49 @@ public static class MiningProspectorAdvisor
             false);
     }
 
+    public static MiningProspectAdvice Evaluate(
+        MiningProspectSnapshot? prospect,
+        IEnumerable<string>? targetCommodities,
+        double minimumProportion)
+    {
+        string[] targets = (targetCommodities ?? Array.Empty<string>())
+            .Select(item => MiningTargetCatalog.Find(item)?.CommodityId ?? item?.Trim() ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (targets.Length == 0)
+        {
+            return Evaluate(prospect, string.Empty, minimumProportion);
+        }
+
+        MiningProspectAdvice[] evaluated = targets
+            .Select(target => Evaluate(prospect, target, minimumProportion))
+            .ToArray();
+
+        MiningProspectAdvice? core = evaluated
+            .FirstOrDefault(item => item.Decision == MiningProspectDecision.Core);
+        if (core is not null)
+        {
+            return core;
+        }
+
+        MiningProspectAdvice? mine = evaluated
+            .Where(item => item.Decision == MiningProspectDecision.Mine)
+            .OrderByDescending(item => item.TargetProportion ?? 0)
+            .FirstOrDefault();
+        if (mine is not null)
+        {
+            return mine;
+        }
+
+        MiningProspectAdvice? found = evaluated
+            .Where(item => item.TargetFound)
+            .OrderByDescending(item => item.TargetProportion ?? 0)
+            .FirstOrDefault();
+        return found ?? evaluated[0];
+    }
+
     public static MiningExtractionMethod RecommendMethod(MiningProspectSnapshot? prospect)
     {
         if (prospect is null)
@@ -131,6 +174,64 @@ public static class MiningProspectorAdvisor
 
 public static class MiningTargetAnalytics
 {
+    public static MiningTargetStatistics Calculate(
+        MiningSessionSnapshot session,
+        IEnumerable<string> targetCommodities,
+        double minimumProportion)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        string[] targets = (targetCommodities ?? Array.Empty<string>())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToArray();
+        int prospected = session.Prospects.Count;
+        if (prospected == 0 || targets.Length == 0)
+        {
+            return new MiningTargetStatistics(
+                prospected,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0);
+        }
+
+        MiningProspectAdvice[] advice = session.Prospects
+            .Select(item => MiningProspectorAdvisor.Evaluate(
+                item,
+                targets,
+                minimumProportion))
+            .ToArray();
+
+        int targetBearing = advice.Count(item => item.TargetFound);
+        int accepted = advice.Count(item =>
+            item.Decision is MiningProspectDecision.Mine or MiningProspectDecision.Core);
+        double[] proportions = advice
+            .Where(item => item.TargetProportion.HasValue)
+            .Select(item => item.TargetProportion!.Value)
+            .OrderBy(value => value)
+            .ToArray();
+        double average = proportions.Length == 0 ? 0 : proportions.Average();
+        double median = proportions.Length switch
+        {
+            0 => 0,
+            var count when count % 2 == 1 => proportions[count / 2],
+            var count => (proportions[count / 2 - 1] + proportions[count / 2]) / 2.0
+        };
+
+        return new MiningTargetStatistics(
+            prospected,
+            targetBearing,
+            accepted,
+            targetBearing / (double)prospected,
+            accepted / (double)prospected,
+            average,
+            median,
+            proportions.Length == 0 ? 0 : proportions[^1]);
+    }
+
     public static MiningTargetStatistics Calculate(
         MiningSessionSnapshot session,
         string? targetCommodity,

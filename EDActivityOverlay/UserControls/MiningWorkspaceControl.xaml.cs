@@ -22,9 +22,14 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         InitializeComponent();
         currentJournal = JournalMonitorService.Instance.Current;
         currentSession = MiningSessionService.Instance.Current;
+        MiningRingContextService.Instance.Start();
         MiningSessionService.Instance.Changed += OnMiningSessionChanged;
         MiningEngineeringMaterialTrackerService.Instance.Changed += OnMiningEngineeringMaterialsChanged;
+        MiningRingContextService.Instance.Changed += OnMiningRingContextChanged;
+        MiningMarketPriceService.Instance.Changed += OnMiningMarketPriceChanged;
         LoadTargetInputs();
+        RefreshTargetInputEnabledState();
+        RequestMarketRefresh();
         RefreshPresentation();
     }
 
@@ -42,12 +47,14 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     public void UpdateJournalState(GameStateSnapshot state)
     {
         currentJournal = state ?? GameStateSnapshot.Empty;
+        RequestMarketRefresh();
         RefreshPresentation();
     }
 
     public void RefreshLocalization()
     {
         LoadTargetInputs();
+        RefreshTargetInputEnabledState();
         RefreshPresentation();
     }
 
@@ -56,6 +63,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         if (Dispatcher.CheckAccess())
         {
             currentSession = e.Current;
+            RequestMarketRefresh();
             RefreshPresentation();
             return;
         }
@@ -63,6 +71,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         Dispatcher.BeginInvoke(new Action(() =>
         {
             currentSession = e.Current;
+            RequestMarketRefresh();
             RefreshPresentation();
         }));
     }
@@ -84,11 +93,15 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     private void RefreshPresentation()
     {
         AppSettings settings = SettingsService.Instance.Settings;
+        MiningRingContextSnapshot ringContext = CurrentRingContext();
+        MiningMarketPriceSnapshot prices = MiningMarketPriceService.Instance.Current;
+        MiningTargetSelection selection = CurrentTargetSelection(settings, ringContext);
+        string intelligenceTarget = selection.CommodityIds.FirstOrDefault() ?? string.Empty;
         MiningIntelligenceSnapshot intelligence =
             MiningIntelligenceCalculator.Calculate(
                 currentSession,
                 MiningCollectorTrackerService.Instance.Current,
-                settings.MiningTargetCommodity,
+                intelligenceTarget,
                 settings.MiningMinimumProportion);
 
         double effectiveThreshold =
@@ -107,13 +120,23 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             "  •  ",
             new[] { location, ring }
                 .Where(value => !string.IsNullOrWhiteSpace(value)));
+        RingContextText.Text = BuildRingContextText(ringContext);
+        RingContextText.Visibility = string.IsNullOrWhiteSpace(RingContextText.Text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        MarketContextText.Text = BuildMarketContextText(ringContext, selection, prices);
+        MarketContextText.Visibility = string.IsNullOrWhiteSpace(MarketContextText.Text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         MiningProspectSnapshot? prospect = currentSession.Prospects.LastOrDefault();
         if (prospect is null)
         {
             ProspectMetaText.Text = Loc.Get("Loc_MINING_WAITING_PROSPECT");
             ProspectHeadlineText.Text = string.Empty;
-            ProspectMaterialsText.Text = Loc.Get("Loc_MINING_TARGET_HINT");
+            ProspectMaterialsText.Text = BuildTargetLabel(
+                selection.CommodityIds,
+                effectiveThreshold);
             DecisionText.Text = string.Empty;
             MethodText.Text = string.Empty;
         }
@@ -121,7 +144,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         {
             MiningProspectAdvice advice = MiningProspectorAdvisor.Evaluate(
                 prospect,
-                settings.MiningTargetCommodity,
+                selection.CommodityIds,
                 effectiveThreshold);
 
             ProspectMetaText.Text = Loc.Format(
@@ -130,7 +153,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
                 prospect.Remaining);
 
             ProspectHeadlineText.Text = BuildProspectHeadline(prospect, advice);
-            ProspectMaterialsText.Text = BuildMaterialsLine(prospect);
+            ProspectMaterialsText.Text = BuildMaterialsLine(prospect, prices);
             DecisionText.Text = Loc.Get(advice.Decision switch
             {
                 MiningProspectDecision.Mine => "Loc_MINING_DECISION_MINE",
@@ -184,12 +207,9 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         if (!currentSession.IsActive)
         {
             SessionText.Text = Loc.Get("Loc_MINING_SESSION_IDLE");
-            TargetStatsText.Text = string.IsNullOrWhiteSpace(settings.MiningTargetCommodity)
-                ? Loc.Get("Loc_MINING_TARGET_HINT")
-                : Loc.Format(
-                    "Loc_MINING_TARGET_FORMAT",
-                    MiningTargetCatalog.GetDisplayName(settings.MiningTargetCommodity),
-                    settings.MiningMinimumProportion);
+            TargetStatsText.Text = BuildTargetLabel(
+                selection.CommodityIds,
+                settings.MiningMinimumProportion);
         }
         else
         {
@@ -210,10 +230,10 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
             MiningTargetStatistics stats = MiningTargetAnalytics.Calculate(
                 currentSession,
-                settings.MiningTargetCommodity,
+                selection.CommodityIds,
                 effectiveThreshold);
 
-            TargetStatsText.Text = string.IsNullOrWhiteSpace(settings.MiningTargetCommodity)
+            TargetStatsText.Text = selection.CommodityIds.Count == 0
                 ? Loc.Get("Loc_MINING_TARGET_HINT")
                 : Loc.Format(
                     "Loc_MINING_TARGET_STATS_FORMAT",
@@ -306,22 +326,29 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     private void LoadTargetInputs()
     {
         AppSettings settings = SettingsService.Instance.Settings;
-        IReadOnlyList<MiningTargetOption> targets =
-            MiningTargetCatalog.GetLocalizedOptions();
+        MiningTargetOption[] targets = MiningTargetCatalog.GetLocalizedOptions()
+            .Where(item => !string.IsNullOrWhiteSpace(item.CommodityId))
+            .ToArray();
+        IReadOnlyList<string> selectedTargets =
+            MiningTargetSelector.NormalizeManualTargets(settings);
 
-        TargetCommodityComboBox.ItemsSource = targets;
-        TargetCommodityComboBox.SelectedItem =
-            MiningTargetCatalog.Find(settings.MiningTargetCommodity)
-            is { } selected
-                ? targets.FirstOrDefault(item =>
-                    item.CommodityId.Equals(
-                        selected.CommodityId,
-                        StringComparison.OrdinalIgnoreCase))
-                : targets.FirstOrDefault();
+        TargetCommodityListBox.ItemsSource = targets;
+        TargetCommodityListBox.SelectedItems.Clear();
+        foreach (MiningTargetOption option in targets)
+        {
+            if (selectedTargets.Contains(
+                    option.CommodityId,
+                    StringComparer.OrdinalIgnoreCase))
+            {
+                TargetCommodityListBox.SelectedItems.Add(option);
+            }
+        }
 
+        AutoTargetsCheckBox.IsChecked = settings.MiningAutoSelectTargets;
         MinimumProportionTextBox.Text = settings.MiningMinimumProportion.ToString(
             "0.#",
             CultureInfo.CurrentCulture);
+        RefreshTargetInputEnabledState();
     }
 
     private void ApplyTargetButton_Click(object sender, RoutedEventArgs e)
@@ -342,17 +369,22 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
     private void ApplyTargetInputs()
     {
-        string target =
-            (TargetCommodityComboBox.SelectedItem
-                as MiningTargetOption)?.CommodityId
-            ?? string.Empty;
+        string[] targets = TargetCommodityListBox.SelectedItems
+            .Cast<MiningTargetOption>()
+            .Select(item => item.CommodityId)
+            .ToArray();
+        bool automatic = AutoTargetsCheckBox.IsChecked == true;
 
         double threshold = ParseThreshold(
             MinimumProportionTextBox.Text,
             SettingsService.Instance.Settings.MiningMinimumProportion);
 
-        SettingsService.Instance.SetMiningCopilotSettings(target, threshold);
+        SettingsService.Instance.SetMiningCopilotSettings(
+            targets,
+            automatic,
+            threshold);
         LoadTargetInputs();
+        RequestMarketRefresh();
         RefreshPresentation();
     }
 

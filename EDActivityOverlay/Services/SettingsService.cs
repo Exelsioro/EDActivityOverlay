@@ -60,6 +60,18 @@ namespace EDActivityOverlay.Services
                         {
                             settings.MiningHotkeyKey = oldKey.GetString() ?? settings.MiningHotkeyKey;
                         }
+                        settings.MiningTargetCommodities ??= new List<string>();
+                        if (settings.MiningTargetCommodities.Count == 0
+                            && !string.IsNullOrWhiteSpace(settings.MiningTargetCommodity))
+                        {
+                            settings.MiningTargetCommodities.Add(settings.MiningTargetCommodity.Trim());
+                        }
+                        if (!root.TryGetProperty(nameof(AppSettings.MiningAutoSelectTargets), out _))
+                        {
+                            // Preserve legacy explicit target behavior. Fresh/default settings use AUTO.
+                            settings.MiningAutoSelectTargets =
+                                string.IsNullOrWhiteSpace(settings.MiningTargetCommodity);
+                        }
                         settings.OverlayChromeStyle = OverlayChromeStyles.Normalize(settings.OverlayChromeStyle);
                         settings.ExplorationSpoilerMode = ExplorationSpoilerModes.Normalize(settings.ExplorationSpoilerMode);
                         Logger.Logger.Info($"Settings loaded from {_settingsFilePath}");
@@ -315,23 +327,43 @@ namespace EDActivityOverlay.Services
 
         public void SetMiningCopilotSettings(string targetCommodity, double minimumProportion)
         {
-            targetCommodity = targetCommodity?.Trim() ?? string.Empty;
+            SetMiningCopilotSettings(
+                string.IsNullOrWhiteSpace(targetCommodity)
+                    ? Array.Empty<string>()
+                    : new[] { targetCommodity },
+                false,
+                minimumProportion);
+        }
+
+        public void SetMiningCopilotSettings(
+            IEnumerable<string> targetCommodities,
+            bool autoSelectTargets,
+            double minimumProportion)
+        {
+            string[] targets = (targetCommodities ?? Array.Empty<string>())
+                .Select(item => item?.Trim() ?? string.Empty)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToArray();
             minimumProportion = Math.Clamp(minimumProportion, 0, 100);
 
-            if (string.Equals(
-                    _settings.MiningTargetCommodity,
-                    targetCommodity,
-                    StringComparison.OrdinalIgnoreCase)
+            bool sameTargets = _settings.MiningTargetCommodities
+                .SequenceEqual(targets, StringComparer.OrdinalIgnoreCase);
+            if (sameTargets
+                && _settings.MiningAutoSelectTargets == autoSelectTargets
                 && Math.Abs(_settings.MiningMinimumProportion - minimumProportion) < 0.0001)
             {
                 return;
             }
 
-            _settings.MiningTargetCommodity = targetCommodity;
+            _settings.MiningTargetCommodities = targets.ToList();
+            _settings.MiningTargetCommodity = targets.FirstOrDefault() ?? string.Empty;
+            _settings.MiningAutoSelectTargets = autoSelectTargets;
             _settings.MiningMinimumProportion = minimumProportion;
             SaveSettings();
             Logger.Logger.Info(
-                $"Mining copilot target updated: target={targetCommodity}, minimum={minimumProportion:0.#}%");
+                $"Mining copilot targets updated: auto={autoSelectTargets}, targets={string.Join(',', targets)}, minimum={minimumProportion:0.#}%");
         }
 
         public void SetJournalSettings(bool enabled, string directory)
@@ -592,10 +624,18 @@ namespace EDActivityOverlay.Services
         public string MiningHotkeyModifiers { get; set; } = "Ctrl";
         public string MiningHotkeyKey { get; set; } = "D4";
 
-        /// <summary>Commodity tracked by the compact Mining prospector advisor. Empty disables MINE/SKIP targeting.</summary>
+        /// <summary>
+        /// Legacy primary Mining target. Kept for settings/X52 compatibility; the compact HUD uses MiningTargetCommodities.
+        /// </summary>
         public string MiningTargetCommodity { get; set; } = string.Empty;
 
-        /// <summary>Minimum laser-minable proportion accepted by the Mining prospector advisor.</summary>
+        /// <summary>Manual Mining targets. Up to five commodities are evaluated independently against the same percentage threshold.</summary>
+        public List<string> MiningTargetCommodities { get; set; } = new();
+
+        /// <summary>Automatically selects up to five ring-compatible targets from current Ardent sell prices.</summary>
+        public bool MiningAutoSelectTargets { get; set; } = true;
+
+        /// <summary>Minimum asteroid composition accepted by the Mining prospector advisor. Market price never changes this percentage.</summary>
         public double MiningMinimumProportion { get; set; } = 25;
 
         /// <summary>Displays non-interactive journal notifications over the game.</summary>

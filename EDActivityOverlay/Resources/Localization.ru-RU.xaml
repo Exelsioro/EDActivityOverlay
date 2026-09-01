@@ -1311,6 +1311,30 @@
     <sys:String x:Key="Loc_MINING_ENG_TARGET_FORMAT">{0} +{1:N0} · {2:N0}/{3:N0} · осталось {4:N0}</sys:String>
     <sys:String x:Key="Loc_MINING_ENG_GAIN_FORMAT">{0} +{1:N0}</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">т/ч считается по полному времени mining-сессии и появляется после 5 минут + 5 очищенных тонн. ETA приблизительный: расход лимпетов освобождает место в трюме.</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGETS">ЦЕЛИ</sys:String>
+    <sys:String x:Key="Loc_MINING_AUTO_TARGETS">АВТО</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGETS_FORMAT">ЦЕЛИ {0} · мин. {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_FORMAT">~{0} кр./т</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_UNAVAILABLE">цена —</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_TOOLTIP">Приблизительная медианная цена продажи станциям по Ardent в радиусе 80 св. лет, данные не старше 3 дней. Fleet Carrier исключены. Процент содержания в астероиде не изменяет рыночную цену.</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_CONTEXT_FORMAT">{0} · {1}</sys:String>
+    <sys:String x:Key="Loc_MINING_MARKET_CONTEXT_FORMAT">МЕДИАНА РЯДОМ · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_DSS_CONTEXT_FORMAT">ХОТСПОТЫ DSS · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_MANUAL_CONTEXT_FORMAT">ВРУЧНУЮ · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_MARKET_LOADING">ЦЕНЫ · загрузка…</sys:String>
+    <sys:String x:Key="Loc_MINING_MARKET_UNAVAILABLE">ЦЕНЫ · недоступны</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_METALLIC">МЕТАЛЛИЧЕСКОЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_METAL_RICH">БОГАТОЕ МЕТАЛЛАМИ</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_ROCKY">КАМЕНИСТОЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_ICY">ЛЕДЯНОЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_UNKNOWN">ТИП КОЛЬЦА ?</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_PRISTINE">НЕТРОНУТЫЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_MAJOR">БОГАТЫЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_COMMON">ОБЫЧНЫЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_LOW">НИЗКИЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_DEPLETED">ИСТОЩЁННЫЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_UNKNOWN">РЕЗЕРВЫ ?</sys:String>
+    <sys:String x:Key="Loc_MINING_CORE_MATERIAL_PRICE_FORMAT">ЯДРО · {0} · {1}</sys:String>
 </ResourceDictionary>
 
 

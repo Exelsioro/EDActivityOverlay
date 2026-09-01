@@ -55,6 +55,7 @@ namespace EDActivityOverlay
             ExplorationRouteService.Instance.Start();
             ExplorationPoiService.Instance.Start();
             MiningLoadoutService.Instance.Start();
+            MiningRingContextService.Instance.Start();
             MiningCollectorTrackerService.Instance.Start();
             MiningSessionService.Instance.Start();
             MiningEngineeringMaterialTrackerService.Instance.Start();

@@ -16,7 +16,8 @@ public sealed class MiningWorkspaceV1bTests
         string loadoutCode = ReadProjectFile(
             "EDActivityOverlay", "UserControls", "MiningWorkspaceControl.Loadout.cs");
 
-        Assert.Contains("TargetCommodityTextBox", xaml, StringComparison.Ordinal);
+        Assert.Contains("TargetCommodityListBox", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutoTargetsCheckBox", xaml, StringComparison.Ordinal);
         Assert.Contains("MinimumProportionTextBox", xaml, StringComparison.Ordinal);
         Assert.Contains("DecisionText", xaml, StringComparison.Ordinal);
         Assert.Contains("MethodText", xaml, StringComparison.Ordinal);
@@ -54,12 +55,18 @@ public sealed class MiningWorkspaceV1bTests
             "EDActivityOverlay", "Resources", "Localization.ru-RU.xaml");
 
         Assert.Contains("MiningTargetCommodity", settings, StringComparison.Ordinal);
+        Assert.Contains("MiningTargetCommodities", settings, StringComparison.Ordinal);
+        Assert.Contains("MiningAutoSelectTargets", settings, StringComparison.Ordinal);
         Assert.Contains("MiningMinimumProportion", settings, StringComparison.Ordinal);
         Assert.Contains("SetMiningCopilotSettings", settings, StringComparison.Ordinal);
 
         foreach (string key in new[]
                  {
                      "Loc_MINING_COPILOT_TITLE",
+                     "Loc_MINING_TARGETS",
+                     "Loc_MINING_AUTO_TARGETS",
+                     "Loc_MINING_PRICE_FORMAT",
+                     "Loc_MINING_RING_CONTEXT_FORMAT",
                      "Loc_MINING_DECISION_MINE",
                      "Loc_MINING_DECISION_SKIP",
                      "Loc_MINING_DECISION_CORE",

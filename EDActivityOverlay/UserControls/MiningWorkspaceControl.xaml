@@ -31,6 +31,18 @@
                                FontSize="9"
                                TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource AccentColorBrush}"/>
+                    <TextBlock x:Name="RingContextText"
+                               Margin="0,2,0,0"
+                               FontSize="8"
+                               Visibility="Collapsed"
+                               Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                    <TextBlock x:Name="MarketContextText"
+                               Margin="0,2,0,0"
+                               FontSize="8"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed"
+                               ToolTip="{DynamicResource Loc_MINING_PRICE_TOOLTIP}"
+                               Foreground="{DynamicResource MutedTextColorBrush}"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Width="30"
@@ -58,19 +70,31 @@
                         <ColumnDefinition Width="70"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource Loc_MINING_TARGET}"
-                                   FontSize="8"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource MutedTextColorBrush}"/>
-                        <ComboBox x:Name="TargetCommodityComboBox"
-                                  Margin="0,3,0,0"
-                                  Height="25"
-                                  Padding="5,2"
-                                  DisplayMemberPath="Label"
-                                  IsTextSearchEnabled="True"
-                                  TextSearch.TextPath="Label"
-                                  VerticalContentAlignment="Center"
-                                  KeyDown="TargetInput_KeyDown"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{DynamicResource Loc_MINING_TARGETS}"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+                            <CheckBox x:Name="AutoTargetsCheckBox"
+                                      Grid.Column="1"
+                                      Margin="8,0,0,0"
+                                      Content="{DynamicResource Loc_MINING_AUTO_TARGETS}"
+                                      FontSize="8"
+                                      VerticalAlignment="Center"
+                                      Foreground="{DynamicResource PrimaryTextColorBrush}"
+                                      Click="AutoTargetsCheckBox_Click"/>
+                        </Grid>
+                        <ListBox x:Name="TargetCommodityListBox"
+                                 Margin="0,3,0,0"
+                                 Height="58"
+                                 Padding="2"
+                                 DisplayMemberPath="Label"
+                                 SelectionMode="Multiple"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="{DynamicResource Loc_MINING_THRESHOLD}"

@@ -1311,6 +1311,30 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_ENG_TARGET_FORMAT">{0} +{1:N0} · {2:N0}/{3:N0} · {4:N0} left</sys:String>
     <sys:String x:Key="Loc_MINING_ENG_GAIN_FORMAT">{0} +{1:N0}</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_LIMITATION">t/h uses wall-clock mining-session time and appears after 5 minutes + 5 refined tons. ETA is an estimate and changes as limpets free cargo space.</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGETS">TARGETS</sys:String>
+    <sys:String x:Key="Loc_MINING_AUTO_TARGETS">AUTO</sys:String>
+    <sys:String x:Key="Loc_MINING_TARGETS_FORMAT">TARGETS {0} · min {1:0.#}%</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_FORMAT">~{0} CR/t</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_UNAVAILABLE">price —</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_TOOLTIP">Approximate nearby median station sell price from Ardent, within 80 LY, data up to 3 days old. Fleet Carriers excluded. Asteroid percentage does not alter market price.</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_CONTEXT_FORMAT">{0} · {1}</sys:String>
+    <sys:String x:Key="Loc_MINING_MARKET_CONTEXT_FORMAT">NEARBY MEDIAN · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_DSS_CONTEXT_FORMAT">DSS HOTSPOTS · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_MANUAL_CONTEXT_FORMAT">MANUAL · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_MARKET_LOADING">MARKET PRICES · loading…</sys:String>
+    <sys:String x:Key="Loc_MINING_MARKET_UNAVAILABLE">MARKET PRICES · unavailable</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_METALLIC">METALLIC</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_METAL_RICH">METAL-RICH</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_ROCKY">ROCKY</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_ICY">ICY</sys:String>
+    <sys:String x:Key="Loc_MINING_RING_UNKNOWN">RING TYPE ?</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_PRISTINE">PRISTINE</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_MAJOR">MAJOR</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_COMMON">COMMON</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_LOW">LOW</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_DEPLETED">DEPLETED</sys:String>
+    <sys:String x:Key="Loc_MINING_RESERVE_UNKNOWN">RESERVES ?</sys:String>
+    <sys:String x:Key="Loc_MINING_CORE_MATERIAL_PRICE_FORMAT">CORE · {0} · {1}</sys:String>
 </ResourceDictionary>
 
 
