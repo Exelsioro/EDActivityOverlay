@@ -92,6 +92,8 @@
                                  Margin="0,3,0,0"
                                  Height="58"
                                  Padding="2"
+                                 Style="{DynamicResource EliteListBoxStyle}"
+                                 ItemContainerStyle="{DynamicResource EliteListBoxItemStyle}"
                                  DisplayMemberPath="Label"
                                  SelectionMode="Multiple"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"/>

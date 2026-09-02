@@ -323,6 +323,111 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="EliteListBoxStyle" TargetType="ListBox">
+        <Setter Property="Background" Value="{DynamicResource SecondaryBackgroundColorBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColorBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColorBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <Border x:Name="ListBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer Padding="{TemplateBinding Padding}"
+                                      Background="Transparent"
+                                      Focusable="False"
+                                      CanContentScroll="True">
+                            <ItemsPresenter/>
+                        </ScrollViewer>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="ListBorder"
+                                    Property="BorderBrush"
+                                    Value="{DynamicResource AccentColorBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.48"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="EliteListBoxItemStyle" TargetType="ListBoxItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColorBrush}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="5,2"/>
+        <Setter Property="Margin" Value="0,0,0,1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Content"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource RowHoverBackgroundBrush}"/>
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource PrimaryTextColorBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource SelectedRowBackgroundBrush}"/>
+                            <Setter TargetName="ItemBorder"
+                                    Property="BorderBrush"
+                                    Value="{DynamicResource SelectedRowBorderBrush}"/>
+                            <Setter TargetName="ItemBorder"
+                                    Property="BorderThickness"
+                                    Value="3,0,0,0"/>
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource SelectedRowTextBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="ItemBorder"
+                                    Property="Background"
+                                    Value="{DynamicResource SelectedRowBackgroundBrush}"/>
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource SelectedRowTextBrush}"/>
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.55"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="ComboboxBorderStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource PrimaryBackgroundColorBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource AccentColorBrush}"/>
