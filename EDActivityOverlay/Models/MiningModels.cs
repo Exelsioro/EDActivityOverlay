@@ -124,6 +124,10 @@ public sealed record MiningSessionSnapshot(
         Array.Empty<MiningProspectSnapshot>(),
         Array.Empty<MiningRefinementSnapshot>());
 
+    public string RingClass { get; init; } = string.Empty;
+    public string ReserveLevel { get; init; } = string.Empty;
+    public IReadOnlyList<string> HotspotCommodityIds { get; init; } = Array.Empty<string>();
+
     public bool IsActive => State == MiningSessionState.Active;
     public int ProspectedAsteroids => Prospects.Count;
     public int RefinedTons => Refinements.Count;

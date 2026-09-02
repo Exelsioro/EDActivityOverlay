@@ -104,6 +104,19 @@ public partial class MiningAnalyticsWorkspaceControl : System.Windows.Controls.U
             FormatDuration(analytics.Duration),
             analytics.RefinementsPerMinute);
 
+        MiningEconomicsSnapshot economics = MiningEconomicsCalculator.Calculate(
+            currentSession,
+            currentJournal,
+            MiningMarketPriceService.Instance.Current);
+        if (economics.HasSessionEstimate)
+        {
+            RateMetaText.Text += Environment.NewLine
+                + Loc.Format(
+                    "Loc_MINING_ANALYTICS_VALUE_FORMAT",
+                    economics.EstimatedSessionValue,
+                    economics.EstimatedCreditsPerHour);
+        }
+
         QualityText.Text = string.IsNullOrWhiteSpace(settings.MiningTargetCommodity)
             ? Loc.Get("Loc_MINING_TARGET_HINT")
             : Loc.Format(
@@ -228,9 +241,20 @@ public partial class MiningAnalyticsWorkspaceControl : System.Windows.Controls.U
 
     private static string BuildLocation(MiningSessionSnapshot session)
     {
+        string ringMeta = string.Join(
+            " · ",
+            new[] { session.RingClass, session.ReserveLevel }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+
         return string.Join(
             " / ",
-            new[] { session.SystemName, session.RingName, session.BodyName }
+            new[]
+            {
+                session.SystemName,
+                session.RingName,
+                ringMeta,
+                session.BodyName
+            }
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Distinct(StringComparer.OrdinalIgnoreCase));
     }

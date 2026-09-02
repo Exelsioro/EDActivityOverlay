@@ -56,8 +56,48 @@ The HUD also labels the best extraction method that can be justified from struct
 
 Target hit rate, acceptance rate, average, median, and best target proportion are calculated from the raw prospect rows retained by v1a. Target and threshold are persisted in normal application settings.
 
-## Next steps
+## Current Mining Copilot
 
-- v1c: full analytics/history workspace, t/h, RPM, distributions and ETA-full;
-- v1d: mining loadout analyzer;
-- v2: ring/location search through a provider boundary, Ardent sell integration, mine-to-sell opportunity ranking.
+The production Mining branch now also includes:
+
+- multi-target selection with an AUTO mode (up to five targets);
+- ring-class and reserve context from `Scan`;
+- DSS hotspot context from `SAASignalsFound`;
+- nearby Ardent sell-price sampling (median reference price, plus average/best data);
+- prices beside the structured `ProspectedAsteroid` composition. Material proportion and market price are independent values: the percentage is never multiplied into or used to modify the per-ton market price;
+- collector/limpet/loadout and engineering-material assistance;
+- full session analytics/history;
+- current-cargo and refined-session estimated value using the current nearby market reference price;
+- Mine -> Sell handoff: the Mining workspace can switch directly to Trade `Sell current cargo`, run the mixed-cargo buyer search, and pin the chosen sale-only route;
+- X52 Mining copilot integration.
+
+### Ring and target semantics
+
+AUTO ranks only commodities compatible with the resolved ring class. When DSS hotspot signals exist, they are shown explicitly and participate in target selection. The compact HUD separately shows:
+
+- ring class / reserve level;
+- DSS hotspots;
+- best priced resources currently known for that ring;
+- active AUTO or manual targets.
+
+Ring class, reserve level, and hotspot commodity IDs are copied into completed mining sessions and persisted with history.
+
+### Economics semantics
+
+Mining economic values are estimates based on current nearby Ardent market observations:
+
+- cargo estimate = priced tons currently in the hold multiplied by the current per-ton reference price;
+- session estimate = emitted `MiningRefined` tons multiplied by the current per-ton reference price;
+- estimated credits/hour = session estimate divided by elapsed mining-session time after a five-minute warm-up.
+
+Prospector material percentages are not part of these price calculations.
+
+The pinned cargo-sale route separately tracks actual `MarketSell` revenue while the sale route is active. That revenue is deliberately not written back as historical mining-session profit because Elite's journal does not provide reliable provenance for every cargo unit when old and newly mined cargo are mixed.
+
+## Remaining polish before merge
+
+- real-game smoke tests across metallic, metal-rich, rocky and icy rings;
+- verify DSS hotspot association on multi-ring bodies;
+- verify Mine -> Sell mixed-cargo completion against live `MarketSell`;
+- update screenshots/user-facing release notes;
+- run the full Trade + Mining + Exploration + X52 regression suite before merging `Mining-module`.

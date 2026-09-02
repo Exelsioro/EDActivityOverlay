@@ -85,6 +85,19 @@ public partial class MainWindow
         Logger.Logger.Info($"Activity workspace selected: {activity}");
     }
 
+    public async Task OpenTradeCargoSaleFromMiningAsync()
+    {
+        SelectActivity(
+            ActivityType.Trade);
+
+        if (activityWorkspaceWindow is null)
+        {
+            return;
+        }
+
+        await activityWorkspaceWindow.BeginCargoSaleFromMiningAsync();
+    }
+
     private void OnX52ControlRequested(object? sender, X52ControlEventArgs e) =>
         Dispatcher.BeginInvoke(new Action(() =>
         {

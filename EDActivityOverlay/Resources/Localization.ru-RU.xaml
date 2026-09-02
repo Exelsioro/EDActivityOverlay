@@ -1337,6 +1337,13 @@
     <sys:String x:Key="Loc_MINING_CORE_MATERIAL_PRICE_FORMAT">ЯДРО · {0} · {1}</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_PIN_PLANNED_VALUE">СТОИМОСТЬ ПРОДАЖИ · {0:N0} кр.</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_PIN_SOLD_VALUE">ПРОДАНО · {0:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_MINING_FIND_BUYER">НАЙТИ ПОКУПАТЕЛЯ</sys:String>
+    <sys:String x:Key="Loc_MINING_BEST_HERE_FORMAT">ЛУЧШЕЕ ЗДЕСЬ · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_AUTO_CONTEXT_FORMAT">АВТО-ЦЕЛИ · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_ECONOMICS_CARGO_FORMAT">ТРЮМ ~{0:N0} кр. ({1:N0} т с ценой)</sys:String>
+    <sys:String x:Key="Loc_MINING_ECONOMICS_SESSION_FORMAT">СЕССИЯ ~{0:N0} кр. ({1:N0} т добыто)</sys:String>
+    <sys:String x:Key="Loc_MINING_ECONOMICS_RATE_FORMAT">~{0:N0} кр/ч</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_VALUE_FORMAT">ОЦЕНКА ~{0:N0} кр. · ~{1:N0} кр/ч</sys:String>
 </ResourceDictionary>
 
 

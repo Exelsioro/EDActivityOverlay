@@ -1337,6 +1337,13 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_CORE_MATERIAL_PRICE_FORMAT">CORE · {0} · {1}</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_PIN_PLANNED_VALUE">SALE VALUE · {0:N0} cr</sys:String>
     <sys:String x:Key="Loc_TRADE_CARGO_PIN_SOLD_VALUE">SOLD · {0:N0} cr</sys:String>
+    <sys:String x:Key="Loc_MINING_FIND_BUYER">FIND BUYER</sys:String>
+    <sys:String x:Key="Loc_MINING_BEST_HERE_FORMAT">BEST HERE · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_AUTO_CONTEXT_FORMAT">AUTO TARGETS · {0}</sys:String>
+    <sys:String x:Key="Loc_MINING_ECONOMICS_CARGO_FORMAT">CARGO ~{0:N0} cr ({1:N0} t priced)</sys:String>
+    <sys:String x:Key="Loc_MINING_ECONOMICS_SESSION_FORMAT">SESSION ~{0:N0} cr ({1:N0} t refined)</sys:String>
+    <sys:String x:Key="Loc_MINING_ECONOMICS_RATE_FORMAT">~{0:N0} cr/h</sys:String>
+    <sys:String x:Key="Loc_MINING_ANALYTICS_VALUE_FORMAT">EST. VALUE ~{0:N0} cr · ~{1:N0} cr/h</sys:String>
 </ResourceDictionary>
 
 

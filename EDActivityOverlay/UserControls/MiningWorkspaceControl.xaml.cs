@@ -36,6 +36,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     public event Action? CloseRequested;
     public event Action? DragRequested;
     public event Action? FullRequested;
+    public event Action? SellCargoRequested;
 
     public void SetChromeStyle(string? style)
     {
@@ -153,7 +154,10 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
                 prospect.Remaining);
 
             ProspectHeadlineText.Text = BuildProspectHeadline(prospect, advice);
-            ProspectMaterialsText.Text = BuildMaterialsLine(prospect, prices);
+            ProspectMaterialsText.Text = BuildMaterialsLine(
+                prospect,
+                prices,
+                selection.CommodityIds);
             DecisionText.Text = Loc.Get(advice.Decision switch
             {
                 MiningProspectDecision.Mine => "Loc_MINING_DECISION_MINE",
@@ -192,6 +196,16 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         CargoText.Text = cargoCapacity > 0
             ? Loc.Format("Loc_MINING_CARGO_FORMAT", cargoUsed, cargoCapacity, limpets)
             : Loc.Format("Loc_MINING_CARGO_UNKNOWN_FORMAT", limpets);
+
+        MiningEconomicsSnapshot economics = MiningEconomicsCalculator.Calculate(
+            currentSession,
+            currentJournal,
+            prices);
+        EconomicsText.Text = BuildEconomicsText(economics);
+        EconomicsText.Visibility = string.IsNullOrWhiteSpace(EconomicsText.Text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        SellCargoButton.IsEnabled = HasSellableMiningCargo(currentJournal);
 
         IntelligenceText.Text = BuildIntelligenceText(intelligence);
 
@@ -412,6 +426,9 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
 
     private void FullAnalyticsButton_Click(object sender, RoutedEventArgs e) =>
         FullRequested?.Invoke();
+
+    private void SellCargoButton_Click(object sender, RoutedEventArgs e) =>
+        SellCargoRequested?.Invoke();
 
     private void CompactMiningDragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {

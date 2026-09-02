@@ -208,6 +208,12 @@
                                FontSize="9"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                    <TextBlock x:Name="EconomicsText"
+                               Margin="0,4,0,0"
+                               FontSize="9"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
                     <TextBlock x:Name="TargetStatsText"
                                Margin="0,3,0,0"
                                FontSize="9"
@@ -220,6 +226,8 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="FooterText"
                            VerticalAlignment="Center"
@@ -227,8 +235,18 @@
                            FontSize="8"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource MutedTextColorBrush}"/>
-                <Button x:Name="FullAnalyticsButton"
+                <Button x:Name="SellCargoButton"
                         Grid.Column="1"
+                        MinWidth="104"
+                        Height="25"
+                        Padding="8,2"
+                        Content="{DynamicResource Loc_MINING_FIND_BUYER}"
+                        Foreground="{DynamicResource PrimaryTextColorBrush}"
+                        Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                        BorderBrush="{DynamicResource AccentColorBrush}"
+                        Click="SellCargoButton_Click"/>
+                <Button x:Name="FullAnalyticsButton"
+                        Grid.Column="3"
                         MinWidth="74"
                         Height="25"
                         Padding="8,2"

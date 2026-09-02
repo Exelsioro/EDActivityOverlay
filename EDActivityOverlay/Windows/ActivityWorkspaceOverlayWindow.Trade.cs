@@ -106,6 +106,22 @@ public partial class ActivityWorkspaceOverlayWindow
             tradeWorkspaceControl.IsFullMode);
     }
 
+    public async Task BeginCargoSaleFromMiningAsync()
+    {
+        if (tradeWorkspaceControl is null)
+        {
+            InitializeTradeWorkspace();
+        }
+
+        tradeWorkspaceControl?.UpdateJournalState(
+            JournalMonitorService.Instance.Current);
+
+        if (tradeWorkspaceControl is not null)
+        {
+            await tradeWorkspaceControl.BeginCargoSaleFromMiningAsync();
+        }
+    }
+
     private void ApplyTradeWorkspaceMode(
         bool full)
     {

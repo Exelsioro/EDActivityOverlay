@@ -56,13 +56,18 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
         MiningAccumulatorResult result;
+        MiningSessionSnapshot publishedCurrent;
+        MiningSessionSnapshot? completed;
         lock (sync)
         {
             result = accumulator.Apply(journalEvent);
-            current = result.Current;
+            publishedCurrent = EnrichRingContext(result.Current);
+            completed = result.CompletedSession is null
+                ? null
+                : EnrichRingContext(result.CompletedSession);
+            current = publishedCurrent;
         }
 
-        MiningSessionSnapshot? completed = result.CompletedSession;
         if (completed is not null
             && journalEvent.Origin == JournalEventOrigin.Live)
         {
@@ -71,23 +76,63 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
 
         if (result.Changed)
         {
-            Changed?.Invoke(this, new MiningSessionChangedEventArgs(result.Current, completed));
+            Changed?.Invoke(
+                this,
+                new MiningSessionChangedEventArgs(
+                    publishedCurrent,
+                    completed));
         }
     }
 
     public void OnCompanionFile(CompanionFileReceivedEventArgs companionFile)
     {
         MiningAccumulatorResult result;
+        MiningSessionSnapshot publishedCurrent;
         lock (sync)
         {
             result = accumulator.ApplyCompanion(companionFile);
-            current = result.Current;
+            publishedCurrent = EnrichRingContext(result.Current);
+            current = publishedCurrent;
         }
 
         if (result.Changed)
         {
-            Changed?.Invoke(this, new MiningSessionChangedEventArgs(result.Current));
+            Changed?.Invoke(
+                this,
+                new MiningSessionChangedEventArgs(
+                    publishedCurrent));
         }
+    }
+
+    private static MiningSessionSnapshot EnrichRingContext(
+        MiningSessionSnapshot session)
+    {
+        if (session.State == MiningSessionState.Idle)
+        {
+            return session;
+        }
+
+        MiningRingContextSnapshot ring =
+            MiningRingContextService.Instance.Resolve(
+                session.RingName,
+                session.BodyName,
+                session.SystemAddress,
+                session.SystemName);
+
+        if (!ring.Available)
+        {
+            return session;
+        }
+
+        return session with
+        {
+            RingName = string.IsNullOrWhiteSpace(session.RingName)
+                ? ring.RingName
+                : session.RingName,
+            RingClass = ring.RingClass,
+            ReserveLevel = ring.ReserveLevel,
+            HotspotCommodityIds = ring.HotspotCommodityIds.ToArray()
+        };
     }
 
     public void Dispose()

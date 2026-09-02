@@ -53,14 +53,14 @@ internal sealed class MiningSessionRepository
                 command.CommandText = """
                     INSERT INTO mining_session(
                         session_id, commander, system_address, system_name,
-                        body_id, body_name, ring_name,
+                        body_id, body_name, ring_name, ring_class, reserve_level, hotspot_commodity_ids,
                         started_utc, last_activity_utc, ended_utc, end_reason,
                         prospected_asteroids, prospectors_launched, collectors_launched,
                         cracked_asteroids, refined_tons,
                         cargo_used_end, cargo_capacity, limpets_remaining_end)
                     VALUES(
                         $id, $commander, $address, $system,
-                        $bodyId, $body, $ring,
+                        $bodyId, $body, $ring, $ringClass, $reserveLevel, $hotspots,
                         $started, $lastActivity, $ended, $reason,
                         $prospected, $prospectors, $collectors,
                         $cracked, $refined,
@@ -72,6 +72,9 @@ internal sealed class MiningSessionRepository
                         body_id = excluded.body_id,
                         body_name = excluded.body_name,
                         ring_name = excluded.ring_name,
+                        ring_class = excluded.ring_class,
+                        reserve_level = excluded.reserve_level,
+                        hotspot_commodity_ids = excluded.hotspot_commodity_ids,
                         started_utc = excluded.started_utc,
                         last_activity_utc = excluded.last_activity_utc,
                         ended_utc = excluded.ended_utc,
@@ -92,6 +95,9 @@ internal sealed class MiningSessionRepository
                 command.Parameters.AddWithValue("$bodyId", session.BodyId);
                 command.Parameters.AddWithValue("$body", session.BodyName);
                 command.Parameters.AddWithValue("$ring", session.RingName);
+                command.Parameters.AddWithValue("$ringClass", session.RingClass);
+                command.Parameters.AddWithValue("$reserveLevel", session.ReserveLevel);
+                command.Parameters.AddWithValue("$hotspots", string.Join("|", session.HotspotCommodityIds));
                 command.Parameters.AddWithValue("$started", session.StartedUtc.ToString("O"));
                 command.Parameters.AddWithValue("$lastActivity", session.LastActivityUtc.ToString("O"));
                 command.Parameters.AddWithValue("$ended", session.EndedUtc.Value.ToString("O"));
@@ -160,6 +166,9 @@ internal sealed class MiningSessionRepository
         int bodyId;
         string bodyName;
         string ringName;
+        string ringClass;
+        string reserveLevel;
+        string hotspotCommodityIds;
         DateTimeOffset startedUtc;
         DateTimeOffset lastActivityUtc;
         DateTimeOffset endedUtc;
@@ -175,7 +184,7 @@ internal sealed class MiningSessionRepository
         {
             command.CommandText = """
                 SELECT commander, system_address, system_name,
-                       body_id, body_name, ring_name,
+                       body_id, body_name, ring_name, ring_class, reserve_level, hotspot_commodity_ids,
                        started_utc, last_activity_utc, ended_utc, end_reason,
                        prospectors_launched, collectors_launched, cracked_asteroids,
                        cargo_used_end, cargo_capacity, limpets_remaining_end
@@ -196,18 +205,21 @@ internal sealed class MiningSessionRepository
             bodyId = reader.GetInt32(3);
             bodyName = reader.GetString(4);
             ringName = reader.GetString(5);
-            startedUtc = DateTimeOffset.Parse(reader.GetString(6));
-            lastActivityUtc = DateTimeOffset.Parse(reader.GetString(7));
-            endedUtc = DateTimeOffset.Parse(reader.GetString(8));
-            endReason = Enum.TryParse(reader.GetString(9), out MiningSessionEndReason parsed)
+            ringClass = reader.GetString(6);
+            reserveLevel = reader.GetString(7);
+            hotspotCommodityIds = reader.GetString(8);
+            startedUtc = DateTimeOffset.Parse(reader.GetString(9));
+            lastActivityUtc = DateTimeOffset.Parse(reader.GetString(10));
+            endedUtc = DateTimeOffset.Parse(reader.GetString(11));
+            endReason = Enum.TryParse(reader.GetString(12), out MiningSessionEndReason parsed)
                 ? parsed
                 : MiningSessionEndReason.None;
-            prospectorsLaunched = reader.GetInt32(10);
-            collectorsLaunched = reader.GetInt32(11);
-            crackedAsteroids = reader.GetInt32(12);
-            cargoUsed = reader.GetInt32(13);
-            cargoCapacity = reader.GetInt32(14);
-            limpetsRemaining = reader.GetInt32(15);
+            prospectorsLaunched = reader.GetInt32(13);
+            collectorsLaunched = reader.GetInt32(14);
+            crackedAsteroids = reader.GetInt32(15);
+            cargoUsed = reader.GetInt32(16);
+            cargoCapacity = reader.GetInt32(17);
+            limpetsRemaining = reader.GetInt32(18);
         }
 
         Dictionary<int, IReadOnlyList<MiningProspectMaterialSnapshot>> materials =
@@ -237,7 +249,12 @@ internal sealed class MiningSessionRepository
             cargoCapacity,
             limpetsRemaining,
             prospects,
-            refinements);
+            refinements)
+        {
+            RingClass = ringClass,
+            ReserveLevel = reserveLevel,
+            HotspotCommodityIds = ParseHotspots(hotspotCommodityIds)
+        };
     }
 
     private static Dictionary<int, IReadOnlyList<MiningProspectMaterialSnapshot>> LoadMaterials(
@@ -436,6 +453,9 @@ internal sealed class MiningSessionRepository
                     body_id INTEGER NOT NULL,
                     body_name TEXT NOT NULL,
                     ring_name TEXT NOT NULL,
+                    ring_class TEXT NOT NULL DEFAULT '',
+                    reserve_level TEXT NOT NULL DEFAULT '',
+                    hotspot_commodity_ids TEXT NOT NULL DEFAULT '',
                     started_utc TEXT NOT NULL,
                     last_activity_utc TEXT NOT NULL,
                     ended_utc TEXT NOT NULL,
@@ -487,8 +507,48 @@ internal sealed class MiningSessionRepository
                     ON mining_refinement(session_id, sequence);
                 """;
             command.ExecuteNonQuery();
+
+            // Existing companion.db installations predate the ring-context columns.
+            EnsureColumn(connection, "mining_session", "ring_class", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, "mining_session", "reserve_level", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumn(connection, "mining_session", "hotspot_commodity_ids", "TEXT NOT NULL DEFAULT ''");
         }
     }
+
+    private static void EnsureColumn(
+        SqliteConnection connection,
+        string table,
+        string column,
+        string definition)
+    {
+        using (SqliteCommand pragma = connection.CreateCommand())
+        {
+            pragma.CommandText = $"PRAGMA table_info({table});";
+            using SqliteDataReader reader = pragma.ExecuteReader();
+            while (reader.Read())
+            {
+                if (reader.GetString(1).Equals(column, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+        }
+
+        using SqliteCommand alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        alter.ExecuteNonQuery();
+    }
+
+    private static IReadOnlyList<string> ParseHotspots(string value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? Array.Empty<string>()
+            : value
+                .Split(
+                    '|',
+                    StringSplitOptions.RemoveEmptyEntries
+                    | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
     private SqliteConnection Open()
     {

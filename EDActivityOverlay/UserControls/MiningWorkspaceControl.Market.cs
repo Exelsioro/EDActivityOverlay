@@ -84,6 +84,23 @@ public partial class MiningWorkspaceControl
             }
         }
 
+        // Session economics and Mine -> Sell also need quotes for cargo already in the hold.
+        foreach (CargoCommoditySnapshot cargo in currentJournal.CargoByCommodityId.Values)
+        {
+            if (cargo.Count <= 0)
+            {
+                continue;
+            }
+
+            MiningTargetOption? option =
+                MiningTargetCatalog.Find(cargo.CommodityId)
+                ?? MiningTargetCatalog.Find(cargo.DisplayName);
+            if (option is not null && !string.IsNullOrWhiteSpace(option.CommodityId))
+            {
+                candidates.Add(option.CommodityId);
+            }
+        }
+
         if (candidates.Count == 0)
         {
             return;
@@ -138,12 +155,18 @@ public partial class MiningWorkspaceControl
 
     private static string BuildMaterialsLine(
         MiningProspectSnapshot prospect,
-        MiningMarketPriceSnapshot prices)
+        MiningMarketPriceSnapshot prices,
+        IReadOnlyList<string> targets)
     {
+        var selected = new HashSet<string>(
+            targets.Select(item =>
+                MiningTargetCatalog.Find(item)?.CommodityId ?? item),
+            StringComparer.OrdinalIgnoreCase);
+
         string materials = string.Join(
             Environment.NewLine,
             prospect.Materials
-                .Take(3)
+                .Take(5)
                 .Select(item =>
                 {
                     string commodityId = MiningTargetCatalog.Find(item.CommodityId)?.CommodityId
@@ -152,7 +175,12 @@ public partial class MiningWorkspaceControl
                     string price = prices.TryGet(commodityId, out MiningMarketPriceQuote? quote)
                         ? FormatMarketPrice(quote!.ReferenceSellPrice)
                         : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE");
-                    return $"{item.DisplayName} {item.Proportion:0.#}% · {price}";
+                    bool target = selected.Contains(commodityId);
+                    string name = target
+                        ? item.DisplayName.ToUpperInvariant()
+                        : item.DisplayName;
+                    string marker = target ? "► " : "  ";
+                    return $"{marker}{name} {item.Proportion:0.#}% · {price}";
                 }));
 
         if (!prospect.HasMotherlode)
@@ -165,18 +193,22 @@ public partial class MiningWorkspaceControl
         string coreCommodity = string.IsNullOrWhiteSpace(prospect.MotherlodeCommodityId)
             ? prospect.MotherlodeDisplayName
             : prospect.MotherlodeCommodityId;
+        string stableCoreId = MiningTargetCatalog.Find(coreCommodity)?.CommodityId
+            ?? coreCommodity;
         string corePrice = prices.TryGet(
-                coreCommodity,
+                stableCoreId,
                 out MiningMarketPriceQuote? quote)
             ? FormatMarketPrice(quote!.ReferenceSellPrice)
             : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE");
-        string core = Loc.Format(
-            "Loc_MINING_CORE_MATERIAL_PRICE_FORMAT",
-            string.IsNullOrWhiteSpace(prospect.MotherlodeDisplayName)
-                ? prospect.MotherlodeCommodityId
-                : prospect.MotherlodeDisplayName,
-            corePrice);
+        string coreName = string.IsNullOrWhiteSpace(prospect.MotherlodeDisplayName)
+            ? MiningTargetCatalog.GetDisplayName(stableCoreId)
+            : prospect.MotherlodeDisplayName;
+        if (selected.Contains(stableCoreId))
+        {
+            coreName = coreName.ToUpperInvariant();
+        }
 
+        string core = $"◆ {coreName} · {corePrice}";
         return string.IsNullOrWhiteSpace(materials)
             ? core
             : core + Environment.NewLine + materials;
@@ -199,36 +231,123 @@ public partial class MiningWorkspaceControl
         MiningTargetSelection selection,
         MiningMarketPriceSnapshot prices)
     {
+        var lines = new List<string>();
+
         if (prices.IsLoading && prices.Quotes.Count == 0)
         {
             return Loc.Get("Loc_MINING_MARKET_LOADING");
         }
 
-        if (selection.CommodityIds.Count == 0)
+        if (ring.HasHotspots)
         {
-            return prices.IsLoading
-                ? Loc.Get("Loc_MINING_MARKET_LOADING")
-                : Loc.Get("Loc_MINING_MARKET_UNAVAILABLE");
+            string hotspots = FormatCommodityPriceList(
+                ring.HotspotCommodityIds,
+                prices,
+                5);
+            if (!string.IsNullOrWhiteSpace(hotspots))
+            {
+                lines.Add(Loc.Format("Loc_MINING_DSS_CONTEXT_FORMAT", hotspots));
+            }
         }
 
-        string list = string.Join(
+        if (ring.Available)
+        {
+            string bestHere = FormatCommodityPriceList(
+                MiningTargetSelector.GetCompatibleCommodityIds(ring.RingClass),
+                prices,
+                5);
+            if (!string.IsNullOrWhiteSpace(bestHere))
+            {
+                lines.Add(Loc.Format("Loc_MINING_BEST_HERE_FORMAT", bestHere));
+            }
+        }
+
+        if (selection.CommodityIds.Count > 0)
+        {
+            string targets = FormatCommodityPriceList(
+                selection.CommodityIds,
+                prices,
+                MiningTargetSelector.MaxTargets);
+            lines.Add(Loc.Format(
+                selection.Automatic
+                    ? "Loc_MINING_AUTO_CONTEXT_FORMAT"
+                    : "Loc_MINING_MANUAL_CONTEXT_FORMAT",
+                targets));
+        }
+
+        if (prices.IsLoading)
+        {
+            lines.Add(Loc.Get("Loc_MINING_MARKET_LOADING"));
+        }
+
+        return lines.Count == 0
+            ? Loc.Get("Loc_MINING_MARKET_UNAVAILABLE")
+            : string.Join(Environment.NewLine, lines.Distinct(StringComparer.Ordinal));
+    }
+
+    private static string FormatCommodityPriceList(
+        IEnumerable<string> commodityIds,
+        MiningMarketPriceSnapshot prices,
+        int limit)
+    {
+        return string.Join(
             " · ",
-            selection.CommodityIds
-                .Take(3)
+            commodityIds
                 .Select(id =>
                 {
-                    string price = prices.TryGet(id, out MiningMarketPriceQuote? quote)
-                        ? FormatMarketPrice(quote!.ReferenceSellPrice)
-                        : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE");
-                    return $"{MiningTargetCatalog.GetDisplayName(id)} {price}";
-                }));
+                    string stableId = MiningTargetCatalog.Find(id)?.CommodityId ?? id;
+                    bool available = prices.TryGet(stableId, out MiningMarketPriceQuote? quote);
+                    return new
+                    {
+                        Id = stableId,
+                        Price = available ? quote!.ReferenceSellPrice : 0
+                    };
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                .DistinctBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(item => item.Price)
+                .ThenBy(item => MiningTargetCatalog.GetDisplayName(item.Id))
+                .Take(Math.Max(1, limit))
+                .Select(item =>
+                    $"{MiningTargetCatalog.GetDisplayName(item.Id)} "
+                    + (item.Price > 0
+                        ? FormatMarketPrice(item.Price)
+                        : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE"))));
+    }
 
-        string key = selection.Automatic && ring.HasHotspots
-            ? "Loc_MINING_DSS_CONTEXT_FORMAT"
-            : selection.Automatic
-                ? "Loc_MINING_MARKET_CONTEXT_FORMAT"
-                : "Loc_MINING_MANUAL_CONTEXT_FORMAT";
-        return Loc.Format(key, list);
+    private static bool HasSellableMiningCargo(GameStateSnapshot state) =>
+        state.CargoByCommodityId.Values.Any(item =>
+            item.Count > 0
+            && (MiningTargetCatalog.Find(item.CommodityId)
+                ?? MiningTargetCatalog.Find(item.DisplayName)) is not null);
+
+    private static string BuildEconomicsText(MiningEconomicsSnapshot economics)
+    {
+        var parts = new List<string>();
+        if (economics.HasCargoEstimate)
+        {
+            parts.Add(Loc.Format(
+                "Loc_MINING_ECONOMICS_CARGO_FORMAT",
+                economics.EstimatedCargoValue,
+                economics.PricedCargoTons));
+        }
+
+        if (economics.HasSessionEstimate)
+        {
+            parts.Add(Loc.Format(
+                "Loc_MINING_ECONOMICS_SESSION_FORMAT",
+                economics.EstimatedSessionValue,
+                economics.PricedRefinedTons));
+        }
+
+        if (economics.EstimatedCreditsPerHour > 0)
+        {
+            parts.Add(Loc.Format(
+                "Loc_MINING_ECONOMICS_RATE_FORMAT",
+                economics.EstimatedCreditsPerHour));
+        }
+
+        return string.Join("  ·  ", parts);
     }
 
     private static string FormatMarketPrice(int price)

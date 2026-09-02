@@ -8,7 +8,7 @@ public sealed record MiningTargetSelection(
 
 public static class MiningTargetSelector
 {
-    private const int MaxTargets = 5;
+    public const int MaxTargets = 5;
 
     private static readonly string[] Metallic =
     [

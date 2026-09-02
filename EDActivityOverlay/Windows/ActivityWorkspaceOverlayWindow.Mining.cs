@@ -10,7 +10,7 @@ namespace EDActivityOverlay.Windows;
 public partial class ActivityWorkspaceOverlayWindow
 {
     private const double MiningCompactWidth = 420;
-    private const double MiningCompactHeight = 500;
+    private const double MiningCompactHeight = 525;
     private const double MiningWorkspaceMinWidth = 940;
     private const double MiningWorkspaceMinHeight = 600;
 
@@ -47,6 +47,7 @@ public partial class ActivityWorkspaceOverlayWindow
         miningWorkspaceControl.CloseRequested += CloseMiningWorkspaceRequested;
         miningWorkspaceControl.DragRequested += DragMiningCompactRequested;
         miningWorkspaceControl.FullRequested += OpenMiningAnalyticsRequested;
+        miningWorkspaceControl.SellCargoRequested += SellMiningCargoRequested;
         miningAnalyticsWorkspaceControl.BackRequested += CloseMiningAnalyticsRequested;
         miningAnalyticsWorkspaceControl.CloseRequested += CloseMiningWorkspaceRequested;
         root.Children.Add(miningWorkspaceControl);
@@ -113,6 +114,16 @@ public partial class ActivityWorkspaceOverlayWindow
         miningWorkspaceControl.Visibility = Visibility.Visible;
         miningWorkspaceControl.UpdateJournalState(JournalMonitorService.Instance.Current);
         ApplyMiningWorkspaceMode(full: false);
+    }
+
+    private async void SellMiningCargoRequested()
+    {
+        if (parentWindow is null)
+        {
+            return;
+        }
+
+        await parentWindow.OpenTradeCargoSaleFromMiningAsync();
     }
 
     private void ApplyMiningWorkspaceMode(bool full)
@@ -253,6 +264,7 @@ public partial class ActivityWorkspaceOverlayWindow
             miningWorkspaceControl.CloseRequested -= CloseMiningWorkspaceRequested;
             miningWorkspaceControl.DragRequested -= DragMiningCompactRequested;
             miningWorkspaceControl.FullRequested -= OpenMiningAnalyticsRequested;
+            miningWorkspaceControl.SellCargoRequested -= SellMiningCargoRequested;
             miningWorkspaceControl.Dispose();
             miningWorkspaceControl = null;
         }

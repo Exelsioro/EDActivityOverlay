@@ -1231,26 +1231,12 @@ public sealed class TradeRouteProgressTracker : IDisposable
         GameStateSnapshot state,
         long marketId,
         string system,
-        string station)
-    {
-        if (state.Docked
-            && marketId > 0
-            && state.MarketId is { } currentMarketId
-            && currentMarketId > 0)
-        {
-            return currentMarketId
-                   == marketId;
-        }
-
-        return TextMatches(
-                   state.StarSystem,
-                   system)
-               && (string.IsNullOrWhiteSpace(
-                       station)
-                   || TextMatches(
-                       state.Station,
-                       station));
-    }
+        string station) =>
+        TradeLocationMatcher.IsAtMarket(
+            state,
+            marketId,
+            system,
+            station);
 
     private static bool HasRouteCommodity(
         GameStateSnapshot state,
