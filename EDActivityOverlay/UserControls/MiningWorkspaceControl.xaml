@@ -69,51 +69,61 @@
                         <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="70"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="{DynamicResource Loc_MINING_TARGETS}"
-                                       FontSize="8"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
-                            <CheckBox x:Name="AutoTargetsCheckBox"
-                                      Grid.Column="1"
-                                      Margin="8,0,0,0"
-                                      Content="{DynamicResource Loc_MINING_AUTO_TARGETS}"
-                                      FontSize="8"
-                                      VerticalAlignment="Center"
-                                      Foreground="{DynamicResource PrimaryTextColorBrush}"
-                                      Click="AutoTargetsCheckBox_Click"/>
-                        </Grid>
-                        <ListBox x:Name="TargetCommodityListBox"
-                                 Margin="0,3,0,0"
-                                 Height="58"
-                                 Padding="2"
-                                 Style="{DynamicResource EliteListBoxStyle}"
-                                 ItemContainerStyle="{DynamicResource EliteListBoxItemStyle}"
-                                 DisplayMemberPath="Label"
-                                 SelectionMode="Multiple"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="{DynamicResource Loc_MINING_THRESHOLD}"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="3"/>
+                        <RowDefinition Height="58"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Loc_MINING_TARGETS}"
                                    FontSize="8"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource MutedTextColorBrush}"/>
-                        <TextBox x:Name="MinimumProportionTextBox"
-                                 Margin="0,3,0,0"
-                                 Height="25"
-                                 Padding="5,2"
-                                 TextAlignment="Right"
-                                 VerticalContentAlignment="Center"
-                                 KeyDown="TargetInput_KeyDown"/>
-                    </StackPanel>
+                        <CheckBox x:Name="AutoTargetsCheckBox"
+                                  Grid.Column="1"
+                                  Margin="8,0,0,0"
+                                  Content="{DynamicResource Loc_MINING_AUTO_TARGETS}"
+                                  FontSize="8"
+                                  VerticalAlignment="Center"
+                                  Foreground="{DynamicResource PrimaryTextColorBrush}"
+                                  Click="AutoTargetsCheckBox_Click"/>
+                    </Grid>
+
+                    <ListBox x:Name="TargetCommodityListBox"
+                             Grid.Row="2"
+                             Height="58"
+                             Padding="2"
+                             Style="{DynamicResource EliteListBoxStyle}"
+                             ItemContainerStyle="{DynamicResource EliteListBoxItemStyle}"
+                             DisplayMemberPath="Label"
+                             SelectionMode="Multiple"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+
+                    <TextBlock Grid.Column="2"
+                               Grid.Row="0"
+                               Text="{DynamicResource Loc_MINING_THRESHOLD}"
+                               FontSize="8"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource MutedTextColorBrush}"/>
+                    <TextBox x:Name="MinimumProportionTextBox"
+                             Grid.Column="2"
+                             Grid.Row="2"
+                             Height="25"
+                             Padding="5,2"
+                             VerticalAlignment="Top"
+                             TextAlignment="Right"
+                             VerticalContentAlignment="Center"
+                             KeyDown="TargetInput_KeyDown"/>
+
                     <Button Grid.Column="4"
-                            Margin="0,14,0,0"
+                            Grid.Row="2"
                             Height="25"
+                            VerticalAlignment="Top"
                             Content="{DynamicResource Loc_MINING_APPLY}"
                             Foreground="{DynamicResource PrimaryTextColorBrush}"
                             Background="{DynamicResource SecondaryBackgroundColorBrush}"

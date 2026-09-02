@@ -56,6 +56,9 @@ public partial class ActivityWorkspaceOverlayWindow
         tradeWorkspaceControl.PinRequested +=
             PinTradeRouteRequested;
 
+        tradeWorkspaceControl.CargoSalePinRequested +=
+            PinCargoSaleRouteRequested;
+
         tradeWorkspaceControl.RoundTripPinRequested +=
             PinRoundTripRouteRequested;
 
@@ -325,6 +328,26 @@ public partial class ActivityWorkspaceOverlayWindow
             candidate,
             tracker);
     }
+    private void PinCargoSaleRouteRequested(
+        CargoSaleCandidate candidate)
+    {
+        if (parentWindow is null)
+        {
+            return;
+        }
+
+        TradeRouteProgressTracker? tracker =
+            parentWindow.OnPinRouteRequested(
+                TradeRoutePresentationAdapter.ToPresentation(
+                    candidate,
+                    JournalMonitorService.Instance.Current),
+                keepTradeWorkspace:
+                    true);
+
+        tradeWorkspaceControl?.ActivatePinnedCargoSale(
+            tracker);
+    }
+
     private void PinRoundTripRouteRequested(
         TradeRoundTripCandidate candidate)
     {
@@ -407,6 +430,9 @@ public partial class ActivityWorkspaceOverlayWindow
 
         tradeWorkspaceControl.PinRequested -=
             PinTradeRouteRequested;
+
+        tradeWorkspaceControl.CargoSalePinRequested -=
+            PinCargoSaleRouteRequested;
 
         tradeWorkspaceControl.RoundTripPinRequested -=
             PinRoundTripRouteRequested;

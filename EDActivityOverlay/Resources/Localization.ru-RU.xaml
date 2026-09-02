@@ -1335,6 +1335,8 @@
     <sys:String x:Key="Loc_MINING_RESERVE_DEPLETED">ИСТОЩЁННЫЕ</sys:String>
     <sys:String x:Key="Loc_MINING_RESERVE_UNKNOWN">РЕЗЕРВЫ ?</sys:String>
     <sys:String x:Key="Loc_MINING_CORE_MATERIAL_PRICE_FORMAT">ЯДРО · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_PIN_PLANNED_VALUE">СТОИМОСТЬ ПРОДАЖИ · {0:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_CARGO_PIN_SOLD_VALUE">ПРОДАНО · {0:N0} кр.</sys:String>
 </ResourceDictionary>
 
 

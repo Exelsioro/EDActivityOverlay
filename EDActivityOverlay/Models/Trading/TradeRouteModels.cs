@@ -11,11 +11,22 @@ public class TradeLeg
         public string LastUpdate { get; set; } = "";
     }
 
+    public class TradeCargoSaleItem
+    {
+        public string InternalName { get; set; } = "";
+        public string Name { get; set; } = "";
+        public int Quantity { get; set; }
+        public int PlannedSellPrice { get; set; }
+    }
+
     public class TradeRoute
     {
         public CardHeader CardHeader { get; set; } = new CardHeader();
         public TradeLeg FirstRoute { get; set; } = new TradeLeg();
-        public int CargoCapacity { get; set; } = 1; 
+        public int CargoCapacity { get; set; } = 1;
+        public bool IsCargoSaleOnly { get; set; }
+        public List<TradeCargoSaleItem> CargoSaleItems { get; set; } = new();
+        public long PlannedSaleValue { get; set; }
 
         // Round trip properties
         public bool IsRoundTrip { get; set; } = false;

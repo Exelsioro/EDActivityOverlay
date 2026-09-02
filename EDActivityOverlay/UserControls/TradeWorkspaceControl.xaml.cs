@@ -1310,6 +1310,20 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         object sender,
         RoutedEventArgs e)
     {
+        if (IsCargoSaleMode)
+        {
+            if (selectedCargoSaleCandidate is null
+                || selectedCargoSaleCandidate.IsCurrentMarket)
+            {
+                return;
+            }
+
+            CargoSalePinRequested?.Invoke(
+                selectedCargoSaleCandidate);
+
+            return;
+        }
+
         if (selectedCandidate is null)
         {
             return;

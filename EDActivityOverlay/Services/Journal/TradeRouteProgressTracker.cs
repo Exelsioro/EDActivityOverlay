@@ -67,6 +67,10 @@ public sealed class TradeRouteProgressTracker : IDisposable
     private long completedRealizedProfit;
     private readonly List<TradeHistoryLegRecord> completedHistoryLegs =
         new();
+    private readonly Dictionary<string, int> cargoSaleSold =
+        new(
+            StringComparer.OrdinalIgnoreCase);
+    private long cargoSaleRevenue;
     private DateTimeOffset routeStartedUtc;
     private DateTimeOffset legStartedUtc;
     private DateTimeOffset? completedUtc;
@@ -260,6 +264,17 @@ public sealed class TradeRouteProgressTracker : IDisposable
             return;
         }
 
+        if (route.IsCargoSaleOnly)
+        {
+            ApplyCargoSaleJournalEvent(
+                e);
+
+            Refresh(
+                journal.Current);
+
+            return;
+        }
+
         RouteLeg leg =
             legs[currentLegIndex];
 
@@ -394,6 +409,14 @@ public sealed class TradeRouteProgressTracker : IDisposable
     private void Refresh(
         GameStateSnapshot state)
     {
+        if (route.IsCargoSaleOnly)
+        {
+            RefreshCargoSaleOnly(
+                state);
+
+            return;
+        }
+
         if (completed)
         {
             long completedActual =
@@ -739,7 +762,8 @@ public sealed class TradeRouteProgressTracker : IDisposable
 
     private void RecordHistoryIfNeeded()
     {
-        if (historyRecorded
+        if (route.IsCargoSaleOnly
+            || historyRecorded
             || !completed)
         {
             return;
@@ -793,6 +817,297 @@ public sealed class TradeRouteProgressTracker : IDisposable
             out DateTimeOffset parsed)
                 ? parsed
                 : DateTimeOffset.UtcNow;
+    }
+
+    private void ApplyCargoSaleJournalEvent(
+        JournalEventReceivedEventArgs e)
+    {
+        if (!e.EventName.Equals(
+                "MarketSell",
+                StringComparison.OrdinalIgnoreCase)
+            || !MarketMatches(
+                e.Data,
+                route.CardHeader.ToStation.MarketId))
+        {
+            return;
+        }
+
+        string commodityId =
+            CommodityIdentity.Normalize(
+                GetString(
+                    e.Data,
+                    "Type"));
+
+        string localized =
+            GetString(
+                e.Data,
+                "Type_Localised");
+
+        TradeCargoSaleItem? item =
+            route.CargoSaleItems
+                .FirstOrDefault(candidate =>
+                    (!string.IsNullOrWhiteSpace(
+                         commodityId)
+                     && CommodityIdentity.Normalize(
+                            candidate.InternalName)
+                        .Equals(
+                            commodityId,
+                            StringComparison.OrdinalIgnoreCase))
+                    || (!string.IsNullOrWhiteSpace(
+                            localized)
+                        && TextMatches(
+                            candidate.Name,
+                            localized)));
+
+        if (item is null)
+        {
+            return;
+        }
+
+        string stableId =
+            CommodityIdentity.Normalize(
+                item.InternalName);
+
+        if (string.IsNullOrWhiteSpace(
+                stableId))
+        {
+            stableId =
+                CommodityIdentity.Normalize(
+                    item.Name);
+        }
+
+        int alreadySold =
+            cargoSaleSold.TryGetValue(
+                stableId,
+                out int tracked)
+                ? tracked
+                : 0;
+
+        int remainingPlanned =
+            Math.Max(
+                0,
+                item.Quantity
+                - alreadySold);
+
+        int eventCount =
+            Math.Max(
+                0,
+                GetInt(
+                    e.Data,
+                    "Count"));
+
+        int applied =
+            Math.Min(
+                eventCount,
+                remainingPlanned);
+
+        if (applied <= 0)
+        {
+            return;
+        }
+
+        cargoSaleSold[stableId] =
+            checked(
+                alreadySold
+                + applied);
+
+        int sellPrice =
+            Math.Max(
+                0,
+                GetInt(
+                    e.Data,
+                    "SellPrice"));
+
+        cargoSaleRevenue =
+            checked(
+                cargoSaleRevenue
+                + (long)applied
+                  * sellPrice);
+
+        bool allSold =
+            route.CargoSaleItems
+                .All(candidate =>
+                {
+                    string id =
+                        CommodityIdentity.Normalize(
+                            candidate.InternalName);
+
+                    if (string.IsNullOrWhiteSpace(
+                            id))
+                    {
+                        id =
+                            CommodityIdentity.Normalize(
+                                candidate.Name);
+                    }
+
+                    int sold =
+                        cargoSaleSold.TryGetValue(
+                            id,
+                            out int value)
+                            ? value
+                            : 0;
+
+                    return sold
+                           >= candidate.Quantity;
+                });
+
+        if (allSold)
+        {
+            completed =
+                true;
+
+            completedUtc =
+                JournalTimestamp(
+                    e.Data);
+        }
+    }
+
+    private void RefreshCargoSaleOnly(
+        GameStateSnapshot state)
+    {
+        int planned =
+            route.CargoSaleItems
+                .Sum(item =>
+                    Math.Max(
+                        0,
+                        item.Quantity));
+
+        int sold =
+            route.CargoSaleItems
+                .Sum(item =>
+                {
+                    string id =
+                        CommodityIdentity.Normalize(
+                            item.InternalName);
+
+                    if (string.IsNullOrWhiteSpace(
+                            id))
+                    {
+                        id =
+                            CommodityIdentity.Normalize(
+                                item.Name);
+                    }
+
+                    return cargoSaleSold.TryGetValue(
+                        id,
+                        out int value)
+                            ? Math.Min(
+                                item.Quantity,
+                                value)
+                            : 0;
+                });
+
+        int remaining =
+            Math.Max(
+                0,
+                planned
+                - sold);
+
+        bool atDestination =
+            LocationMatches(
+                state,
+                route.CardHeader.ToStation.MarketId,
+                route.CardHeader.ToStation.System,
+                route.CardHeader.ToStation.Name);
+
+        TradeRouteStage stage =
+            completed
+                ? TradeRouteStage.Completed
+                : atDestination
+                    ? TradeRouteStage.Sell
+                    : TradeRouteStage.FlyToSell;
+
+        string commodity =
+            string.Join(
+                " + ",
+                route.CargoSaleItems
+                    .Take(2)
+                    .Select(item =>
+                        item.Name.ToUpperInvariant()));
+
+        if (route.CargoSaleItems.Count > 2)
+        {
+            commodity +=
+                $" +{route.CargoSaleItems.Count - 2}";
+        }
+
+        long projectedValue =
+            completed
+                ? cargoSaleRevenue
+                : route.PlannedSaleValue;
+
+        Current =
+            new TradeRouteProgress
+            {
+                Stage =
+                    stage,
+                LegNumber =
+                    1,
+                LegCount =
+                    1,
+                Action =
+                    stage switch
+                    {
+                        TradeRouteStage.Completed =>
+                            Loc.Get(
+                                "Loc_ROUTE_COMPLETE"),
+                        TradeRouteStage.Sell =>
+                            Loc.Get(
+                                "Loc_SELL_CARGO"),
+                        _ =>
+                            Loc.Get(
+                                "Loc_FLY_TO_SELL")
+                    },
+                System =
+                    route.CardHeader.ToStation.System,
+                Station =
+                    route.CardHeader.ToStation.Name,
+                Commodity =
+                    commodity,
+                Quantity =
+                    remaining,
+                PlannedQuantity =
+                    planned,
+                SoldQuantity =
+                    sold,
+                RemainingQuantity =
+                    remaining,
+                SaleRevenue =
+                    cargoSaleRevenue,
+                ActualProfit =
+                    cargoSaleRevenue,
+                ProjectedProfit =
+                    projectedValue,
+                PlannedProfit =
+                    route.PlannedSaleValue,
+                ProjectedVariancePercent =
+                    VariancePercent(
+                        projectedValue,
+                        route.PlannedSaleValue),
+                HasTransactions =
+                    cargoSaleRevenue > 0,
+                RemainingJumps =
+                    stage
+                    == TradeRouteStage.Completed
+                        ? 0
+                        : GetRemainingJumps(
+                            state,
+                            route.CardHeader.ToStation.System),
+                IsInDanger =
+                    state.IsInDanger,
+                Note =
+                    stage
+                    == TradeRouteStage.Completed
+                        ? Loc.Get(
+                            "Loc_Search_for_the_next_route_or_unpin_this_one")
+                        : BuildNote(
+                            stage,
+                            state,
+                            0,
+                            null)
+            };
+
+        RaiseChanged();
     }
 
     private long PlannedFutureLegProfit()
