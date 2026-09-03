@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
+using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Services.Navigation;
 using EDActivityOverlay.Services.Trading;
 using EDActivityOverlay.UserControls;
 using EDActivityOverlay.Utils;
@@ -58,6 +60,9 @@ public partial class ActivityWorkspaceOverlayWindow
 
         tradeWorkspaceControl.CargoSalePinRequested +=
             PinCargoSaleRouteRequested;
+
+        tradeWorkspaceControl.NavigateSystemRequested +=
+            NavigateTradeSystemRequested;
 
         tradeWorkspaceControl.RoundTripPinRequested +=
             PinRoundTripRouteRequested;
@@ -119,6 +124,24 @@ public partial class ActivityWorkspaceOverlayWindow
         if (tradeWorkspaceControl is not null)
         {
             await tradeWorkspaceControl.BeginCargoSaleFromMiningAsync();
+        }
+    }
+
+    private async void NavigateTradeSystemRequested(string targetSystem)
+    {
+        if (string.IsNullOrWhiteSpace(targetSystem) || targetWindow == IntPtr.Zero)
+            return;
+
+        bool automatic = SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
+        EliteNavigationResult result = await EliteRouteNavigationService.Instance.PrepareAsync(
+            targetSystem,
+            targetWindow,
+            automatic);
+
+        if (result.Status == EliteNavigationStatus.Failed)
+        {
+            Logger.Logger.Warning(
+                $"Trade commodity navigation failed for {targetSystem}: {result.MessageKey} {result.Detail}");
         }
     }
 

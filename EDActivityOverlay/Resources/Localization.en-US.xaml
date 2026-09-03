@@ -1344,6 +1344,34 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_ECONOMICS_SESSION_FORMAT">SESSION ~{0:N0} cr ({1:N0} t refined)</sys:String>
     <sys:String x:Key="Loc_MINING_ECONOMICS_RATE_FORMAT">~{0:N0} cr/h</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_VALUE_FORMAT">EST. VALUE ~{0:N0} cr · ~{1:N0} cr/h</sys:String>
+    <sys:String x:Key="Loc_TRADE_MODE_FIND_COMMODITY">Find commodity</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY">Commodity</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_QUANTITY">Quantity</sys:String>
+    <sys:String x:Key="Loc_TRADE_FIND_COMMODITY">FIND COMMODITY</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_VALIDATION">Select or enter a commodity.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_SEARCHING_FORMAT">Searching for {1:N0} t of {0}…</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_DONE_FORMAT">Sources found: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_NO_RESULTS">No seller found with the current filters.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_SOURCE_BADGE">SELLER</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_FULL_STOCK">FULL STOCK</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_PARTIAL_STOCK">PARTIAL</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_PRICE_FORMAT">{0:N0} cr/t</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_TOTAL_FORMAT">{0:N0} t · {1:N0} cr total</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_STOCK_FORMAT">stock {0:N0} · {1} coverage</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_SELLER">SELLER</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_AVAILABILITY">AVAILABILITY</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_AVAILABILITY_FORMAT">stock {0:N0} · need {1:N0} · buy {2:N0} t</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_DETAIL_PRICE">{0:N0} cr/t · {1:N0} t · {2:N0} cr</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_DETAIL_ECONOMICS">Price {0:N0} cr/t · total {1:N0} cr · stock {2:N0} · {3:0.0} ly from anchor</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_TRAVEL_FORMAT">{0:0.0} ly · ~{1} · ~{2} jumps</sys:String>
+    <sys:String x:Key="Loc_TRADE_PLOT_TO_SELLER">PLOT TO SELLER</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_IDLE_FOOTER">Find the cheapest nearby market selling the selected commodity.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_FOOTER">{0} sources · cheapest {1:N0} cr/t · {2} / {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_COMPACT_FILTERS">{0} · {1} · {2:N0} t · radius {3} ly</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_READY">Select a commodity and search for sellers.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_COMPACT_BEST">{0} · {1:N0} cr/t · {2} / {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_COMPACT_META">stock {0:N0} · {1:0.0} ly · data {2:0.#} h</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_CHEAPEST">Lowest buy price</sys:String>
 </ResourceDictionary>
 
 

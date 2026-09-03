@@ -26,6 +26,14 @@ public partial class TradeWorkspaceControl
         TradeSearchConstraints constraints,
         CancellationToken cancellationToken)
     {
+        if (IsCommodityLookupMode)
+        {
+            await RunCommodityLookupSearchAsync(
+                constraints,
+                cancellationToken);
+            return;
+        }
+
         if (IsCargoSaleMode)
         {
             await RunCargoSaleSearchAsync(
@@ -479,6 +487,7 @@ public partial class TradeWorkspaceControl
         UpdateCargoSaleSortLabels();
         UpdateContinuousSortLabels();
         UpdateConfidenceSortAvailability();
+        UpdateCommodityLookupModeUi();
         ApplyCargoSaleControlAvailability(
             searchCancellation is not null);
         ApplyContinuousControlAvailability(

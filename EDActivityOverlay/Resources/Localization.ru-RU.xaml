@@ -1344,6 +1344,34 @@
     <sys:String x:Key="Loc_MINING_ECONOMICS_SESSION_FORMAT">СЕССИЯ ~{0:N0} кр. ({1:N0} т добыто)</sys:String>
     <sys:String x:Key="Loc_MINING_ECONOMICS_RATE_FORMAT">~{0:N0} кр/ч</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_VALUE_FORMAT">ОЦЕНКА ~{0:N0} кр. · ~{1:N0} кр/ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_MODE_FIND_COMMODITY">Найти товар</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY">Товар</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_QUANTITY">Количество</sys:String>
+    <sys:String x:Key="Loc_TRADE_FIND_COMMODITY">НАЙТИ ТОВАР</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_VALIDATION">Выберите или введите товар.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_SEARCHING_FORMAT">Ищем {0}: {1:N0} т…</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_DONE_FORMAT">Найдено продавцов: {0}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_NO_RESULTS">По текущим фильтрам продавец не найден.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_SOURCE_BADGE">ПРОДАВЕЦ</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_FULL_STOCK">ХВАТИТ НА ВЕСЬ ОБЪЁМ</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_PARTIAL_STOCK">ЧАСТИЧНО</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_PRICE_FORMAT">{0:N0} кр/т</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_TOTAL_FORMAT">{0:N0} т · всего {1:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_STOCK_FORMAT">запас {0:N0} · покрытие {1}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_SELLER">ПРОДАВЕЦ</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_AVAILABILITY">НАЛИЧИЕ</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_AVAILABILITY_FORMAT">запас {0:N0} · нужно {1:N0} · можно купить {2:N0} т</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_DETAIL_PRICE">{0:N0} кр/т · {1:N0} т · {2:N0} кр.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_DETAIL_ECONOMICS">Цена {0:N0} кр/т · всего {1:N0} кр. · запас {2:N0} · {3:0.0} св. л. от точки поиска</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_TRAVEL_FORMAT">{0:0.0} св. л. · ~{1} · ~{2} прыжков</sys:String>
+    <sys:String x:Key="Loc_TRADE_PLOT_TO_SELLER">ПРОЛОЖИТЬ К ПРОДАВЦУ</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_IDLE_FOOTER">Поиск ближайшего продавца выбранного товара по минимальной цене.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_FOOTER">{0} продавцов · минимум {1:N0} кр/т · {2} / {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_COMPACT_FILTERS">{0} · {1} · {2:N0} т · радиус {3} св. л.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_READY">Выберите товар и запустите поиск продавцов.</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_COMPACT_BEST">{0} · {1:N0} кр/т · {2} / {3}</sys:String>
+    <sys:String x:Key="Loc_TRADE_COMMODITY_COMPACT_META">запас {0:N0} · {1:0.0} св. л. · данные {2:0.#} ч</sys:String>
+    <sys:String x:Key="Loc_TRADE_SORT_CHEAPEST">Минимальная цена</sys:String>
 </ResourceDictionary>
 
 

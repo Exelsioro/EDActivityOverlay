@@ -226,7 +226,8 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="{DynamicResource Loc_TRADE_CARGO_FREE}"
+                            <TextBlock x:Name="CargoLabelText"
+                                       Text="{DynamicResource Loc_TRADE_CARGO_FREE}"
                                        FontSize="8"
                                        Foreground="{DynamicResource MutedTextColorBrush}"/>
                             <TextBox x:Name="CargoTextBox"
@@ -257,7 +258,7 @@
                             </ComboBox>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="6">
+                        <StackPanel x:Name="TargetRadiusPanel" Grid.Column="6">
                             <TextBlock Text="{DynamicResource Loc_TRADE_TARGET_RADIUS}"
                                        FontSize="8"
                                        Foreground="{DynamicResource MutedTextColorBrush}"/>
@@ -276,6 +277,21 @@
                                 <ComboBoxItem Content="150 LY" Tag="150"/>
                                 <ComboBoxItem Content="200 LY" Tag="200"/>
                             </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel x:Name="CommodityLookupPanel"
+                                    Grid.Column="6"
+                                    Visibility="Collapsed">
+                            <TextBlock Text="{DynamicResource Loc_TRADE_COMMODITY}"
+                                       FontSize="8"
+                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+                            <ComboBox x:Name="CommodityLookupComboBox"
+                                      Height="26"
+                                      Margin="0,2,0,0"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="True"
+                                      StaysOpenOnEdit="True"
+                                      Style="{DynamicResource ComboBoxStyle}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="8">
@@ -307,6 +323,7 @@
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_ROUND_TRIP}" Tag="roundtrip"/>
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_CONTINUOUS}" Tag="continuous"/>
                                 <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_SELL_CARGO}" Tag="cargo"/>
+                                <ComboBoxItem Content="{DynamicResource Loc_TRADE_MODE_FIND_COMMODITY}" Tag="commodity"/>
                             </ComboBox>
                         </StackPanel>
 

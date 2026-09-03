@@ -45,6 +45,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         public bool AdvancedOpen { get; set; }
         public string Sort { get; set; } = "profit";
         public string RouteMode { get; set; } = "oneway";
+        public string Commodity { get; set; } = string.Empty;
     }
 
     private const int PageSize = 10;
@@ -69,6 +70,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
     {
         InitializeComponent();
         InitializeTradeHistory();
+        InitializeCommodityLookupMode();
 
         applyingJournal = true;
         try
@@ -246,6 +248,7 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         UpdateAdvancedFiltersUi();
         UpdateRouteModeUi();
+        RefreshCommodityLookupLocalization();
         RefreshTradeHistory();
         RefreshFooter();
         RefreshCompactPresentation();
@@ -849,9 +852,11 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         }
 
         List<TradeRouteCandidate> sorted =
-            (IsContinuousMode
-                ? SortedContinuousCandidates()
-                : SortedCandidates())
+            (IsCommodityLookupMode
+                ? SortedCommodityLookupCandidates()
+                : IsContinuousMode
+                    ? SortedContinuousCandidates()
+                    : SortedCandidates())
             .ToList();
 
         int pageCount =
@@ -1022,6 +1027,14 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         TradeRouteCandidate candidate,
         bool held)
     {
+        if (TryBuildCommodityLookupRow(
+                candidate,
+                held,
+                out TradeRow commodityRow))
+        {
+            return commodityRow;
+        }
+
         if (TryBuildContinuousRow(
                 candidate,
                 held,
@@ -1218,6 +1231,11 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             return;
         }
 
+        if (TryShowCommodityLookupCandidate(candidate))
+        {
+            return;
+        }
+
         if (TryShowContinuousCandidate(
                 candidate))
         {
@@ -1310,6 +1328,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         object sender,
         RoutedEventArgs e)
     {
+        if (IsCommodityLookupMode)
+        {
+            PinCommodityLookupCandidate();
+            return;
+        }
+
         if (IsCargoSaleMode)
         {
             if (selectedCargoSaleCandidate is null
@@ -1355,6 +1379,13 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         if (IsContinuousMode)
         {
             return TryBuildContinuousConstraints(
+                out constraints,
+                out error);
+        }
+
+        if (IsCommodityLookupMode)
+        {
+            return TryBuildCommodityLookupConstraints(
                 out constraints,
                 out error);
         }
@@ -1531,6 +1562,8 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
             running);
         ApplyContinuousControlAvailability(
             running);
+        ApplyCommodityLookupControlAvailability(
+            running);
 
         SearchButton.SetResourceReference(
             ContentControl.ContentProperty,
@@ -1612,6 +1645,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
         Session.RouteMode =
             RouteModeTag();
+
+        Session.Commodity =
+            CommodityLookupComboBox.Text.Trim();
     }
 
     private void ApplySession()
@@ -1666,6 +1702,9 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
                 RouteModeComboBox,
                 Session.RouteMode);
 
+            CommodityLookupComboBox.Text =
+                Session.Commodity;
+
             advancedFiltersOpen =
                 Session.AdvancedOpen;
 
@@ -1690,6 +1729,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
 
     private void RefreshFooter()
     {
+        if (IsCommodityLookupMode)
+        {
+            RefreshCommodityLookupFooter();
+            return;
+        }
+
         if (IsContinuousMode)
         {
             RefreshContinuousFooter();
@@ -1736,6 +1781,12 @@ public partial class TradeWorkspaceControl : UserControl, IDisposable
         {
             RefreshCargoSaleCompact(
                 preserveStatus);
+            return;
+        }
+
+        if (IsCommodityLookupMode)
+        {
+            RefreshCommodityLookupCompact(preserveStatus);
             return;
         }
 
