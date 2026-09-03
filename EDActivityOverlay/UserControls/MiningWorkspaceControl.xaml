@@ -31,6 +31,64 @@
                                FontSize="9"
                                TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource AccentColorBrush}"/>
+                    <Border x:Name="DestinationPanel"
+                            Margin="0,6,0,0"
+                            Padding="7,5"
+                            Visibility="Collapsed"
+                            Background="{DynamicResource HighlightBackgroundBrush}"
+                            BorderBrush="{DynamicResource AccentColorBrush}"
+                            BorderThickness="2,0,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock x:Name="DestinationLabelText"
+                                       FontSize="7"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource MutedTextColorBrush}"/>
+                            <Button x:Name="ClearMiningDestinationButton"
+                                    Grid.Column="1"
+                                    Width="20"
+                                    Height="18"
+                                    Padding="0"
+                                    Content="×"
+                                    ToolTip="{DynamicResource Loc_MINING_DESTINATION_CLEAR}"
+                                    Foreground="{DynamicResource MutedTextColorBrush}"
+                                    Background="Transparent"
+                                    BorderBrush="{DynamicResource BorderColorBrush}"
+                                    Click="ClearMiningDestinationButton_Click"/>
+                            <TextBlock x:Name="DestinationSystemText"
+                                       Grid.Row="1"
+                                       Grid.ColumnSpan="2"
+                                       Margin="0,2,0,0"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                            <TextBlock x:Name="DestinationBodyText"
+                                       Grid.Row="2"
+                                       Grid.ColumnSpan="2"
+                                       Margin="0,1,0,0"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource AccentColorBrush}"/>
+                            <TextBlock x:Name="DestinationMetaText"
+                                       Grid.Row="3"
+                                       Grid.ColumnSpan="2"
+                                       Margin="0,2,0,0"
+                                       FontSize="8"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                        </Grid>
+                    </Border>
                     <TextBlock x:Name="RingContextText"
                                Margin="0,2,0,0"
                                FontSize="8"
@@ -39,7 +97,8 @@
                     <TextBlock x:Name="MarketContextText"
                                Margin="0,2,0,0"
                                FontSize="8"
-                               TextWrapping="Wrap"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
                                Visibility="Collapsed"
                                ToolTip="{DynamicResource Loc_MINING_PRICE_TOOLTIP}"
                                Foreground="{DynamicResource MutedTextColorBrush}"/>
@@ -219,37 +278,44 @@
                                FontSize="9"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource MutedTextColorBrush}"/>
+                    <TextBlock x:Name="FooterText"
+                               Margin="0,5,0,0"
+                               FontSize="8"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextColorBrush}"/>
                 </StackPanel>
             </Border>
 
             <Grid Grid.Row="4" Margin="0,7,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="6"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="FooterText"
-                           VerticalAlignment="Center"
-                           Margin="0,0,8,0"
-                           FontSize="8"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource MutedTextColorBrush}"/>
                 <Button x:Name="SellCargoButton"
-                        Grid.Column="1"
-                        MinWidth="104"
+                        Grid.Column="0"
                         Height="25"
-                        Padding="8,2"
+                        Padding="6,2"
                         Content="{DynamicResource Loc_MINING_FIND_BUYER}"
                         Foreground="{DynamicResource PrimaryTextColorBrush}"
                         Background="{DynamicResource SecondaryBackgroundColorBrush}"
                         BorderBrush="{DynamicResource AccentColorBrush}"
                         Click="SellCargoButton_Click"/>
-                <Button x:Name="FullAnalyticsButton"
-                        Grid.Column="3"
-                        MinWidth="74"
+                <Button x:Name="MiningLocationsButton"
+                        Grid.Column="2"
                         Height="25"
-                        Padding="8,2"
+                        Padding="6,2"
+                        Content="{DynamicResource Loc_MINING_LOCATIONS}"
+                        Foreground="{DynamicResource PrimaryTextColorBrush}"
+                        Background="{DynamicResource SecondaryBackgroundColorBrush}"
+                        BorderBrush="{DynamicResource BorderColorBrush}"
+                        Click="MiningLocationsButton_Click"/>
+                <Button x:Name="FullAnalyticsButton"
+                        Grid.Column="4"
+                        Height="25"
+                        Padding="6,2"
                         Content="{DynamicResource Loc_MINING_MORE}"
                         Foreground="{DynamicResource PrimaryTextColorBrush}"
                         Background="{DynamicResource SecondaryBackgroundColorBrush}"

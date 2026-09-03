@@ -2515,6 +2515,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         ApplyRoutePanelState();
         tradeWorkspaceControl?.RefreshLocalization();
         miningWorkspaceControl?.RefreshLocalization();
+        miningLocationWorkspaceControl?.RefreshLocalization();
         RefreshContent(
             JournalMonitorService.Instance.Current);
     }

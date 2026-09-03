@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
+using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Services.Navigation;
 using EDActivityOverlay.UserControls;
 using EDActivityOverlay.Utils;
 
@@ -16,11 +18,13 @@ public partial class ActivityWorkspaceOverlayWindow
 
     private MiningWorkspaceControl? miningWorkspaceControl;
     private MiningAnalyticsWorkspaceControl? miningAnalyticsWorkspaceControl;
+    private MiningLocationWorkspaceControl? miningLocationWorkspaceControl;
     private bool miningExclusiveInteraction;
 
     private bool IsMiningFullWorkspace =>
         activity == ActivityType.Mining
-        && miningAnalyticsWorkspaceControl?.Visibility == Visibility.Visible;
+        && (miningAnalyticsWorkspaceControl?.Visibility == Visibility.Visible
+            || miningLocationWorkspaceControl?.Visibility == Visibility.Visible);
 
     private void InitializeMiningWorkspace()
     {
@@ -43,21 +47,32 @@ public partial class ActivityWorkspaceOverlayWindow
         {
             Visibility = Visibility.Collapsed
         };
+        miningLocationWorkspaceControl = new MiningLocationWorkspaceControl
+        {
+            Visibility = Visibility.Collapsed
+        };
 
         miningWorkspaceControl.CloseRequested += CloseMiningWorkspaceRequested;
         miningWorkspaceControl.DragRequested += DragMiningCompactRequested;
         miningWorkspaceControl.FullRequested += OpenMiningAnalyticsRequested;
         miningWorkspaceControl.SellCargoRequested += SellMiningCargoRequested;
+        miningWorkspaceControl.LocationsRequested += OpenMiningLocationsRequested;
         miningAnalyticsWorkspaceControl.BackRequested += CloseMiningAnalyticsRequested;
         miningAnalyticsWorkspaceControl.CloseRequested += CloseMiningWorkspaceRequested;
+        miningLocationWorkspaceControl.BackRequested += CloseMiningLocationsRequested;
+        miningLocationWorkspaceControl.CloseRequested += CloseMiningWorkspaceRequested;
+        miningLocationWorkspaceControl.NavigateSystemRequested += NavigateMiningLocationRequested;
         root.Children.Add(miningWorkspaceControl);
         root.Children.Add(miningAnalyticsWorkspaceControl);
+        root.Children.Add(miningLocationWorkspaceControl);
     }
 
     private void ShowMiningWorkspace(GameStateSnapshot state)
     {
         InitializeMiningWorkspace();
-        if (miningWorkspaceControl is null || miningAnalyticsWorkspaceControl is null)
+        if (miningWorkspaceControl is null
+            || miningAnalyticsWorkspaceControl is null
+            || miningLocationWorkspaceControl is null)
         {
             return;
         }
@@ -71,16 +86,24 @@ public partial class ActivityWorkspaceOverlayWindow
         FullExplorationPanel.Visibility = Visibility.Collapsed;
         miningWorkspaceControl.UpdateJournalState(state);
         miningAnalyticsWorkspaceControl.UpdateJournalState(state);
+        miningLocationWorkspaceControl.UpdateJournalState(state);
 
-        if (IsMiningFullWorkspace)
+        if (miningAnalyticsWorkspaceControl.Visibility == Visibility.Visible)
         {
             miningWorkspaceControl.Visibility = Visibility.Collapsed;
-            miningAnalyticsWorkspaceControl.Visibility = Visibility.Visible;
+            miningLocationWorkspaceControl.Visibility = Visibility.Collapsed;
+            ApplyMiningWorkspaceMode(full: true);
+        }
+        else if (miningLocationWorkspaceControl.Visibility == Visibility.Visible)
+        {
+            miningWorkspaceControl.Visibility = Visibility.Collapsed;
+            miningAnalyticsWorkspaceControl.Visibility = Visibility.Collapsed;
             ApplyMiningWorkspaceMode(full: true);
         }
         else
         {
             miningAnalyticsWorkspaceControl.Visibility = Visibility.Collapsed;
+            miningLocationWorkspaceControl.Visibility = Visibility.Collapsed;
             miningWorkspaceControl.Visibility = Visibility.Visible;
             ApplyMiningWorkspaceMode(full: false);
         }
@@ -91,12 +114,15 @@ public partial class ActivityWorkspaceOverlayWindow
 
     private void OpenMiningAnalyticsRequested()
     {
-        if (miningWorkspaceControl is null || miningAnalyticsWorkspaceControl is null)
+        if (miningWorkspaceControl is null
+            || miningAnalyticsWorkspaceControl is null
+            || miningLocationWorkspaceControl is null)
         {
             return;
         }
 
         miningWorkspaceControl.Visibility = Visibility.Collapsed;
+        miningLocationWorkspaceControl.Visibility = Visibility.Collapsed;
         miningAnalyticsWorkspaceControl.ReloadHistory();
         miningAnalyticsWorkspaceControl.UpdateJournalState(JournalMonitorService.Instance.Current);
         miningAnalyticsWorkspaceControl.Visibility = Visibility.Visible;
@@ -114,6 +140,59 @@ public partial class ActivityWorkspaceOverlayWindow
         miningWorkspaceControl.Visibility = Visibility.Visible;
         miningWorkspaceControl.UpdateJournalState(JournalMonitorService.Instance.Current);
         ApplyMiningWorkspaceMode(full: false);
+    }
+
+    private void OpenMiningLocationsRequested()
+    {
+        if (miningWorkspaceControl is null
+            || miningAnalyticsWorkspaceControl is null
+            || miningLocationWorkspaceControl is null)
+        {
+            return;
+        }
+
+        miningWorkspaceControl.Visibility = Visibility.Collapsed;
+        miningAnalyticsWorkspaceControl.Visibility = Visibility.Collapsed;
+        miningLocationWorkspaceControl.UpdateJournalState(JournalMonitorService.Instance.Current);
+        miningLocationWorkspaceControl.Visibility = Visibility.Visible;
+        ApplyMiningWorkspaceMode(full: true);
+    }
+
+    private void CloseMiningLocationsRequested()
+    {
+        if (miningWorkspaceControl is null || miningLocationWorkspaceControl is null)
+        {
+            return;
+        }
+
+        miningLocationWorkspaceControl.Visibility = Visibility.Collapsed;
+        miningWorkspaceControl.Visibility = Visibility.Visible;
+        miningWorkspaceControl.UpdateJournalState(JournalMonitorService.Instance.Current);
+        ApplyMiningWorkspaceMode(full: false);
+    }
+
+    private async void NavigateMiningLocationRequested(string targetSystem)
+    {
+        if (string.IsNullOrWhiteSpace(targetSystem) || targetWindow == IntPtr.Zero)
+        {
+            return;
+        }
+
+        bool automatic =
+            SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
+
+        EliteNavigationResult result =
+            await EliteRouteNavigationService.Instance.PrepareAsync(
+                targetSystem,
+                targetWindow,
+                automatic);
+
+        if (result.Status == EliteNavigationStatus.Failed)
+        {
+            Logger.Logger.Warning(
+                $"Mining location navigation failed for {targetSystem}: "
+                + $"{result.MessageKey} {result.Detail}");
+        }
     }
 
     private async void SellMiningCargoRequested()
@@ -177,7 +256,8 @@ public partial class ActivityWorkspaceOverlayWindow
     private void LeaveMiningWorkspace()
     {
         bool visible = miningWorkspaceControl?.Visibility == Visibility.Visible
-                       || miningAnalyticsWorkspaceControl?.Visibility == Visibility.Visible;
+                       || miningAnalyticsWorkspaceControl?.Visibility == Visibility.Visible
+                       || miningLocationWorkspaceControl?.Visibility == Visibility.Visible;
         if (!visible)
         {
             EndMiningExclusiveInteraction();
@@ -192,6 +272,10 @@ public partial class ActivityWorkspaceOverlayWindow
         if (miningAnalyticsWorkspaceControl is not null)
         {
             miningAnalyticsWorkspaceControl.Visibility = Visibility.Collapsed;
+        }
+        if (miningLocationWorkspaceControl is not null)
+        {
+            miningLocationWorkspaceControl.Visibility = Visibility.Collapsed;
         }
 
         MinWidth = 0;
@@ -265,6 +349,7 @@ public partial class ActivityWorkspaceOverlayWindow
             miningWorkspaceControl.DragRequested -= DragMiningCompactRequested;
             miningWorkspaceControl.FullRequested -= OpenMiningAnalyticsRequested;
             miningWorkspaceControl.SellCargoRequested -= SellMiningCargoRequested;
+            miningWorkspaceControl.LocationsRequested -= OpenMiningLocationsRequested;
             miningWorkspaceControl.Dispose();
             miningWorkspaceControl = null;
         }
@@ -275,6 +360,15 @@ public partial class ActivityWorkspaceOverlayWindow
             miningAnalyticsWorkspaceControl.CloseRequested -= CloseMiningWorkspaceRequested;
             miningAnalyticsWorkspaceControl.Dispose();
             miningAnalyticsWorkspaceControl = null;
+        }
+
+        if (miningLocationWorkspaceControl is not null)
+        {
+            miningLocationWorkspaceControl.BackRequested -= CloseMiningLocationsRequested;
+            miningLocationWorkspaceControl.CloseRequested -= CloseMiningWorkspaceRequested;
+            miningLocationWorkspaceControl.NavigateSystemRequested -= NavigateMiningLocationRequested;
+            miningLocationWorkspaceControl.Dispose();
+            miningLocationWorkspaceControl = null;
         }
     }
 }

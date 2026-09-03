@@ -25,7 +25,7 @@ public sealed class MiningWorkspaceV1bTests
         Assert.Contains("MiningProspectorAdvisor.Evaluate", code, StringComparison.Ordinal);
         Assert.Contains("MiningTargetAnalytics.Calculate", code, StringComparison.Ordinal);
         Assert.Contains("BuildLoadoutFooter()", code, StringComparison.Ordinal);
-        Assert.Contains("Loc_MINING_METHOD_LIMITATION", loadoutCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("Loc_MINING_METHOD_LIMITATION", loadoutCode, StringComparison.Ordinal);
     }
 
     [Fact]

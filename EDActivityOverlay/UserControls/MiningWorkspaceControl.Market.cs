@@ -45,10 +45,10 @@ public partial class MiningWorkspaceControl
         MiningRingContextSnapshot ring = CurrentRingContext();
         var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (ring.Available)
+        if (MiningTargetSelector.HasResolvedRingClass(ring.RingClass))
         {
-            // Load the complete ring-compatible set so AUTO can rank targets and the
-            // Prospector can show a price next to every recognized material.
+            // Load the complete ring-compatible set only when the ring class is known.
+            // Unknown ring class must not be treated as "every mining commodity".
             candidates.UnionWith(
                 MiningTargetSelector.GetCompatibleCommodityIds(ring.RingClass));
         }
@@ -231,8 +231,6 @@ public partial class MiningWorkspaceControl
         MiningTargetSelection selection,
         MiningMarketPriceSnapshot prices)
     {
-        var lines = new List<string>();
-
         if (prices.IsLoading && prices.Quotes.Count == 0)
         {
             return Loc.Get("Loc_MINING_MARKET_LOADING");
@@ -243,22 +241,22 @@ public partial class MiningWorkspaceControl
             string hotspots = FormatCommodityPriceList(
                 ring.HotspotCommodityIds,
                 prices,
-                5);
+                3);
             if (!string.IsNullOrWhiteSpace(hotspots))
             {
-                lines.Add(Loc.Format("Loc_MINING_DSS_CONTEXT_FORMAT", hotspots));
+                return Loc.Format("Loc_MINING_DSS_CONTEXT_FORMAT", hotspots);
             }
         }
 
-        if (ring.Available)
+        if (MiningTargetSelector.HasResolvedRingClass(ring.RingClass))
         {
             string bestHere = FormatCommodityPriceList(
                 MiningTargetSelector.GetCompatibleCommodityIds(ring.RingClass),
                 prices,
-                5);
+                3);
             if (!string.IsNullOrWhiteSpace(bestHere))
             {
-                lines.Add(Loc.Format("Loc_MINING_BEST_HERE_FORMAT", bestHere));
+                return Loc.Format("Loc_MINING_BEST_HERE_FORMAT", bestHere);
             }
         }
 
@@ -267,22 +265,20 @@ public partial class MiningWorkspaceControl
             string targets = FormatCommodityPriceList(
                 selection.CommodityIds,
                 prices,
-                MiningTargetSelector.MaxTargets);
-            lines.Add(Loc.Format(
-                selection.Automatic
-                    ? "Loc_MINING_AUTO_CONTEXT_FORMAT"
-                    : "Loc_MINING_MANUAL_CONTEXT_FORMAT",
-                targets));
+                3);
+            if (!string.IsNullOrWhiteSpace(targets))
+            {
+                return Loc.Format(
+                    selection.Automatic
+                        ? "Loc_MINING_AUTO_CONTEXT_FORMAT"
+                        : "Loc_MINING_MANUAL_CONTEXT_FORMAT",
+                    targets);
+            }
         }
 
-        if (prices.IsLoading)
-        {
-            lines.Add(Loc.Get("Loc_MINING_MARKET_LOADING"));
-        }
-
-        return lines.Count == 0
-            ? Loc.Get("Loc_MINING_MARKET_UNAVAILABLE")
-            : string.Join(Environment.NewLine, lines.Distinct(StringComparer.Ordinal));
+        return prices.IsLoading
+            ? Loc.Get("Loc_MINING_MARKET_LOADING")
+            : Loc.Get("Loc_MINING_MARKET_UNAVAILABLE");
     }
 
     private static string FormatCommodityPriceList(

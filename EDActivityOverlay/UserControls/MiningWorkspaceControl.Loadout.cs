@@ -44,10 +44,6 @@ public partial class MiningWorkspaceControl
                 $" · PWA {(loadout.HasPulseWaveAnalyzer ? "✓" : "—")}");
         }
 
-        lines.Add(
-            Loc.Get(
-                "Loc_MINING_METHOD_LIMITATION"));
-
         return string.Join(
             Environment.NewLine,
             lines);

@@ -37,6 +37,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     public event Action? DragRequested;
     public event Action? FullRequested;
     public event Action? SellCargoRequested;
+    public event Action? LocationsRequested;
 
     public void SetChromeStyle(string? style)
     {
@@ -117,10 +118,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             ? currentSession.RingName
             : string.Empty;
 
-        CompactJournalContextText.Text = string.Join(
-            "  •  ",
-            new[] { location, ring }
-                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        RefreshLocationPresentation(location, ring, ringContext);
         RingContextText.Text = BuildRingContextText(ringContext);
         RingContextText.Visibility = string.IsNullOrWhiteSpace(RingContextText.Text)
             ? Visibility.Collapsed
@@ -430,6 +428,9 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
     private void SellCargoButton_Click(object sender, RoutedEventArgs e) =>
         SellCargoRequested?.Invoke();
 
+    private void MiningLocationsButton_Click(object sender, RoutedEventArgs e) =>
+        LocationsRequested?.Invoke();
+
     private void CompactMiningDragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton == MouseButtonState.Pressed)
@@ -448,5 +449,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         disposed = true;
         MiningSessionService.Instance.Changed -= OnMiningSessionChanged;
         MiningEngineeringMaterialTrackerService.Instance.Changed -= OnMiningEngineeringMaterialsChanged;
+        MiningRingContextService.Instance.Changed -= OnMiningRingContextChanged;
+        MiningMarketPriceService.Instance.Changed -= OnMiningMarketPriceChanged;
     }
 }

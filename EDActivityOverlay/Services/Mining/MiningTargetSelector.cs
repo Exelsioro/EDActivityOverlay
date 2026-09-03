@@ -86,17 +86,28 @@ public static class MiningTargetSelector
     {
         ArgumentNullException.ThrowIfNull(ring);
 
+        string[] hotspotIds = ring.HotspotCommodityIds
+            .Select(item => MiningTargetCatalog.Find(item)?.CommodityId ?? string.Empty)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (!HasResolvedRingClass(ring.RingClass))
+        {
+            // Signal data is useful even before the ring class is known, but an
+            // unknown class must never expand AUTO to the whole mining catalog.
+            return hotspotIds
+                .Take(MaxTargets)
+                .ToArray();
+        }
+
         string[] compatible = GetCompatibleCommodityIds(ring.RingClass).ToArray();
-        if (!ring.HasHotspots)
+        if (hotspotIds.Length == 0)
         {
             return compatible;
         }
 
-        var hotspotSet = ring.HotspotCommodityIds
-            .Select(item => MiningTargetCatalog.Find(item)?.CommodityId ?? string.Empty)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
+        var hotspotSet = hotspotIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         string[] hotspotCompatible = compatible
             .Where(hotspotSet.Contains)
             .ToArray();
@@ -104,6 +115,16 @@ public static class MiningTargetSelector
         return hotspotCompatible.Length > 0
             ? hotspotCompatible
             : compatible;
+    }
+
+    public static bool HasResolvedRingClass(string? ringClass)
+    {
+        string value = ringClass?.Trim() ?? string.Empty;
+        return value.Contains("MetalRich", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("Metalic", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("Metallic", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("Rocky", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("Icy", StringComparison.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<string> GetCompatibleCommodityIds(string? ringClass)
