@@ -1345,7 +1345,6 @@
     <sys:String x:Key="Loc_MINING_ECONOMICS_RATE_FORMAT">~{0:N0} кр/ч</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_VALUE_FORMAT">ОЦЕНКА ~{0:N0} кр. · ~{1:N0} кр/ч</sys:String>
     <sys:String x:Key="Loc_TRADE_MODE_FIND_COMMODITY">Найти товар</sys:String>
-    <sys:String x:Key="Loc_TRADE_COMMODITY">Товар</sys:String>
     <sys:String x:Key="Loc_TRADE_COMMODITY_QUANTITY">Количество</sys:String>
     <sys:String x:Key="Loc_TRADE_FIND_COMMODITY">НАЙТИ ТОВАР</sys:String>
     <sys:String x:Key="Loc_TRADE_COMMODITY_VALIDATION">Выберите или введите товар.</sys:String>

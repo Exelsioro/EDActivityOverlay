@@ -1345,7 +1345,6 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_ECONOMICS_RATE_FORMAT">~{0:N0} cr/h</sys:String>
     <sys:String x:Key="Loc_MINING_ANALYTICS_VALUE_FORMAT">EST. VALUE ~{0:N0} cr · ~{1:N0} cr/h</sys:String>
     <sys:String x:Key="Loc_TRADE_MODE_FIND_COMMODITY">Find commodity</sys:String>
-    <sys:String x:Key="Loc_TRADE_COMMODITY">Commodity</sys:String>
     <sys:String x:Key="Loc_TRADE_COMMODITY_QUANTITY">Quantity</sys:String>
     <sys:String x:Key="Loc_TRADE_FIND_COMMODITY">FIND COMMODITY</sys:String>
     <sys:String x:Key="Loc_TRADE_COMMODITY_VALIDATION">Select or enter a commodity.</sys:String>
