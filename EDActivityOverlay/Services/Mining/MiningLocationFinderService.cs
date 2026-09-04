@@ -68,6 +68,15 @@ public sealed record MiningLocationCandidate
         Array.Empty<MiningLocationSpecialSite>();
     public string PrimaryCommodityId { get; init; } = string.Empty;
     public int MarketReferencePrice { get; init; }
+    public string BestSellCommodityId { get; init; } = string.Empty;
+    public int BestSellPrice { get; init; }
+    public string BestSellSystemName { get; init; } = string.Empty;
+    public string BestSellStationName { get; init; } = string.Empty;
+    public long BestSellDemand { get; init; }
+    public double BestSellDistanceLy { get; init; }
+    public double? BestSellDistanceToArrivalLs { get; init; }
+    public int BestSellMaxLandingPadSize { get; init; }
+    public DateTimeOffset BestSellUpdatedAt { get; init; }
     public int TargetScore { get; init; }
     public int ReserveScore { get; init; }
     public int SpecialScore { get; init; }
@@ -76,6 +85,10 @@ public sealed record MiningLocationCandidate
     public int Score { get; init; }
 
     public bool HasKnownSpecial => SpecialSites.Count > 0;
+    public bool HasDestinationMarket =>
+        BestSellPrice > 0
+        && !string.IsNullOrWhiteSpace(BestSellSystemName)
+        && !string.IsNullOrWhiteSpace(BestSellStationName);
     public int HighestHotspotCount => HotspotCounts.Count == 0 ? 0 : HotspotCounts.Values.Max();
 }
 
@@ -100,18 +113,34 @@ public sealed class MiningLocationFinderService
 {
     private readonly IMiningLocationProvider locationProvider;
     private readonly IMiningSpecialSiteProvider specialSiteProvider;
+    private readonly IMiningLocationMarketEnricher marketEnricher;
 
     public MiningLocationFinderService()
-        : this(new SpanshMiningLocationProvider(), new MiningCommunitySpecialSiteProvider())
+        : this(
+            new SpanshMiningLocationProvider(),
+            new MiningCommunitySpecialSiteProvider(),
+            new MiningLocationMarketEnrichmentService())
     {
     }
 
     internal MiningLocationFinderService(
         IMiningLocationProvider locationProvider,
         IMiningSpecialSiteProvider specialSiteProvider)
+        : this(
+            locationProvider,
+            specialSiteProvider,
+            new MiningLocationMarketEnrichmentService())
+    {
+    }
+
+    internal MiningLocationFinderService(
+        IMiningLocationProvider locationProvider,
+        IMiningSpecialSiteProvider specialSiteProvider,
+        IMiningLocationMarketEnricher marketEnricher)
     {
         this.locationProvider = locationProvider ?? throw new ArgumentNullException(nameof(locationProvider));
         this.specialSiteProvider = specialSiteProvider ?? throw new ArgumentNullException(nameof(specialSiteProvider));
+        this.marketEnricher = marketEnricher ?? throw new ArgumentNullException(nameof(marketEnricher));
     }
 
     public async Task<MiningLocationSearchResult> SearchAsync(
@@ -138,7 +167,7 @@ public sealed class MiningLocationFinderService
                 group => (IReadOnlyList<MiningLocationSpecialSite>)group.ToArray(),
                 StringComparer.OrdinalIgnoreCase);
 
-        MiningLocationCandidate[] ranked = raw
+        MiningLocationCandidate[] provisional = raw
             .Where(candidate => MiningLocationRanker.RingClassMatches(candidate.RingClass, query.RingClass))
             .Where(candidate => MiningLocationRanker.ReserveRank(candidate.ReserveLevel) >= query.MinimumReserveRank)
             .Select(candidate =>
@@ -166,6 +195,22 @@ public sealed class MiningLocationFinderService
             .OrderByDescending(candidate => candidate.Score)
             .ThenByDescending(candidate => candidate.SpecialScore)
             .ThenByDescending(candidate => candidate.ReserveScore)
+            .ThenBy(candidate => candidate.DistanceLy)
+            .ThenBy(candidate => candidate.DistanceToArrivalLs)
+            .Take(query.MaxResults)
+            .ToArray();
+
+        IReadOnlyList<MiningLocationCandidate> enriched =
+            await marketEnricher.EnrichAsync(
+                query,
+                provisional,
+                cancellationToken).ConfigureAwait(false);
+
+        MiningLocationCandidate[] ranked = enriched
+            .OrderByDescending(candidate => candidate.Score)
+            .ThenByDescending(candidate => candidate.SpecialScore)
+            .ThenByDescending(candidate => candidate.ReserveScore)
+            .ThenByDescending(candidate => candidate.MarketScore)
             .ThenBy(candidate => candidate.DistanceLy)
             .ThenBy(candidate => candidate.DistanceToArrivalLs)
             .Take(query.MaxResults)

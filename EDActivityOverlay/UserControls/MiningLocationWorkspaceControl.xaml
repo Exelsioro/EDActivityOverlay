@@ -191,6 +191,7 @@
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_MATCH}" Binding="{Binding Targets}" Width="1.15*"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_SPECIAL}" Binding="{Binding Special}" Width="125"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_DISTANCE}" Binding="{Binding Distance}" Width="72"/>
+                                <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_SELL}" Binding="{Binding Sell}" Width="112"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_ARRIVAL}" Binding="{Binding Arrival}" Width="72"/>
                             </DataGrid.Columns>
                         </DataGrid>

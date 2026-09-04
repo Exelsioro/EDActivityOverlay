@@ -29,6 +29,7 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
         string Targets,
         string Special,
         string Distance,
+        string Sell,
         string Arrival);
 
     private static readonly FilterOption<string>[] RingOptions =
@@ -342,6 +343,12 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
             targets,
             SpecialSummary(candidate),
             Loc.Format("Loc_MINING_LOCATION_LY_VALUE", candidate.DistanceLy),
+            candidate.HasDestinationMarket
+                ? Loc.Format(
+                    "Loc_MINING_LOCATION_SELL_SHORT",
+                    candidate.BestSellPrice,
+                    candidate.BestSellDistanceLy)
+                : "—",
             candidate.DistanceToArrivalLs > 0
                 ? Loc.Format("Loc_MINING_LOCATION_LS_VALUE", candidate.DistanceToArrivalLs)
                 : "—");
@@ -403,12 +410,36 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
             candidate.TravelScore,
             candidate.MarketScore);
 
-        SelectedMarketText.Text = candidate.MarketReferencePrice > 0
-            ? Loc.Format(
-                "Loc_MINING_LOCATION_MARKET_CONTEXT",
+        if (candidate.HasDestinationMarket)
+        {
+            double ageHours = Math.Max(
+                0,
+                (DateTimeOffset.UtcNow - candidate.BestSellUpdatedAt).TotalHours);
+            string demand = candidate.BestSellDemand == 0
+                ? "∞"
+                : candidate.BestSellDemand.ToString("N0", CultureInfo.CurrentCulture);
+
+            SelectedMarketText.Text = Loc.Format(
+                "Loc_MINING_LOCATION_DESTINATION_MARKET_CONTEXT",
+                MiningTargetCatalog.GetDisplayName(candidate.BestSellCommodityId),
+                candidate.BestSellPrice,
+                candidate.BestSellDistanceLy,
+                candidate.BestSellSystemName,
+                candidate.BestSellStationName,
+                demand,
+                ageHours);
+        }
+        else if (candidate.MarketReferencePrice > 0)
+        {
+            SelectedMarketText.Text = Loc.Format(
+                "Loc_MINING_LOCATION_DESTINATION_MARKET_FALLBACK",
                 MiningTargetCatalog.GetDisplayName(candidate.PrimaryCommodityId),
-                candidate.MarketReferencePrice)
-            : Loc.Get("Loc_MINING_LOCATION_MARKET_UNAVAILABLE");
+                candidate.MarketReferencePrice);
+        }
+        else
+        {
+            SelectedMarketText.Text = Loc.Get("Loc_MINING_LOCATION_MARKET_UNAVAILABLE");
+        }
 
         SelectedSourceText.Text = candidate.SpecialSites.Count > 0
             ? Loc.Get("Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY")
