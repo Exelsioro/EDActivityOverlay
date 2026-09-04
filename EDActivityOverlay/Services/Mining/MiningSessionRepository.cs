@@ -116,6 +116,7 @@ internal sealed class MiningSessionRepository
             DeleteChildren(connection, transaction, session.SessionId);
             SaveProspects(connection, transaction, session);
             SaveRefinements(connection, transaction, session);
+            SaveDestinationContext(connection, transaction, session);
             transaction.Commit();
         }
     }
@@ -228,6 +229,8 @@ internal sealed class MiningSessionRepository
             LoadProspects(connection, sessionId, materials);
         IReadOnlyList<MiningRefinementSnapshot> refinements =
             LoadRefinements(connection, sessionId);
+        MiningSessionDestinationContext destinationContext =
+            LoadDestinationContext(connection, sessionId);
 
         return new MiningSessionSnapshot(
             sessionId,
@@ -253,7 +256,8 @@ internal sealed class MiningSessionRepository
         {
             RingClass = ringClass,
             ReserveLevel = reserveLevel,
-            HotspotCommodityIds = ParseHotspots(hotspotCommodityIds)
+            HotspotCommodityIds = ParseHotspots(hotspotCommodityIds),
+            DestinationContext = destinationContext
         };
     }
 
@@ -347,6 +351,100 @@ internal sealed class MiningSessionRepository
         return rows;
     }
 
+    private static MiningSessionDestinationContext LoadDestinationContext(
+        SqliteConnection connection,
+        Guid sessionId)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT system_name, body_name, ring_name, confirmed,
+                   primary_commodity_id, target_commodity_ids,
+                   overlap_multiplier, res_type,
+                   quality_commodity_id, measured_average_content,
+                   quality_source, selected_utc
+            FROM mining_session_destination
+            WHERE session_id = $id
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$id", SessionKey(sessionId));
+
+        using SqliteDataReader reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return MiningSessionDestinationContext.Empty;
+        }
+
+        DateTimeOffset? selectedUtc =
+            DateTimeOffset.TryParse(reader.GetString(11), out DateTimeOffset parsed)
+                ? parsed
+                : null;
+
+        return new MiningSessionDestinationContext
+        {
+            SystemName = reader.GetString(0),
+            BodyName = reader.GetString(1),
+            RingName = reader.GetString(2),
+            Confirmed = reader.GetInt32(3) != 0,
+            PrimaryCommodityId = reader.GetString(4),
+            TargetCommodityIds = ParseHotspots(reader.GetString(5)),
+            OverlapMultiplier = reader.GetInt32(6),
+            ResType = reader.GetString(7),
+            QualityCommodityId = reader.GetString(8),
+            MeasuredAverageContentPercent = reader.GetDouble(9),
+            QualitySource = reader.GetString(10),
+            SelectedUtc = selectedUtc
+        };
+    }
+
+    private static void SaveDestinationContext(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        MiningSessionSnapshot session)
+    {
+        MiningSessionDestinationContext context = session.DestinationContext;
+        if (!context.Available)
+        {
+            return;
+        }
+
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO mining_session_destination(
+                session_id, system_name, body_name, ring_name, confirmed,
+                primary_commodity_id, target_commodity_ids,
+                overlap_multiplier, res_type,
+                quality_commodity_id, measured_average_content,
+                quality_source, selected_utc)
+            VALUES(
+                $id, $system, $body, $ring, $confirmed,
+                $primaryCommodity, $targetCommodities,
+                $overlap, $resType,
+                $qualityCommodity, $measuredContent,
+                $qualitySource, $selectedUtc);
+            """;
+        command.Parameters.AddWithValue("$id", SessionKey(session.SessionId));
+        command.Parameters.AddWithValue("$system", context.SystemName);
+        command.Parameters.AddWithValue("$body", context.BodyName);
+        command.Parameters.AddWithValue("$ring", context.RingName);
+        command.Parameters.AddWithValue("$confirmed", context.Confirmed ? 1 : 0);
+        command.Parameters.AddWithValue("$primaryCommodity", context.PrimaryCommodityId);
+        command.Parameters.AddWithValue(
+            "$targetCommodities",
+            string.Join("|", context.TargetCommodityIds));
+        command.Parameters.AddWithValue("$overlap", context.OverlapMultiplier);
+        command.Parameters.AddWithValue("$resType", context.ResType);
+        command.Parameters.AddWithValue("$qualityCommodity", context.QualityCommodityId);
+        command.Parameters.AddWithValue(
+            "$measuredContent",
+            context.MeasuredAverageContentPercent);
+        command.Parameters.AddWithValue("$qualitySource", context.QualitySource);
+        command.Parameters.AddWithValue(
+            "$selectedUtc",
+            context.SelectedUtc?.ToString("O") ?? string.Empty);
+        command.ExecuteNonQuery();
+    }
+
     private static void DeleteChildren(
         SqliteConnection connection,
         SqliteTransaction transaction,
@@ -356,7 +454,8 @@ internal sealed class MiningSessionRepository
                  {
                      "mining_prospect_material",
                      "mining_prospect",
-                     "mining_refinement"
+                     "mining_refinement",
+                     "mining_session_destination"
                  })
         {
             using SqliteCommand command = connection.CreateCommand();
@@ -505,6 +604,22 @@ internal sealed class MiningSessionRepository
 
                 CREATE INDEX IF NOT EXISTS ix_mining_refinement_session
                     ON mining_refinement(session_id, sequence);
+
+                CREATE TABLE IF NOT EXISTS mining_session_destination(
+                    session_id TEXT PRIMARY KEY,
+                    system_name TEXT NOT NULL DEFAULT '',
+                    body_name TEXT NOT NULL DEFAULT '',
+                    ring_name TEXT NOT NULL DEFAULT '',
+                    confirmed INTEGER NOT NULL DEFAULT 0,
+                    primary_commodity_id TEXT NOT NULL DEFAULT '',
+                    target_commodity_ids TEXT NOT NULL DEFAULT '',
+                    overlap_multiplier INTEGER NOT NULL DEFAULT 0,
+                    res_type TEXT NOT NULL DEFAULT '',
+                    quality_commodity_id TEXT NOT NULL DEFAULT '',
+                    measured_average_content REAL NOT NULL DEFAULT 0,
+                    quality_source TEXT NOT NULL DEFAULT '',
+                    selected_utc TEXT NOT NULL DEFAULT ''
+                );
                 """;
             command.ExecuteNonQuery();
 

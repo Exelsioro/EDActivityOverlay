@@ -8,7 +8,11 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
     private readonly object sync = new();
     private readonly MiningSessionAccumulator accumulator;
     private readonly MiningSessionRepository repository;
+    private readonly Func<MiningDestinationSnapshot> destinationProvider;
     private MiningSessionSnapshot current = MiningSessionSnapshot.Empty;
+    private Guid destinationSessionId = Guid.Empty;
+    private MiningSessionDestinationContext linkedDestination =
+        MiningSessionDestinationContext.Empty;
     private bool started;
     private bool disposed;
 
@@ -32,9 +36,13 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
     {
     }
 
-    internal MiningSessionService(MiningSessionRepository repository)
+    internal MiningSessionService(
+        MiningSessionRepository repository,
+        Func<MiningDestinationSnapshot>? destinationProvider = null)
     {
         this.repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        this.destinationProvider =
+            destinationProvider ?? (() => MiningDestinationService.Instance.Current);
         accumulator = new MiningSessionAccumulator();
     }
 
@@ -61,11 +69,21 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
         lock (sync)
         {
             result = accumulator.Apply(journalEvent);
-            publishedCurrent = EnrichRingContext(result.Current);
+
+            // Complete the old session before processing an idle/new current
+            // snapshot so its captured destination context cannot be lost.
             completed = result.CompletedSession is null
                 ? null
-                : EnrichRingContext(result.CompletedSession);
+                : EnrichSession(result.CompletedSession);
+
+            publishedCurrent = EnrichSession(result.Current);
             current = publishedCurrent;
+
+            if (completed is not null
+                && publishedCurrent.State == MiningSessionState.Idle)
+            {
+                ResetDestinationLink();
+            }
         }
 
         if (completed is not null
@@ -91,7 +109,7 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
         lock (sync)
         {
             result = accumulator.ApplyCompanion(companionFile);
-            publishedCurrent = EnrichRingContext(result.Current);
+            publishedCurrent = EnrichSession(result.Current);
             current = publishedCurrent;
         }
 
@@ -102,6 +120,46 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
                 new MiningSessionChangedEventArgs(
                     publishedCurrent));
         }
+    }
+
+    private MiningSessionSnapshot EnrichSession(
+        MiningSessionSnapshot session)
+    {
+        session = EnrichRingContext(session);
+        if (session.State == MiningSessionState.Idle)
+        {
+            return session;
+        }
+
+        if (destinationSessionId != session.SessionId)
+        {
+            destinationSessionId = session.SessionId;
+            linkedDestination = MiningSessionDestinationContext.Empty;
+        }
+
+        if (!linkedDestination.Available)
+        {
+            linkedDestination = MiningSessionDestinationLinker.Capture(
+                session,
+                destinationProvider());
+        }
+        else
+        {
+            linkedDestination = MiningSessionDestinationLinker.Reconcile(
+                session,
+                linkedDestination);
+        }
+
+        return session with
+        {
+            DestinationContext = linkedDestination
+        };
+    }
+
+    private void ResetDestinationLink()
+    {
+        destinationSessionId = Guid.Empty;
+        linkedDestination = MiningSessionDestinationContext.Empty;
     }
 
     private static MiningSessionSnapshot EnrichRingContext(

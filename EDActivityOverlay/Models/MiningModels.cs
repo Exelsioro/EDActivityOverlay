@@ -80,6 +80,28 @@ public sealed record MiningRefinementSnapshot(
     string CommodityId,
     string DisplayName);
 
+public sealed record MiningSessionDestinationContext
+{
+    public string SystemName { get; init; } = string.Empty;
+    public string BodyName { get; init; } = string.Empty;
+    public string RingName { get; init; } = string.Empty;
+    public bool Confirmed { get; init; }
+    public string PrimaryCommodityId { get; init; } = string.Empty;
+    public IReadOnlyList<string> TargetCommodityIds { get; init; } = Array.Empty<string>();
+    public int OverlapMultiplier { get; init; }
+    public string ResType { get; init; } = string.Empty;
+    public string QualityCommodityId { get; init; } = string.Empty;
+    public double MeasuredAverageContentPercent { get; init; }
+    public string QualitySource { get; init; } = string.Empty;
+    public DateTimeOffset? SelectedUtc { get; init; }
+
+    public static MiningSessionDestinationContext Empty { get; } = new();
+
+    public bool Available =>
+        !string.IsNullOrWhiteSpace(SystemName)
+        && !string.IsNullOrWhiteSpace(RingName);
+}
+
 public sealed record MiningSessionSnapshot(
     Guid SessionId,
     MiningSessionState State,
@@ -127,6 +149,8 @@ public sealed record MiningSessionSnapshot(
     public string RingClass { get; init; } = string.Empty;
     public string ReserveLevel { get; init; } = string.Empty;
     public IReadOnlyList<string> HotspotCommodityIds { get; init; } = Array.Empty<string>();
+    public MiningSessionDestinationContext DestinationContext { get; init; } =
+        MiningSessionDestinationContext.Empty;
 
     public bool IsActive => State == MiningSessionState.Active;
     public int ProspectedAsteroids => Prospects.Count;
