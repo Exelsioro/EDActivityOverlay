@@ -1388,11 +1388,12 @@
     <sys:String x:Key="Loc_MINING_LOCATION_CLASS">Тип / резервы</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MATCH">Пятна</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SPECIAL">Особое</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_COLUMN">История EDAO</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DISTANCE">Расстояние</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ARRIVAL">От звезды</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_PLOT">ПРОЛОЖИТЬ К СИСТЕМЕ</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_READY">Выберите цели и запустите поиск мест для добычи.</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Кольца/пятна: Spansh · overlap/RES: списки EliteMining · измеренное качество Platinum: high-yield список E:D Tools · рынок сбыта: Ardent вокруг лучших мест.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Личная история точного кольца: подтверждённые сессии EDAO · кольца/пятна: Spansh · overlap/RES: списки EliteMining · внешний fallback качества Platinum: high-yield список E:D Tools · рынок сбыта: Ardent вокруг лучших мест.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ANY">Любой</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_COMMON_PLUS">Обычные+</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_MAJOR_PLUS">Богатые+</sys:String>
@@ -1418,6 +1419,11 @@
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY">Кольцо/тело: Spansh. Подтверждённые overlap/RES: список сообщества EliteMining.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Кольцо/тело и число сигналов: Spansh. Подтверждённого overlap/RES не найдено.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDTOOLS">Среднее содержание Platinum по замерам: high-yield survey E:D Tools (живой список).</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDAO">Личная история добычи: подтверждённые сессии EDAO именно в этом кольце. После набора минимальной выборки собственное качество имеет приоритет над внешними замерами в оценке.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT">{0}× · {1:0.#} т/ч</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT_SAMPLE">{0}× · выборка</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_HISTORY">ИСТОРИЯ EDAO · сессий {0} · с валидной скоростью {1} · средняя {2:0.#} т/ч · лучшая {3:0.#} т/ч · попадания {4:P0} · среднее содержание цели {5:0.##}%</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_REFINED">ДОБЫТО EDAO · {0}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_HIGH_YIELD_SHORT">HIGH-YIELD {0:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MEASURED_QUALITY">ЗАМЕРЫ · {0} среднее {1:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_KNOWN_OVERLAP">{0}: подтверждённое пересечение {1}x</sys:String>

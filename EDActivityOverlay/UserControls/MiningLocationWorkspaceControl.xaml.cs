@@ -28,6 +28,7 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
         string ClassReserve,
         string Targets,
         string Special,
+        string History,
         string Distance,
         string Sell,
         string Arrival);
@@ -342,6 +343,7 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
                     .Where(value => !string.IsNullOrWhiteSpace(value))),
             targets,
             SpecialSummary(candidate),
+            PersonalHistorySummary(candidate),
             Loc.Format("Loc_MINING_LOCATION_LY_VALUE", candidate.DistanceLy),
             candidate.HasDestinationMarket
                 ? Loc.Format(
@@ -450,6 +452,35 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
     private static string BuildSpecialDetail(MiningLocationCandidate candidate)
     {
         var parts = new List<string>();
+
+        if (candidate.HasPersonalHistory)
+        {
+            MiningLocationHistorySnapshot history = candidate.PersonalHistory;
+            parts.Add(Loc.Format(
+                "Loc_MINING_LOCATION_EDAO_HISTORY",
+                history.Sessions,
+                history.RateSessions,
+                history.AverageTonsPerHour,
+                history.BestTonsPerHour,
+                history.HitRate,
+                history.AverageTargetContentPercent));
+
+            string composition = string.Join(
+                " · ",
+                history.RefinedComposition
+                    .Take(4)
+                    .Select(item =>
+                        $"{MiningTargetCatalog.GetDisplayName(item.CommodityId)} "
+                        + $"{item.Tons:N0} ({item.Share:P0})"));
+
+            if (!string.IsNullOrWhiteSpace(composition))
+            {
+                parts.Add(Loc.Format(
+                    "Loc_MINING_LOCATION_EDAO_REFINED",
+                    composition));
+            }
+        }
+
         foreach (MiningLocationSpecialSite site in candidate.SpecialSites
                      .OrderByDescending(item => item.ResType)
                      .ThenByDescending(item => item.OverlapMultiplier))
@@ -493,6 +524,25 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
             : string.Join(Environment.NewLine, parts.Distinct(StringComparer.OrdinalIgnoreCase));
     }
 
+    private static string PersonalHistorySummary(
+        MiningLocationCandidate candidate)
+    {
+        MiningLocationHistorySnapshot history = candidate.PersonalHistory;
+        if (!history.Available)
+        {
+            return "—";
+        }
+
+        return history.RateSessions > 0
+            ? Loc.Format(
+                "Loc_MINING_LOCATION_EDAO_SHORT",
+                history.Sessions,
+                history.AverageTonsPerHour)
+            : Loc.Format(
+                "Loc_MINING_LOCATION_EDAO_SHORT_SAMPLE",
+                history.Sessions);
+    }
+
     private static string SpecialSummary(MiningLocationCandidate candidate)
     {
         MiningResSiteType res = candidate.SpecialSites
@@ -529,12 +579,17 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
 
     private static string BuildSourceDetail(MiningLocationCandidate candidate)
     {
-        var lines = new List<string>
+        var lines = new List<string>();
+
+        if (candidate.HasPersonalHistory)
         {
+            lines.Add(Loc.Get("Loc_MINING_LOCATION_SOURCE_EDAO"));
+        }
+
+        lines.Add(
             candidate.SpecialSites.Count > 0
                 ? Loc.Get("Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY")
-                : Loc.Get("Loc_MINING_LOCATION_SOURCE_SPANSH")
-        };
+                : Loc.Get("Loc_MINING_LOCATION_SOURCE_SPANSH"));
 
         if (candidate.HasMeasuredQuality)
         {

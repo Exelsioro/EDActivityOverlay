@@ -77,6 +77,8 @@ public sealed record MiningLocationCandidate
         Array.Empty<MiningLocationSpecialSite>();
     public IReadOnlyList<MiningLocationQualitySite> QualitySites { get; init; } =
         Array.Empty<MiningLocationQualitySite>();
+    public MiningLocationHistorySnapshot PersonalHistory { get; init; } =
+        MiningLocationHistorySnapshot.Empty;
     public string PrimaryCommodityId { get; init; } = string.Empty;
     public int MarketReferencePrice { get; init; }
     public string BestSellCommodityId { get; init; } = string.Empty;
@@ -98,6 +100,8 @@ public sealed record MiningLocationCandidate
 
     public bool HasKnownSpecial => SpecialSites.Count > 0;
     public bool HasMeasuredQuality => QualitySites.Count > 0;
+    public bool HasPersonalHistory => PersonalHistory.Available;
+    public bool UsesPersonalQuality => PersonalHistory.HasQualitySignal;
     public double BestMeasuredAverageContentPercent =>
         QualitySites
             .Select(site => site.AverageContentPercent)
@@ -139,13 +143,15 @@ public sealed class MiningLocationFinderService
     private readonly IMiningSpecialSiteProvider specialSiteProvider;
     private readonly IMiningLocationMarketEnricher marketEnricher;
     private readonly IMiningLocationQualityProvider qualityProvider;
+    private readonly IMiningLocationHistoryProvider historyProvider;
 
     public MiningLocationFinderService()
         : this(
             new SpanshMiningLocationProvider(),
             new MiningCommunitySpecialSiteProvider(),
             new MiningLocationMarketEnrichmentService(),
-            new MiningEdToolsQualityProvider())
+            new MiningEdToolsQualityProvider(),
+            new MiningSessionLocationHistoryProvider())
     {
     }
 
@@ -156,7 +162,8 @@ public sealed class MiningLocationFinderService
             locationProvider,
             specialSiteProvider,
             new MiningLocationMarketEnrichmentService(),
-            new NullMiningLocationQualityProvider())
+            new NullMiningLocationQualityProvider(),
+            new NullMiningLocationHistoryProvider())
     {
     }
 
@@ -168,7 +175,8 @@ public sealed class MiningLocationFinderService
             locationProvider,
             specialSiteProvider,
             marketEnricher,
-            new NullMiningLocationQualityProvider())
+            new NullMiningLocationQualityProvider(),
+            new NullMiningLocationHistoryProvider())
     {
     }
 
@@ -177,11 +185,27 @@ public sealed class MiningLocationFinderService
         IMiningSpecialSiteProvider specialSiteProvider,
         IMiningLocationMarketEnricher marketEnricher,
         IMiningLocationQualityProvider qualityProvider)
+        : this(
+            locationProvider,
+            specialSiteProvider,
+            marketEnricher,
+            qualityProvider,
+            new NullMiningLocationHistoryProvider())
+    {
+    }
+
+    internal MiningLocationFinderService(
+        IMiningLocationProvider locationProvider,
+        IMiningSpecialSiteProvider specialSiteProvider,
+        IMiningLocationMarketEnricher marketEnricher,
+        IMiningLocationQualityProvider qualityProvider,
+        IMiningLocationHistoryProvider historyProvider)
     {
         this.locationProvider = locationProvider ?? throw new ArgumentNullException(nameof(locationProvider));
         this.specialSiteProvider = specialSiteProvider ?? throw new ArgumentNullException(nameof(specialSiteProvider));
         this.marketEnricher = marketEnricher ?? throw new ArgumentNullException(nameof(marketEnricher));
         this.qualityProvider = qualityProvider ?? throw new ArgumentNullException(nameof(qualityProvider));
+        this.historyProvider = historyProvider ?? throw new ArgumentNullException(nameof(historyProvider));
     }
 
     public async Task<MiningLocationSearchResult> SearchAsync(
@@ -226,6 +250,27 @@ public sealed class MiningLocationFinderService
                 group => (IReadOnlyList<MiningLocationQualitySite>)group.ToArray(),
                 StringComparer.OrdinalIgnoreCase);
 
+        IReadOnlyDictionary<string, MiningLocationHistorySnapshot> historyByRing;
+        IReadOnlyList<string> historyWarnings;
+        try
+        {
+            historyByRing = MiningLocationHistoryCalculator.CalculateByLocation(
+                historyProvider.LoadRecent(),
+                query.CommodityIds);
+            historyWarnings = Array.Empty<string>();
+        }
+        catch (Exception ex)
+        {
+            historyByRing =
+                new Dictionary<string, MiningLocationHistorySnapshot>(
+                    StringComparer.OrdinalIgnoreCase);
+            historyWarnings =
+            [
+                $"Personal mining history unavailable: {ex.Message}"
+            ];
+            Logger.Logger.Warning($"Mining location history unavailable: {ex}");
+        }
+
         MiningLocationCandidate[] provisional = raw
             .Where(candidate => MiningLocationRanker.RingClassMatches(candidate.RingClass, query.RingClass))
             .Where(candidate => MiningLocationRanker.ReserveRank(candidate.ReserveLevel) >= query.MinimumReserveRank)
@@ -241,6 +286,9 @@ public sealed class MiningLocationFinderService
                 qualityByRing.TryGetValue(
                     key,
                     out IReadOnlyList<MiningLocationQualitySite>? ringQuality);
+                historyByRing.TryGetValue(
+                    key,
+                    out MiningLocationHistorySnapshot? personalHistory);
 
                 string[] selected = query.CommodityIds
                     .Select(id => MiningTargetCatalog.Find(id)?.CommodityId ?? string.Empty)
@@ -262,12 +310,16 @@ public sealed class MiningLocationFinderService
                     candidate with
                     {
                         SpecialSites = relevant,
-                        QualitySites = relevantQuality
+                        QualitySites = relevantQuality,
+                        PersonalHistory =
+                            personalHistory ?? MiningLocationHistorySnapshot.Empty
                     },
                     prices);
             })
             .Where(candidate => !query.SpecialOnly || candidate.HasKnownSpecial)
             .OrderByDescending(candidate => candidate.Score)
+            .ThenByDescending(candidate => candidate.HasPersonalHistory)
+            .ThenByDescending(candidate => candidate.PersonalHistory.AverageTonsPerHour)
             .ThenByDescending(candidate => candidate.SpecialScore)
             .ThenByDescending(candidate => candidate.ReserveScore)
             .ThenBy(candidate => candidate.DistanceLy)
@@ -283,6 +335,9 @@ public sealed class MiningLocationFinderService
 
         MiningLocationCandidate[] ranked = enriched
             .OrderByDescending(candidate => candidate.Score)
+            .ThenByDescending(candidate => candidate.HasPersonalHistory)
+            .ThenByDescending(candidate => candidate.PersonalHistory.RateSessions)
+            .ThenByDescending(candidate => candidate.PersonalHistory.AverageTonsPerHour)
             .ThenByDescending(candidate => candidate.QualityScore)
             .ThenByDescending(candidate => candidate.SpecialScore)
             .ThenByDescending(candidate => candidate.ReserveScore)
@@ -294,6 +349,7 @@ public sealed class MiningLocationFinderService
 
         string[] warnings = specialWarnings
             .Concat(qualityWarnings)
+            .Concat(historyWarnings)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
@@ -351,10 +407,17 @@ public static class MiningLocationRanker
             .Where(site => selected.Contains(site.CommodityId, StringComparer.OrdinalIgnoreCase))
             .ToArray();
 
-        double measuredAverage = relevantQuality
+        double externalMeasuredAverage = relevantQuality
             .Select(site => site.AverageContentPercent)
             .DefaultIfEmpty(0)
             .Max();
+
+        // Exact-ring EDAO observations are authoritative once the local sample
+        // reaches the minimum credibility gate. Until then the larger external
+        // survey remains the quality-score fallback.
+        double measuredAverage = candidate.PersonalHistory.HasQualitySignal
+            ? candidate.PersonalHistory.AverageTargetContentPercent
+            : externalMeasuredAverage;
 
         int qualityScore = QualityScoreFor(measuredAverage);
 

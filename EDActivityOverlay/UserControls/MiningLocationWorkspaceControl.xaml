@@ -189,7 +189,8 @@
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_RING}" Binding="{Binding Ring}" Width="1.1*"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_CLASS}" Binding="{Binding ClassReserve}" Width="110"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_MATCH}" Binding="{Binding Targets}" Width="1.15*"/>
-                                <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_SPECIAL}" Binding="{Binding Special}" Width="125"/>
+                                <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_SPECIAL}" Binding="{Binding Special}" Width="115"/>
+                                <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_EDAO_COLUMN}" Binding="{Binding History}" Width="92"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_DISTANCE}" Binding="{Binding Distance}" Width="72"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_SELL}" Binding="{Binding Sell}" Width="112"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MINING_LOCATION_ARRIVAL}" Binding="{Binding Arrival}" Width="72"/>

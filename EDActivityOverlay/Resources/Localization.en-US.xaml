@@ -1388,11 +1388,12 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_CLASS">Class / reserves</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MATCH">Hotspots</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SPECIAL">Special</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_COLUMN">EDAO history</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DISTANCE">Distance</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ARRIVAL">Arrival</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_PLOT">PLOT TO SYSTEM</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_READY">Choose targets and search for mining locations.</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Rings/hotspots: Spansh · overlap/RES: EliteMining community lists · measured Platinum quality: E:D Tools high-yield list · destination sell market: Ardent around top candidates.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Personal exact-ring history: confirmed EDAO sessions · rings/hotspots: Spansh · overlap/RES: EliteMining community lists · measured Platinum quality fallback: E:D Tools high-yield list · destination sell market: Ardent around top candidates.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ANY">Any</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_COMMON_PLUS">Common+</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_MAJOR_PLUS">Major+</sys:String>
@@ -1418,6 +1419,11 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY">Ring/body data: Spansh. Confirmed overlap/RES: EliteMining community list.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Ring/body and signal-count data: Spansh. No confirmed overlap/RES record matched.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDTOOLS">Measured Platinum average content: E:D Tools high-yield survey (live list).</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDAO">Personal mining history: confirmed EDAO sessions for this exact ring. Once the local sample is large enough it overrides external measured quality for scoring.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT">{0}× · {1:0.#} t/h</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT_SAMPLE">{0}× · sample</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_HISTORY">EDAO HISTORY · {0} sessions · {1} rate-ready · avg {2:0.#} t/h · best {3:0.#} t/h · hit {4:P0} · avg target {5:0.##}%</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_REFINED">EDAO REFINED · {0}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_HIGH_YIELD_SHORT">HIGH-YIELD {0:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MEASURED_QUALITY">MEASURED · {0} average {1:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_KNOWN_OVERLAP">{0}: confirmed {1}x overlap</sys:String>
