@@ -86,4 +86,73 @@ public sealed class X52StartupProfileServiceTests
             expected,
             X52StartupProfileService.IsOverlayProfilePath(path));
     }
+
+
+    [Fact]
+    public void ResolveProfilePrefersExplicitSelectionOverActiveAndCanonical()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EDAO-X52-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            string preferred = Path.Combine(directory, "MyMining.pr0");
+            string active = Path.Combine(directory, "Current.pr0");
+            string canonical = Path.Combine(
+                directory,
+                "X52ProEliteV223EX_Overlay.pr0");
+            File.WriteAllText(preferred, string.Empty);
+            File.WriteAllText(active, string.Empty);
+            File.WriteAllText(canonical, string.Empty);
+
+            string? resolved = X52StartupProfileService.ResolveProfile(
+                [canonical],
+                preferred,
+                active);
+
+            Assert.True(
+                X52StartupProfileService.PathsEqual(
+                    preferred,
+                    resolved));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveProfilePrefersCurrentLogitechProfileOverCanonicalFallback()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "EDAO-X52-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            string active = Path.Combine(directory, "MyCustomElite.pr0");
+            string canonical = Path.Combine(
+                directory,
+                "X52ProEliteV223EX_Overlay.pr0");
+            File.WriteAllText(active, string.Empty);
+            File.WriteAllText(canonical, string.Empty);
+
+            string? resolved = X52StartupProfileService.ResolveProfile(
+                [canonical],
+                preferredProfilePath: null,
+                currentStartupPath: active);
+
+            Assert.True(
+                X52StartupProfileService.PathsEqual(
+                    active,
+                    resolved));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
 }

@@ -91,7 +91,7 @@ public sealed class MiningLocationHistoryTests
         Assert.Equal(2, history.Sessions);
         Assert.Equal(2, history.RateSessions);
         Assert.Equal(20, history.RefinedTons);
-        Assert.Equal(26.666, history.AverageTonsPerHour, 3);
+        Assert.Equal(20.0 / 0.75, history.AverageTonsPerHour, 10);
         Assert.Equal(40, history.BestTonsPerHour, 3);
 
         Assert.Equal(5, history.ProspectedAsteroids);

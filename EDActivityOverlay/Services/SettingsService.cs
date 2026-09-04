@@ -514,6 +514,23 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"X52 settings updated: enabled={enabled}, mfd={mfd}, leds={leds}, controls={mfdControls}");
         }
 
+        public void SetX52StartupProfilePath(string profilePath)
+        {
+            profilePath = profilePath?.Trim() ?? string.Empty;
+            if (string.Equals(
+                    _settings.X52StartupProfilePath,
+                    profilePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.X52StartupProfilePath = profilePath;
+            SaveSettings();
+            Logger.Logger.Info(
+                $"X52 startup profile preference updated: configured={!string.IsNullOrWhiteSpace(profilePath)}");
+        }
+
         public void SetExperimentalX52MiningCopilot(bool enabled)
         {
             if (_settings.EnableExperimentalX52MiningCopilot == enabled)
@@ -753,6 +770,12 @@ namespace EDActivityOverlay.Services
 
         /// <summary>Uses the MFD wheel to switch and toggle activity widgets.</summary>
         public bool EnableX52MfdControls { get; set; } = true;
+
+        /// <summary>
+        /// User-selected Logitech .pr0 profile. Empty means follow the currently
+        /// active Logitech startup profile and use EDAO overlay discovery only as fallback.
+        /// </summary>
+        public string X52StartupProfilePath { get; set; } = string.Empty;
 
         /// <summary>Shows Mining-specific MFD and LED copilot cues. Experimental and opt-in.</summary>
         public bool EnableExperimentalX52MiningCopilot { get; set; }

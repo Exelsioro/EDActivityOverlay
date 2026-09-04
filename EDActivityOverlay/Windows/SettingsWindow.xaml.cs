@@ -27,6 +27,7 @@ namespace EDActivityOverlay.Windows
     {
         private readonly bool overlayMode;
         private readonly IntPtr targetWindow;
+        private bool loadingX52StartupProfiles;
 
         public bool IsOverlayMode => overlayMode;
 
@@ -965,12 +966,20 @@ namespace EDActivityOverlay.Windows
                     .GetAvailableProfiles()
                     .ToList();
 
+            AppSettings settings = SettingsService.Instance.Settings;
+            string? configuredPreference =
+                selectedPath
+                ?? settings.X52StartupProfilePath;
+
             X52StartupProfileState current =
-                X52StartupProfileService.Instance.Inspect();
+                X52StartupProfileService.Instance.Inspect(
+                    configuredPreference);
 
             string? preferred =
-                selectedPath
-                ?? current.ProfilePath;
+                !string.IsNullOrWhiteSpace(configuredPreference)
+                && File.Exists(configuredPreference)
+                    ? configuredPreference
+                    : current.ProfilePath;
 
             if (!string.IsNullOrWhiteSpace(preferred)
                 && preferred.EndsWith(
@@ -985,12 +994,20 @@ namespace EDActivityOverlay.Windows
                 profiles.Add(new X52ProfileOption(preferred));
             }
 
-            X52StartupProfileComboBox.ItemsSource = profiles;
-            X52StartupProfileComboBox.SelectedItem =
-                profiles.FirstOrDefault(item =>
-                    X52StartupProfileService.PathsEqual(
-                        item.ProfilePath,
-                        preferred));
+            loadingX52StartupProfiles = true;
+            try
+            {
+                X52StartupProfileComboBox.ItemsSource = profiles;
+                X52StartupProfileComboBox.SelectedItem =
+                    profiles.FirstOrDefault(item =>
+                        X52StartupProfileService.PathsEqual(
+                            item.ProfilePath,
+                            preferred));
+            }
+            finally
+            {
+                loadingX52StartupProfiles = false;
+            }
 
             RefreshX52StartupProfileStatus();
         }
@@ -1072,6 +1089,9 @@ namespace EDActivityOverlay.Windows
                 return;
             }
 
+            SettingsService.Instance.SetX52StartupProfilePath(
+                profilePath);
+
             RefreshX52StartupProfileStatus(
                 X52StartupProfileService.Instance.Configure(
                     profilePath));
@@ -1079,8 +1099,22 @@ namespace EDActivityOverlay.Windows
 
         private void X52StartupProfileComboBox_SelectionChanged(
             object sender,
-            SelectionChangedEventArgs e) =>
+            SelectionChangedEventArgs e)
+        {
+            if (loadingX52StartupProfiles)
+            {
+                return;
+            }
+
+            string? profilePath = SelectedX52StartupProfilePath();
+            if (!string.IsNullOrWhiteSpace(profilePath))
+            {
+                SettingsService.Instance.SetX52StartupProfilePath(
+                    profilePath);
+            }
+
             RefreshX52StartupProfileStatus();
+        }
 
         private void ApplyX52StartupProfileNowButton_Click(
             object sender,
@@ -1094,6 +1128,9 @@ namespace EDActivityOverlay.Windows
                 RefreshX52StartupProfileStatus();
                 return;
             }
+
+            SettingsService.Instance.SetX52StartupProfilePath(
+                profilePath);
 
             X52ApplyNowResult result =
                 X52ProfileRuntimeActivator.ApplyNow(profilePath);
@@ -1134,6 +1171,8 @@ namespace EDActivityOverlay.Windows
 
             if (dialog.ShowDialog(this) == true)
             {
+                SettingsService.Instance.SetX52StartupProfilePath(
+                    dialog.FileName);
                 LoadX52StartupProfiles(dialog.FileName);
             }
         }

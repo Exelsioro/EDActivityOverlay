@@ -73,6 +73,11 @@ public sealed class MaterialAcquisitionAdvisor
         string materialId,
         IReadOnlyDictionary<string, MaterialInventoryEntry> inventory)
     {
+        // Callers can supply either the Frontier Journal symbol
+        // (for example shieldcyclerecordings) or the canonical Coriolis/display
+        // identity (distortedshieldcyclerecordings). Normalize before lookup.
+        materialId = MaterialName.Normalize(materialId);
+
         if (inventory.TryGetValue(materialId, out MaterialInventoryEntry? item))
         {
             return item.Category;

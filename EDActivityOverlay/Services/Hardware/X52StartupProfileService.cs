@@ -463,18 +463,22 @@ public sealed class X52StartupProfileService
             .ToArray();
     }
 
-    private static string? ResolveProfile(
+    internal static string? ResolveProfile(
         IReadOnlyList<string> discovered,
         string? preferredProfilePath,
         string? currentStartupPath)
     {
-        if (!string.IsNullOrWhiteSpace(preferredProfilePath)
-            && preferredProfilePath.EndsWith(
-                ".pr0",
-                StringComparison.OrdinalIgnoreCase)
-            && File.Exists(preferredProfilePath))
+        // Explicit EDAO preference always wins. Without one, respect the
+        // profile Logitech is already configured to load. Auto-discovered
+        // *_Overlay.pr0 files are only a first-run fallback.
+        if (IsExistingProfilePath(preferredProfilePath))
         {
-            return Path.GetFullPath(preferredProfilePath);
+            return Path.GetFullPath(preferredProfilePath!);
+        }
+
+        if (IsExistingProfilePath(currentStartupPath))
+        {
+            return Path.GetFullPath(currentStartupPath!);
         }
 
         string? canonical = discovered
@@ -497,14 +501,15 @@ public sealed class X52StartupProfileService
             return Path.GetFullPath(canonical);
         }
 
-        if (IsOverlayProfilePath(currentStartupPath)
-            && File.Exists(currentStartupPath!))
-        {
-            return Path.GetFullPath(currentStartupPath!);
-        }
-
         return null;
     }
+
+    private static bool IsExistingProfilePath(string? path) =>
+        !string.IsNullOrWhiteSpace(path)
+        && path.EndsWith(
+            ".pr0",
+            StringComparison.OrdinalIgnoreCase)
+        && File.Exists(path);
 
     internal static bool IsOverlayProfilePath(string? path)
     {
