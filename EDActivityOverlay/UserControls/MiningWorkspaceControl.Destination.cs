@@ -121,6 +121,13 @@ public partial class MiningWorkspaceControl
             parts.Add($"{destination.OverlapMultiplier}x");
         }
 
+        if (destination.MeasuredAverageContentPercent > 0)
+        {
+            parts.Add(Loc.Format(
+                "Loc_MINING_LOCATION_HIGH_YIELD_SHORT",
+                destination.MeasuredAverageContentPercent));
+        }
+
         if (destination.DistanceLy > 0)
         {
             parts.Add(Loc.Format(

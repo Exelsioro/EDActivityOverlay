@@ -17,6 +17,9 @@ public sealed record MiningDestinationSnapshot
     public IReadOnlyList<string> TargetCommodityIds { get; init; } = Array.Empty<string>();
     public int OverlapMultiplier { get; init; }
     public MiningResSiteType ResType { get; init; }
+    public string QualityCommodityId { get; init; } = string.Empty;
+    public double MeasuredAverageContentPercent { get; init; }
+    public string QualitySource { get; init; } = string.Empty;
     public DateTimeOffset SelectedUtc { get; init; }
 
     public static MiningDestinationSnapshot Empty { get; } = new();
@@ -41,6 +44,10 @@ public sealed record MiningDestinationSnapshot
             .DefaultIfEmpty(0)
             .Max();
 
+        MiningLocationQualitySite? bestQuality = candidate.QualitySites
+            .OrderByDescending(item => item.AverageContentPercent)
+            .FirstOrDefault();
+
         return new MiningDestinationSnapshot
         {
             SystemName = candidate.SystemName.Trim(),
@@ -62,6 +69,10 @@ public sealed record MiningDestinationSnapshot
                 .ToArray(),
             OverlapMultiplier = Math.Max(0, overlap),
             ResType = bestRes,
+            QualityCommodityId = bestQuality?.CommodityId ?? string.Empty,
+            MeasuredAverageContentPercent =
+                Math.Max(0, bestQuality?.AverageContentPercent ?? 0),
+            QualitySource = bestQuality?.Source ?? string.Empty,
             SelectedUtc = selectedUtc ?? DateTimeOffset.UtcNow
         };
     }

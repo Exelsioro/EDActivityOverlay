@@ -89,6 +89,78 @@ public sealed class MiningLocationFinderTests
     }
 
     [Fact]
+    public void MeasuredHighYieldSingleOutranksKnownDoubleOverlap()
+    {
+        MiningLocationQuery query = Query();
+        MiningMarketPriceSnapshot prices = Prices();
+
+        MiningLocationCandidate measured = MiningLocationRanker.Rank(
+            query,
+            Candidate() with
+            {
+                QualitySites =
+                [
+                    new MiningLocationQualitySite(
+                        "Test A",
+                        "1 A Ring",
+                        "Platinum",
+                        22.90,
+                        "test",
+                        "https://example.invalid",
+                        DateTimeOffset.UtcNow)
+                ]
+            },
+            prices);
+
+        MiningLocationCandidate overlap = MiningLocationRanker.Rank(
+            query,
+            Candidate() with
+            {
+                SpecialSites =
+                [
+                    new MiningLocationSpecialSite(
+                        "Test A",
+                        "1 A Ring",
+                        "Platinum",
+                        2,
+                        MiningResSiteType.None,
+                        "test")
+                ]
+            },
+            prices);
+
+        Assert.True(measured.Score > overlap.Score);
+        Assert.True(measured.QualityScore > overlap.SpecialScore);
+    }
+
+    [Fact]
+    public void EdToolsParserReadsMeasuredYieldAndRemovesOverlapSuffix()
+    {
+        const string html =
+            "<table><tr><th>Dist</th><th>Name</th><th>Comment</th></tr>"
+            + "<tr><td>164.74</td><td>Salikians</td><td>1 A Ring: 22.90%</td></tr>"
+            + "<tr><td>981.17</td><td>Parrot's Head Sector EL-Y d83</td>"
+            + "<td>1 A Ring ovr x3: 26.09%</td></tr></table>";
+
+        IReadOnlyList<MiningLocationQualitySite> rows =
+            MiningEdToolsQualityProvider.ParseHtml(
+                html,
+                new DateTimeOffset(2026, 9, 4, 10, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(
+            rows,
+            row => row.SystemName == "Salikians"
+                   && row.RingName == "1 A Ring"
+                   && Math.Abs(row.AverageContentPercent - 22.90) < 0.001);
+        Assert.Contains(
+            rows,
+            row => row.SystemName == "Parrot's Head Sector EL-Y d83"
+                   && row.RingName == "1 A Ring"
+                   && Math.Abs(row.AverageContentPercent - 26.09) < 0.001);
+    }
+
+    [Fact]
     public void ReserveRequirementRanksPristineAboveMajor()
     {
         Assert.Equal(4, MiningLocationRanker.ReserveRank("Pristine"));

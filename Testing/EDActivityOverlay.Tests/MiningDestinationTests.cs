@@ -31,6 +31,17 @@ public sealed class MiningDestinationTests
                     0,
                     MiningResSiteType.Hazardous,
                     "test")
+            ],
+            QualitySites =
+            [
+                new MiningLocationQualitySite(
+                    "Lalande 34968",
+                    "Lalande 34968 AB 8 A Ring",
+                    "Platinum",
+                    13.40,
+                    "test quality",
+                    "https://example.invalid",
+                    DateTimeOffset.UtcNow)
             ]
         };
 
@@ -44,6 +55,9 @@ public sealed class MiningDestinationTests
         Assert.Equal("A Ring", destination.RingDisplayName);
         Assert.Equal("Lalande 34968 AB 8 A Ring", destination.RingName);
         Assert.Equal(MiningResSiteType.Hazardous, destination.ResType);
+        Assert.Equal("Platinum", destination.QualityCommodityId);
+        Assert.Equal(13.40, destination.MeasuredAverageContentPercent, 2);
+        Assert.Equal("test quality", destination.QualitySource);
         Assert.True(destination.Available);
     }
 

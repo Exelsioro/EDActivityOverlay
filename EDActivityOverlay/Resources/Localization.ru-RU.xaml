@@ -1392,7 +1392,7 @@
     <sys:String x:Key="Loc_MINING_LOCATION_ARRIVAL">От звезды</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_PLOT">ПРОЛОЖИТЬ К СИСТЕМЕ</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_READY">Выберите цели и запустите поиск мест для добычи.</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Кольца/пятна: Spansh · подтверждённые overlap/RES: списки сообщества EliteMining (загрузка во время работы) · рынок сбыта: Ardent вокруг лучших найденных мест.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Кольца/пятна: Spansh · overlap/RES: списки EliteMining · измеренное качество Platinum: high-yield список E:D Tools · рынок сбыта: Ardent вокруг лучших мест.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ANY">Любой</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_COMMON_PLUS">Обычные+</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_MAJOR_PLUS">Богатые+</sys:String>
@@ -1408,7 +1408,7 @@
     <sys:String x:Key="Loc_MINING_LOCATION_SELECT">Выберите место для добычи</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DETAIL_META">{0} · {1} · {2:0.0} св. л. · {3:N0} св. с.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DETAIL_TARGETS">ПЯТНА · {0}</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SCORE_BREAKDOWN">ОЦЕНКА {0} · цели {1} · резервы {2} · особое {3} · путь {4} · рынок {5}</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SCORE_BREAKDOWN">ОЦЕНКА {0} · цели {1} · резервы {2} · качество {3} · особое {4} · путь {5} · рынок {6}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MARKET_CONTEXT">Рыночный контекст текущего региона · {0} ~{1:N0} кр/т</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MARKET_UNAVAILABLE">В обогащённой выборке не найден подходящий покупатель возле точки добычи.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELL">Сбыт</sys:String>
@@ -1416,7 +1416,10 @@
     <sys:String x:Key="Loc_MINING_LOCATION_DESTINATION_MARKET_CONTEXT">СБЫТ · {0} {1:N0} кр/т · {2:0.0} св. л. → {3} / {4} · спрос {5} · данные {6:0.#} ч</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DESTINATION_MARKET_FALLBACK">Покупатель возле точки не определён · текущий ориентир {0} ~{1:N0} кр/т</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY">Кольцо/тело: Spansh. Подтверждённые overlap/RES: список сообщества EliteMining.</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Кольцо/тело и число сигналов: Spansh. Подтверждённого особого места не найдено.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Кольцо/тело и число сигналов: Spansh. Подтверждённого overlap/RES не найдено.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDTOOLS">Среднее содержание Platinum по замерам: high-yield survey E:D Tools (живой список).</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_HIGH_YIELD_SHORT">HIGH-YIELD {0:0.00}%</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_MEASURED_QUALITY">ЗАМЕРЫ · {0} среднее {1:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_KNOWN_OVERLAP">{0}: подтверждённое пересечение {1}x</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_UNCONFIRMED_OVERLAP">Пятен одного ресурса: {0} · геометрическое пересечение не подтверждено</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_NO_SPECIAL">Нет подтверждённого overlap / RES</sys:String>

@@ -1392,7 +1392,7 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ARRIVAL">Arrival</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_PLOT">PLOT TO SYSTEM</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_READY">Choose targets and search for mining locations.</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Rings/hotspots: Spansh · confirmed overlap/RES: EliteMining community lists (runtime fetch) · destination sell market: Ardent around the top location candidates.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_FOOTER">Rings/hotspots: Spansh · overlap/RES: EliteMining community lists · measured Platinum quality: E:D Tools high-yield list · destination sell market: Ardent around top candidates.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_ANY">Any</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_COMMON_PLUS">Common+</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RESERVE_MAJOR_PLUS">Major+</sys:String>
@@ -1408,7 +1408,7 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELECT">Select a mining location</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DETAIL_META">{0} · {1} · {2:0.0} LY · {3:N0} ls</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DETAIL_TARGETS">HOTSPOTS · {0}</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SCORE_BREAKDOWN">SCORE {0} · targets {1} · reserves {2} · special {3} · travel {4} · market {5}</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SCORE_BREAKDOWN">SCORE {0} · targets {1} · reserves {2} · quality {3} · special {4} · travel {5} · market {6}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MARKET_CONTEXT">Current-region market context · {0} ~{1:N0} cr/t</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MARKET_UNAVAILABLE">No usable destination buyer was found in the enriched market sample.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELL">Sell</sys:String>
@@ -1416,7 +1416,10 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DESTINATION_MARKET_CONTEXT">SELL · {0} {1:N0} cr/t · {2:0.0} LY → {3} / {4} · demand {5} · data {6:0.#} h</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_DESTINATION_MARKET_FALLBACK">Destination buyer unresolved · current-region reference {0} ~{1:N0} cr/t</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY">Ring/body data: Spansh. Confirmed overlap/RES: EliteMining community list.</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Ring/body and signal-count data: Spansh. No confirmed special-site record matched.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Ring/body and signal-count data: Spansh. No confirmed overlap/RES record matched.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDTOOLS">Measured Platinum average content: E:D Tools high-yield survey (live list).</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_HIGH_YIELD_SHORT">HIGH-YIELD {0:0.00}%</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_MEASURED_QUALITY">MEASURED · {0} average {1:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_KNOWN_OVERLAP">{0}: confirmed {1}x overlap</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_UNCONFIRMED_OVERLAP">{0} same-material hotspots reported · geometric overlap unconfirmed</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_NO_SPECIAL">No confirmed overlap / RES record</sys:String>

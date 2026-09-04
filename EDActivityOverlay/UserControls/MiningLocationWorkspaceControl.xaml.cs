@@ -406,6 +406,7 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
             candidate.Score,
             candidate.TargetScore,
             candidate.ReserveScore,
+            candidate.QualityScore,
             candidate.SpecialScore,
             candidate.TravelScore,
             candidate.MarketScore);
@@ -441,9 +442,7 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
             SelectedMarketText.Text = Loc.Get("Loc_MINING_LOCATION_MARKET_UNAVAILABLE");
         }
 
-        SelectedSourceText.Text = candidate.SpecialSites.Count > 0
-            ? Loc.Get("Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY")
-            : Loc.Get("Loc_MINING_LOCATION_SOURCE_SPANSH");
+        SelectedSourceText.Text = BuildSourceDetail(candidate);
 
         PlotButton.Tag = candidate.SystemName;
     }
@@ -468,6 +467,16 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
                     commodity,
                     site.OverlapMultiplier));
             }
+        }
+
+        foreach (MiningLocationQualitySite site in candidate.QualitySites
+                     .OrderByDescending(item => item.AverageContentPercent)
+                     .Take(2))
+        {
+            parts.Add(Loc.Format(
+                "Loc_MINING_LOCATION_MEASURED_QUALITY",
+                MiningTargetCatalog.GetDisplayName(site.CommodityId),
+                site.AverageContentPercent));
         }
 
         int signalCount = candidate.HighestHotspotCount;
@@ -501,6 +510,12 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
             parts.Add(ResLabel(res));
         if (overlap >= 2)
             parts.Add($"{overlap}x");
+        if (candidate.HasMeasuredQuality)
+        {
+            parts.Add(Loc.Format(
+                "Loc_MINING_LOCATION_HIGH_YIELD_SHORT",
+                candidate.BestMeasuredAverageContentPercent));
+        }
 
         if (parts.Count == 0 && candidate.HighestHotspotCount >= 2)
         {
@@ -510,6 +525,23 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
         }
 
         return parts.Count == 0 ? "—" : string.Join(" + ", parts);
+    }
+
+    private static string BuildSourceDetail(MiningLocationCandidate candidate)
+    {
+        var lines = new List<string>
+        {
+            candidate.SpecialSites.Count > 0
+                ? Loc.Get("Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY")
+                : Loc.Get("Loc_MINING_LOCATION_SOURCE_SPANSH")
+        };
+
+        if (candidate.HasMeasuredQuality)
+        {
+            lines.Add(Loc.Get("Loc_MINING_LOCATION_SOURCE_EDTOOLS"));
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static string ResLabel(MiningResSiteType type) =>

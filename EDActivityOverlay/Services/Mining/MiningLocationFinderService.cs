@@ -50,6 +50,15 @@ public sealed record MiningLocationSpecialSite(
     public bool HasRes => ResType != MiningResSiteType.None;
 }
 
+public sealed record MiningLocationQualitySite(
+    string SystemName,
+    string RingName,
+    string CommodityId,
+    double AverageContentPercent,
+    string Source,
+    string SourceUrl,
+    DateTimeOffset ObservedUtc);
+
 public sealed record MiningLocationCandidate
 {
     public string SystemName { get; init; } = string.Empty;
@@ -66,6 +75,8 @@ public sealed record MiningLocationCandidate
         new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyList<MiningLocationSpecialSite> SpecialSites { get; init; } =
         Array.Empty<MiningLocationSpecialSite>();
+    public IReadOnlyList<MiningLocationQualitySite> QualitySites { get; init; } =
+        Array.Empty<MiningLocationQualitySite>();
     public string PrimaryCommodityId { get; init; } = string.Empty;
     public int MarketReferencePrice { get; init; }
     public string BestSellCommodityId { get; init; } = string.Empty;
@@ -79,12 +90,19 @@ public sealed record MiningLocationCandidate
     public DateTimeOffset BestSellUpdatedAt { get; init; }
     public int TargetScore { get; init; }
     public int ReserveScore { get; init; }
+    public int QualityScore { get; init; }
     public int SpecialScore { get; init; }
     public int TravelScore { get; init; }
     public int MarketScore { get; init; }
     public int Score { get; init; }
 
     public bool HasKnownSpecial => SpecialSites.Count > 0;
+    public bool HasMeasuredQuality => QualitySites.Count > 0;
+    public double BestMeasuredAverageContentPercent =>
+        QualitySites
+            .Select(site => site.AverageContentPercent)
+            .DefaultIfEmpty(0)
+            .Max();
     public bool HasDestinationMarket =>
         BestSellPrice > 0
         && !string.IsNullOrWhiteSpace(BestSellSystemName)
@@ -109,17 +127,25 @@ public interface IMiningSpecialSiteProvider
         CancellationToken cancellationToken);
 }
 
+public interface IMiningLocationQualityProvider
+{
+    Task<(IReadOnlyList<MiningLocationQualitySite> Sites, IReadOnlyList<string> Warnings)> LoadAsync(
+        CancellationToken cancellationToken);
+}
+
 public sealed class MiningLocationFinderService
 {
     private readonly IMiningLocationProvider locationProvider;
     private readonly IMiningSpecialSiteProvider specialSiteProvider;
     private readonly IMiningLocationMarketEnricher marketEnricher;
+    private readonly IMiningLocationQualityProvider qualityProvider;
 
     public MiningLocationFinderService()
         : this(
             new SpanshMiningLocationProvider(),
             new MiningCommunitySpecialSiteProvider(),
-            new MiningLocationMarketEnrichmentService())
+            new MiningLocationMarketEnrichmentService(),
+            new MiningEdToolsQualityProvider())
     {
     }
 
@@ -129,7 +155,8 @@ public sealed class MiningLocationFinderService
         : this(
             locationProvider,
             specialSiteProvider,
-            new MiningLocationMarketEnrichmentService())
+            new MiningLocationMarketEnrichmentService(),
+            new NullMiningLocationQualityProvider())
     {
     }
 
@@ -137,10 +164,24 @@ public sealed class MiningLocationFinderService
         IMiningLocationProvider locationProvider,
         IMiningSpecialSiteProvider specialSiteProvider,
         IMiningLocationMarketEnricher marketEnricher)
+        : this(
+            locationProvider,
+            specialSiteProvider,
+            marketEnricher,
+            new NullMiningLocationQualityProvider())
+    {
+    }
+
+    internal MiningLocationFinderService(
+        IMiningLocationProvider locationProvider,
+        IMiningSpecialSiteProvider specialSiteProvider,
+        IMiningLocationMarketEnricher marketEnricher,
+        IMiningLocationQualityProvider qualityProvider)
     {
         this.locationProvider = locationProvider ?? throw new ArgumentNullException(nameof(locationProvider));
         this.specialSiteProvider = specialSiteProvider ?? throw new ArgumentNullException(nameof(specialSiteProvider));
         this.marketEnricher = marketEnricher ?? throw new ArgumentNullException(nameof(marketEnricher));
+        this.qualityProvider = qualityProvider ?? throw new ArgumentNullException(nameof(qualityProvider));
     }
 
     public async Task<MiningLocationSearchResult> SearchAsync(
@@ -155,8 +196,17 @@ public sealed class MiningLocationFinderService
         IReadOnlyList<MiningLocationCandidate> raw =
             await locationProvider.SearchAsync(query, cancellationToken).ConfigureAwait(false);
 
-        (IReadOnlyList<MiningLocationSpecialSite> specialSites, IReadOnlyList<string> warnings) =
-            await specialSiteProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
+        Task<(IReadOnlyList<MiningLocationSpecialSite> Sites, IReadOnlyList<string> Warnings)>
+            specialTask = specialSiteProvider.LoadAsync(cancellationToken);
+        Task<(IReadOnlyList<MiningLocationQualitySite> Sites, IReadOnlyList<string> Warnings)>
+            qualityTask = qualityProvider.LoadAsync(cancellationToken);
+
+        await Task.WhenAll(specialTask, qualityTask).ConfigureAwait(false);
+
+        (IReadOnlyList<MiningLocationSpecialSite> specialSites, IReadOnlyList<string> specialWarnings) =
+            await specialTask.ConfigureAwait(false);
+        (IReadOnlyList<MiningLocationQualitySite> qualitySites, IReadOnlyList<string> qualityWarnings) =
+            await qualityTask.ConfigureAwait(false);
 
         var specialsByRing = specialSites
             .GroupBy(
@@ -167,14 +217,30 @@ public sealed class MiningLocationFinderService
                 group => (IReadOnlyList<MiningLocationSpecialSite>)group.ToArray(),
                 StringComparer.OrdinalIgnoreCase);
 
+        var qualityByRing = qualitySites
+            .GroupBy(
+                item => MiningLocationKey.For(item.SystemName, item.RingName),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<MiningLocationQualitySite>)group.ToArray(),
+                StringComparer.OrdinalIgnoreCase);
+
         MiningLocationCandidate[] provisional = raw
             .Where(candidate => MiningLocationRanker.RingClassMatches(candidate.RingClass, query.RingClass))
             .Where(candidate => MiningLocationRanker.ReserveRank(candidate.ReserveLevel) >= query.MinimumReserveRank)
             .Select(candidate =>
             {
+                string key = MiningLocationKey.For(
+                    candidate.SystemName,
+                    candidate.RingName);
+
                 specialsByRing.TryGetValue(
-                    MiningLocationKey.For(candidate.SystemName, candidate.RingName),
+                    key,
                     out IReadOnlyList<MiningLocationSpecialSite>? ringSpecials);
+                qualityByRing.TryGetValue(
+                    key,
+                    out IReadOnlyList<MiningLocationQualitySite>? ringQuality);
 
                 string[] selected = query.CommodityIds
                     .Select(id => MiningTargetCatalog.Find(id)?.CommodityId ?? string.Empty)
@@ -186,9 +252,18 @@ public sealed class MiningLocationFinderService
                     .Where(site => selected.Contains(site.CommodityId, StringComparer.OrdinalIgnoreCase))
                     .ToArray();
 
+                IReadOnlyList<MiningLocationQualitySite> relevantQuality =
+                    (ringQuality ?? Array.Empty<MiningLocationQualitySite>())
+                    .Where(site => selected.Contains(site.CommodityId, StringComparer.OrdinalIgnoreCase))
+                    .ToArray();
+
                 return MiningLocationRanker.Rank(
                     query,
-                    candidate with { SpecialSites = relevant },
+                    candidate with
+                    {
+                        SpecialSites = relevant,
+                        QualitySites = relevantQuality
+                    },
                     prices);
             })
             .Where(candidate => !query.SpecialOnly || candidate.HasKnownSpecial)
@@ -208,12 +283,18 @@ public sealed class MiningLocationFinderService
 
         MiningLocationCandidate[] ranked = enriched
             .OrderByDescending(candidate => candidate.Score)
+            .ThenByDescending(candidate => candidate.QualityScore)
             .ThenByDescending(candidate => candidate.SpecialScore)
             .ThenByDescending(candidate => candidate.ReserveScore)
             .ThenByDescending(candidate => candidate.MarketScore)
             .ThenBy(candidate => candidate.DistanceLy)
             .ThenBy(candidate => candidate.DistanceToArrivalLs)
             .Take(query.MaxResults)
+            .ToArray();
+
+        string[] warnings = specialWarnings
+            .Concat(qualityWarnings)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         return new MiningLocationSearchResult(ranked, warnings);
@@ -246,18 +327,36 @@ public static class MiningLocationRanker
             .DefaultIfEmpty(0)
             .Max();
 
+        // Keep the complete score interpretable and bounded to 100:
+        // target 25 + reserves 15 + measured quality 20 + special 25
+        // + travel 10 + market 5.
         int targetScore = matched.Length == 0
             ? 0
-            : Math.Min(30, 20 + (matched.Length - 1) * 3 + Math.Min(6, Math.Max(0, maxSignalCount - 1) * 3));
+            : Math.Min(
+                25,
+                18
+                + Math.Max(0, matched.Length - 1) * 2
+                + Math.Min(4, Math.Max(0, maxSignalCount - 1) * 2));
 
         int reserveScore = ReserveRank(candidate.ReserveLevel) switch
         {
-            >= 4 => 20,
-            3 => 14,
-            2 => 8,
-            1 => 3,
+            >= 4 => 15,
+            3 => 10,
+            2 => 5,
+            1 => 2,
             _ => 0
         };
+
+        MiningLocationQualitySite[] relevantQuality = candidate.QualitySites
+            .Where(site => selected.Contains(site.CommodityId, StringComparer.OrdinalIgnoreCase))
+            .ToArray();
+
+        double measuredAverage = relevantQuality
+            .Select(site => site.AverageContentPercent)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        int qualityScore = QualityScoreFor(measuredAverage);
 
         MiningLocationSpecialSite[] relevantSpecials = candidate.SpecialSites
             .Where(site => selected.Contains(site.CommodityId, StringComparer.OrdinalIgnoreCase))
@@ -270,10 +369,10 @@ public static class MiningLocationRanker
 
         int resScore = bestRes switch
         {
-            MiningResSiteType.Hazardous => 35,
-            MiningResSiteType.High => 28,
-            MiningResSiteType.Regular => 20,
-            MiningResSiteType.Low => 10,
+            MiningResSiteType.Hazardous => 20,
+            MiningResSiteType.High => 16,
+            MiningResSiteType.Regular => 11,
+            MiningResSiteType.Low => 6,
             _ => 0
         };
 
@@ -284,24 +383,24 @@ public static class MiningLocationRanker
 
         int overlapScore = bestOverlap switch
         {
-            >= 3 => 18,
-            2 => 11,
+            >= 3 => 5,
+            2 => 3,
             _ => 0
         };
 
-        int specialScore = Math.Min(45, resScore + overlapScore);
+        int specialScore = Math.Min(25, resScore + overlapScore);
 
         double radius = Math.Max(1, query.RadiusLy);
         int distanceScore = (int)Math.Round(
-            15 * (1 - Math.Clamp(candidate.DistanceLy / radius, 0, 1)),
+            7 * (1 - Math.Clamp(candidate.DistanceLy / radius, 0, 1)),
             MidpointRounding.AwayFromZero);
 
         int arrivalScore = candidate.DistanceToArrivalLs switch
         {
             <= 0 => 0,
-            <= 500 => 8,
-            <= 2_000 => 6,
-            <= 10_000 => 3,
+            <= 500 => 3,
+            <= 2_000 => 2,
+            <= 10_000 => 1,
             _ => 0
         };
 
@@ -338,7 +437,12 @@ public static class MiningLocationRanker
             : 0;
 
         int score = Math.Clamp(
-            targetScore + reserveScore + specialScore + travelScore + marketScore,
+            targetScore
+            + reserveScore
+            + qualityScore
+            + specialScore
+            + travelScore
+            + marketScore,
             0,
             100);
 
@@ -348,12 +452,25 @@ public static class MiningLocationRanker
             MarketReferencePrice = primaryPrice,
             TargetScore = targetScore,
             ReserveScore = reserveScore,
+            QualityScore = qualityScore,
             SpecialScore = specialScore,
             TravelScore = travelScore,
             MarketScore = marketScore,
             Score = score
         };
     }
+
+    internal static int QualityScoreFor(double averageContentPercent) =>
+        averageContentPercent switch
+        {
+            >= 26 => 20,
+            >= 24 => 18,
+            >= 22 => 16,
+            >= 20 => 14,
+            >= 18 => 10,
+            > 0 => 6,
+            _ => 0
+        };
 
     public static int ReserveRank(string? reserveLevel)
     {
