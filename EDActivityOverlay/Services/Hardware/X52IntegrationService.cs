@@ -17,6 +17,7 @@ public sealed class X52IntegrationService : IDisposable
     private Timer? animationTimer;
     private Timer? inputTimer;
     private long animationStep;
+    private bool scoCooldownAnimationActive;
     private bool started;
     private bool disposed;
 
@@ -131,8 +132,28 @@ public sealed class X52IntegrationService : IDisposable
 
     private void OnAnimationTick()
     {
-        GameStateSnapshot game = JournalMonitorService.Instance.Current;
-        if (!game.FsdCharging && !game.IsInDanger && !game.LowFuel && !game.OverHeating)
+        GameStateSnapshot game =
+            JournalMonitorService.Instance.Current;
+
+        DateTimeOffset now =
+            DateTimeOffset.UtcNow;
+
+        bool scoCooldownActive =
+            game.GetScoCooldownRemainingSeconds(now) > 0;
+
+        bool clearExpiredScoCooldown =
+            scoCooldownAnimationActive
+            && !scoCooldownActive;
+
+        scoCooldownAnimationActive =
+            scoCooldownActive;
+
+        if (!game.FsdCharging
+            && !game.IsInDanger
+            && !game.LowFuel
+            && !game.OverHeating
+            && !scoCooldownActive
+            && !clearExpiredScoCooldown)
         {
             return;
         }
@@ -183,14 +204,35 @@ public sealed class X52IntegrationService : IDisposable
             GameStateSnapshot game = suppliedState ?? JournalMonitorService.Instance.Current;
             if (settings.EnableX52Mfd)
             {
-                string[] lines = activity == ActivityType.Mining
-                    && settings.EnableExperimentalX52MiningCopilot
-                    ? X52MiningCopilotFormatter.BuildLines(
-                        MiningSessionService.Instance.Current,
-                        MiningCollectorTrackerService.Instance.Current,
-                        settings.MiningTargetCommodity,
-                        settings.MiningMinimumProportion)
-                    : X52DisplayFormatter.BuildLines(game, activity);
+                bool miningCopilot =
+                    activity == ActivityType.Mining
+                    && settings.EnableExperimentalX52MiningCopilot;
+
+                string[] lines =
+                    miningCopilot
+                        ? X52MiningCopilotFormatter.BuildLines(
+                            MiningSessionService.Instance.Current,
+                            MiningCollectorTrackerService.Instance.Current,
+                            settings.MiningTargetCommodity,
+                            settings.MiningMinimumProportion)
+                        : X52DisplayFormatter.BuildLines(
+                            game,
+                            activity);
+
+                if (miningCopilot)
+                {
+                    string driveStatus =
+                        FsdScoStatusPresentation.BuildCompact(
+                            game);
+
+                    if (!string.IsNullOrWhiteSpace(
+                            driveStatus))
+                    {
+                        lines[2] =
+                            X52DisplayFormatter.NormalizeLine(
+                                driveStatus);
+                    }
+                }
 
                 if (force || !lines.SequenceEqual(lastLines, StringComparer.Ordinal))
                 {

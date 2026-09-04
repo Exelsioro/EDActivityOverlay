@@ -18,6 +18,7 @@ public partial class ShipStatusOverlayWindow : Window
     private string currentSystem = string.Empty;
     private string nextSystem = string.Empty;
     private Func<bool>? contextSuppression;
+    private bool scoCooldownRefreshActive;
     private bool disposed;
 
     public ShipStatusOverlayWindow(IntPtr targetWindow)
@@ -64,13 +65,41 @@ public partial class ShipStatusOverlayWindow : Window
         PositionOverlay();
     }
 
-    private void Refresh(GameStateSnapshot state)
+    private void Refresh(
+        GameStateSnapshot state,
+        DateTimeOffset? now = null)
     {
         ShipStatusPresentation view = ShipStatusPresentationBuilder.Build(state);
         currentSystem = view.CurrentSystem;
         nextSystem = view.NextSystem;
         CurrentSystemText.Text = string.IsNullOrWhiteSpace(currentSystem)
             ? Loc.Get("Loc_WAITING_FOR_GAME") : currentSystem.ToUpperInvariant();
+
+        DateTimeOffset displayUtc =
+            now ?? DateTimeOffset.UtcNow;
+
+        string driveStatus =
+            FsdScoStatusPresentation.BuildOverlay(
+                state,
+                displayUtc);
+
+        bool hasDriveStatus =
+            !string.IsNullOrWhiteSpace(
+                driveStatus);
+
+        DriveStatusText.Text =
+            hasDriveStatus
+                ? driveStatus
+                : "→";
+
+        DriveStatusText.FontSize =
+            hasDriveStatus
+                ? 9
+                : 16;
+
+        scoCooldownRefreshActive =
+            state.GetScoCooldownRemainingSeconds(
+                displayUtc) > 0;
 
         CurrentSystemCaptionText.Text =
             string.IsNullOrWhiteSpace(
@@ -111,6 +140,25 @@ public partial class ShipStatusOverlayWindow : Window
     private void UpdateTimer_Tick(object? sender, EventArgs e)
     {
         if (disposed) return;
+
+        GameStateSnapshot liveState =
+            JournalMonitorService.Instance.Current;
+
+        DateTimeOffset now =
+            DateTimeOffset.UtcNow;
+
+        bool scoCooldownActive =
+            liveState.GetScoCooldownRemainingSeconds(
+                now) > 0;
+
+        if (scoCooldownActive
+            || scoCooldownRefreshActive)
+        {
+            Refresh(
+                liveState,
+                now);
+        }
+
         bool contextSuppressed = contextSuppression?.Invoke() == true;
         bool targetReady = enabled && !contextSuppressed && !OverlayVisibilityState.SuppressAll
             && targetWindow != IntPtr.Zero && WindowsAPI.IsWindow(targetWindow)

@@ -152,6 +152,9 @@ internal sealed class JournalStateReducer
         JsonElement root = document.RootElement;
         ulong flags = TryGetUInt64(root, "Flags");
         ulong flags2 = TryGetUInt64(root, "Flags2");
+        bool inSupercruise = HasFlag(flags, 4);
+        bool scoActive = HasFlag(flags2, 20);
+        DateTimeOffset observedUtc = DateTimeOffset.UtcNow;
         bool hasSurfacePosition = HasFlag(flags, 21)
                                   && root.TryGetProperty("Latitude", out _)
                                   && root.TryGetProperty("Longitude", out _);
@@ -175,51 +178,75 @@ internal sealed class JournalStateReducer
             fuelReservoir = TryGetDouble(fuel, "FuelReservoir", fuelReservoir);
         }
 
-        Update(current => current with
+        Update(current =>
         {
-            LastEventUtc = MaxTimestamp(current.LastEventUtc, GetTimestamp(root)),
-            GuiFocus = TryGetInt32(root, "GuiFocus", current.GuiFocus),
-            CargoUsed = cargoUsed,
-            Balance = balance,
-            Docked = HasFlag(flags, 0),
-            LandingGearDown = HasFlag(flags, 2),
-            ShieldsUp = HasFlag(flags, 3),
-            InSupercruise = HasFlag(flags, 4),
-            HardpointsDeployed = HasFlag(flags, 6),
-            LightsOn = HasFlag(flags, 8),
-            CargoScoopDeployed = HasFlag(flags, 9),
-            SilentRunning = HasFlag(flags, 10),
-            FuelScooping = HasFlag(flags, 11),
-            FsdMassLocked = HasFlag(flags, 16),
-            FsdCharging = HasFlag(flags, 17) || HasFlag(flags, 30),
-            FsdCooldown = HasFlag(flags, 18),
-            LowFuel = HasFlag(flags, 19),
-            OverHeating = HasFlag(flags, 20),
-            IsInDanger = HasFlag(flags, 22) || HasFlag(flags, 23),
-            NightVision = HasFlag(flags, 28),
-            Landed = HasFlag(flags, 1),
-            InSrv = HasFlag(flags, 26),
-            OnFoot = HasFlag(flags2, 0),
-            OnFootOnPlanet = HasFlag(flags2, 4),
-            GlideMode = HasFlag(flags2, 12),
-            HasSurfacePosition = hasSurfacePosition,
-            Latitude = hasSurfacePosition ? TryGetNullableDouble(root, "Latitude") : null,
-            Longitude = hasSurfacePosition ? TryGetNullableDouble(root, "Longitude") : null,
-            AltitudeMeters = TryGetNullableDouble(root, "Altitude"),
-            HeadingDegrees = TryGetNullableDouble(root, "Heading"),
-            PlanetRadiusMeters = TryGetNullableDouble(root, "PlanetRadius") ?? current.PlanetRadiusMeters,
-            SurfaceGravityG = TryGetNullableDouble(root, "Gravity") ?? current.SurfaceGravityG,
-            Oxygen = TryGetNullableDouble(root, "Oxygen"),
-            Health = TryGetNullableDouble(root, "Health"),
-            TemperatureKelvin = TryGetNullableDouble(root, "Temperature"),
-            CurrentBody = GetString(root, "BodyName", current.CurrentBody),
-            LegalState = GetString(root, "LegalState", current.LegalState),
-            Destination = destinationName,
-            DestinationName = destinationName,
-            DestinationSystemAddress = destinationSystemAddress,
-            DestinationBodyId = destinationBodyId,
-            FuelMain = fuelMain,
-            FuelReservoir = fuelReservoir
+            DateTimeOffset? scoCooldownUntil =
+                current.ScoCooldownUntilUtc;
+
+            if (!inSupercruise
+                || scoActive)
+            {
+                scoCooldownUntil = null;
+            }
+            else if (current.ScoActive
+                     && !scoActive)
+            {
+                // Live Status.json research on 2026-09-04 showed that SCO
+                // recharge is not represented by Flags bit 18. The observed
+                // falling-edge -> next accepted SCO activation interval is
+                // consistently ~10 seconds, so derive the missing cooldown.
+                scoCooldownUntil =
+                    observedUtc.AddSeconds(10);
+            }
+
+            return current with
+            {
+                LastEventUtc = MaxTimestamp(current.LastEventUtc, GetTimestamp(root)),
+                GuiFocus = TryGetInt32(root, "GuiFocus", current.GuiFocus),
+                CargoUsed = cargoUsed,
+                Balance = balance,
+                Docked = HasFlag(flags, 0),
+                LandingGearDown = HasFlag(flags, 2),
+                ShieldsUp = HasFlag(flags, 3),
+                InSupercruise = inSupercruise,
+                HardpointsDeployed = HasFlag(flags, 6),
+                LightsOn = HasFlag(flags, 8),
+                CargoScoopDeployed = HasFlag(flags, 9),
+                SilentRunning = HasFlag(flags, 10),
+                FuelScooping = HasFlag(flags, 11),
+                FsdMassLocked = HasFlag(flags, 16),
+                FsdCharging = HasFlag(flags, 17) || HasFlag(flags, 30),
+                FsdCooldown = HasFlag(flags, 18),
+                ScoActive = scoActive,
+                ScoCooldownUntilUtc = scoCooldownUntil,
+                LowFuel = HasFlag(flags, 19),
+                OverHeating = HasFlag(flags, 20),
+                IsInDanger = HasFlag(flags, 22) || HasFlag(flags, 23),
+                NightVision = HasFlag(flags, 28),
+                Landed = HasFlag(flags, 1),
+                InSrv = HasFlag(flags, 26),
+                OnFoot = HasFlag(flags2, 0),
+                OnFootOnPlanet = HasFlag(flags2, 4),
+                GlideMode = HasFlag(flags2, 12),
+                HasSurfacePosition = hasSurfacePosition,
+                Latitude = hasSurfacePosition ? TryGetNullableDouble(root, "Latitude") : null,
+                Longitude = hasSurfacePosition ? TryGetNullableDouble(root, "Longitude") : null,
+                AltitudeMeters = TryGetNullableDouble(root, "Altitude"),
+                HeadingDegrees = TryGetNullableDouble(root, "Heading"),
+                PlanetRadiusMeters = TryGetNullableDouble(root, "PlanetRadius") ?? current.PlanetRadiusMeters,
+                SurfaceGravityG = TryGetNullableDouble(root, "Gravity") ?? current.SurfaceGravityG,
+                Oxygen = TryGetNullableDouble(root, "Oxygen"),
+                Health = TryGetNullableDouble(root, "Health"),
+                TemperatureKelvin = TryGetNullableDouble(root, "Temperature"),
+                CurrentBody = GetString(root, "BodyName", current.CurrentBody),
+                LegalState = GetString(root, "LegalState", current.LegalState),
+                Destination = destinationName,
+                DestinationName = destinationName,
+                DestinationSystemAddress = destinationSystemAddress,
+                DestinationBodyId = destinationBodyId,
+                FuelMain = fuelMain,
+                FuelReservoir = fuelReservoir
+            };
         });
     }
 

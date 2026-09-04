@@ -8,7 +8,10 @@ internal static class X52DisplayFormatter
 {
     public const int MaximumLineLength = 16;
 
-    public static string[] BuildLines(GameStateSnapshot state, ActivityType activity)
+    public static string[] BuildLines(
+        GameStateSnapshot state,
+        ActivityType activity,
+        DateTimeOffset? now = null)
     {
         string activityName = activity switch
         {
@@ -18,7 +21,7 @@ internal static class X52DisplayFormatter
             _ => "TRADE"
         };
         string location = string.IsNullOrWhiteSpace(state.StarSystem) ? "WAITING JOURNAL" : state.StarSystem;
-        string context = BuildContext(state);
+        string context = BuildContext(state, now);
         return
         [
             NormalizeLine($"ED {activityName}"),
@@ -101,11 +104,24 @@ internal static class X52DisplayFormatter
         return result.ToString().Normalize(NormalizationForm.FormC);
     }
 
-    private static string BuildContext(GameStateSnapshot state)
+    private static string BuildContext(
+        GameStateSnapshot state,
+        DateTimeOffset? now)
     {
         if (state.IsInDanger) return "! DANGER !";
         if (state.LowFuel) return "! LOW FUEL !";
         if (state.FsdCharging) return "FSD CHARGING";
+
+        string driveStatus =
+            FsdScoStatusPresentation.BuildCompact(
+                state,
+                now);
+
+        if (!string.IsNullOrWhiteSpace(driveStatus))
+        {
+            return driveStatus;
+        }
+
         if (!string.IsNullOrWhiteSpace(state.Destination)) return $"> {state.Destination}";
         if (state.Docked && !string.IsNullOrWhiteSpace(state.Station)) return state.Station;
         if (state.OnFoot) return "ON FOOT";

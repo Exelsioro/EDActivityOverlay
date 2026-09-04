@@ -155,6 +155,23 @@ public sealed partial record GameStateSnapshot
     public bool FsdCharging { get; init; }
     public bool FsdMassLocked { get; init; }
     public bool FsdCooldown { get; init; }
+    public bool ScoActive { get; init; }
+    public DateTimeOffset? ScoCooldownUntilUtc { get; init; }
+
+    internal double GetScoCooldownRemainingSeconds(
+        DateTimeOffset now)
+    {
+        if (ScoActive
+            || ScoCooldownUntilUtc is not { } until)
+        {
+            return 0;
+        }
+
+        return Math.Max(
+            0,
+            (until - now).TotalSeconds);
+    }
+
     public bool HardpointsDeployed { get; init; }
     public bool LightsOn { get; init; }
     public bool CargoScoopDeployed { get; init; }

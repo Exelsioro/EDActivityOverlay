@@ -30,7 +30,14 @@
                                    MouseLeftButtonUp="CurrentSystemText_MouseLeftButtonUp"
                                    FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
-                    <TextBlock Grid.Column="1" Text="→" Margin="14,8" FontSize="16"
+                    <TextBlock x:Name="DriveStatusText"
+                               Grid.Column="1"
+                               Text="→"
+                               Margin="10,8"
+                               MinWidth="76"
+                               TextAlignment="Center"
+                               FontSize="16"
+                               FontWeight="SemiBold"
                                Foreground="{DynamicResource AccentColorBrush}"/>
                     <StackPanel Grid.Column="2">
                         <TextBlock x:Name="RouteCaptionText" Text="{DynamicResource Loc_NEXT_SYSTEM_SHORT}" FontSize="8"
