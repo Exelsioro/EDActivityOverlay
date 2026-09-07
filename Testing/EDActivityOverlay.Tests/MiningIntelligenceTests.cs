@@ -161,6 +161,43 @@ public sealed class MiningIntelligenceTests
             advice.Recommendation);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(60)]
+    [InlineData(68)]
+    [InlineData(69)]
+    [InlineData(75)]
+    [InlineData(100)]
+    public void AdaptiveThresholdSupportsEntireSettingsRange(double baseline)
+    {
+        var session = BuildSession(prospects: Enumerable.Range(1, 16)
+            .Select(i => Prospect(i, 38)).ToArray());
+        var advice = MiningIntelligenceCalculator.CalculateAdaptiveThreshold(session, "Platinum", baseline);
+        Assert.True(advice.Ready);
+        Assert.InRange(advice.Suggested, Math.Max(0, baseline - 8), Math.Min(100, baseline + 8));
+    }
+
+    [Fact]
+    public void LimpetShortageWarnsBeforeAbsoluteLowWatermark()
+    {
+        var session = BuildSession(
+            refinements: Enumerable.Range(1, 20).Select(i => new MiningRefinementSnapshot(
+                i, DateTimeOffset.UtcNow, "platinum", "Platinum")).ToArray(),
+            prospectorsLaunched: 10, collectorsLaunched: 10,
+            cargoUsed: 70, cargoCapacity: 100, limpets: 20);
+        var advice = MiningIntelligenceCalculator.CalculateLimpets(session);
+        Assert.Equal(50, advice.EstimatedRequired);
+        Assert.True(advice.Low);
+        Assert.True(advice.Critical);
+        Assert.Equal(0, advice.SafeExcess);
+        Assert.True(EDActivityOverlay.Services.Hardware.X52IntegrationService.RequiresMiningAnimation(
+            ActivityType.Mining, true, session));
+        Assert.False(EDActivityOverlay.Services.Hardware.X52IntegrationService.RequiresMiningAnimation(
+            ActivityType.Trade, true, session));
+        Assert.False(EDActivityOverlay.Services.Hardware.X52IntegrationService.RequiresMiningAnimation(
+            ActivityType.Mining, false, session));
+    }
+
     private static MiningProspectSnapshot Prospect(
         int sequence,
         double proportion,

@@ -238,8 +238,8 @@ public static class MiningIntelligenceCalculator
 
         double suggested = Math.Clamp(
             baseline + adjustment,
-            Math.Max(5, baseline - 8),
-            Math.Min(60, baseline + 8));
+            Math.Max(0, baseline - 8),
+            Math.Min(100, baseline + 8));
 
         return new MiningAdaptiveThresholdAdvice(
             true,
@@ -289,7 +289,7 @@ public static class MiningIntelligenceCalculator
         int estimatedRequired =
             (int)Math.Ceiling(
                 Math.Min(
-                    remaining,
+                    int.MaxValue / 2d,
                     effectiveMineralRoom * usagePerTon));
 
         int reserve =

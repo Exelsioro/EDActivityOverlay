@@ -32,7 +32,7 @@ public sealed class FsdScoCooldownTests
             reducer.Current.ScoActive);
 
         Assert.Null(
-            reducer.Current.ScoCooldownUntilUtc);
+            reducer.Current.ScoEstimatedCooldownUntilUtc);
 
         DateTimeOffset before =
             DateTimeOffset.UtcNow;
@@ -56,7 +56,7 @@ public sealed class FsdScoCooldownTests
 
         DateTimeOffset until =
             Assert.IsType<DateTimeOffset>(
-                cooling.ScoCooldownUntilUtc);
+                cooling.ScoEstimatedCooldownUntilUtc);
 
         Assert.InRange(
             until,
@@ -76,7 +76,7 @@ public sealed class FsdScoCooldownTests
             """);
 
         Assert.Null(
-            reducer.Current.ScoCooldownUntilUtc);
+            reducer.Current.ScoEstimatedCooldownUntilUtc);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class FsdScoCooldownTests
             reducer.Current.ScoActive);
 
         Assert.Null(
-            reducer.Current.ScoCooldownUntilUtc);
+            reducer.Current.ScoEstimatedCooldownUntilUtc);
     }
 
     [Fact]
@@ -139,18 +139,18 @@ public sealed class FsdScoCooldownTests
                 GameStateSnapshot.Empty with
                 {
                     FsdCooldown = true,
-                    ScoCooldownUntilUtc =
+                    ScoEstimatedCooldownUntilUtc =
                         now.AddSeconds(7.25)
                 },
                 now));
 
         Assert.Equal(
-            "FSD CD | SCO ~7.3s",
+            Loc.Format("Loc_SCO_COMBINED_COOLDOWN", 7.25),
             FsdScoStatusPresentation.BuildOverlay(
                 GameStateSnapshot.Empty with
                 {
                     FsdCooldown = true,
-                    ScoCooldownUntilUtc =
+                    ScoEstimatedCooldownUntilUtc =
                         now.AddSeconds(7.25)
                 },
                 now));
@@ -160,7 +160,7 @@ public sealed class FsdScoCooldownTests
             FsdScoStatusPresentation.BuildCompact(
                 GameStateSnapshot.Empty with
                 {
-                    ScoCooldownUntilUtc =
+                    ScoEstimatedCooldownUntilUtc =
                         now.AddSeconds(7.25)
                 },
                 now));
@@ -170,7 +170,7 @@ public sealed class FsdScoCooldownTests
             FsdScoStatusPresentation.BuildCompact(
                 GameStateSnapshot.Empty with
                 {
-                    ScoCooldownUntilUtc =
+                    ScoEstimatedCooldownUntilUtc =
                         now.AddMilliseconds(-1)
                 },
                 now));
@@ -189,7 +189,7 @@ public sealed class FsdScoCooldownTests
                 {
                     StarSystem = "Sol",
                     InSupercruise = true,
-                    ScoCooldownUntilUtc =
+                    ScoEstimatedCooldownUntilUtc =
                         now.AddSeconds(5.25)
                 },
                 ActivityType.Trade,

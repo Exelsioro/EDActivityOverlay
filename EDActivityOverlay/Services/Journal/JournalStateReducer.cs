@@ -181,7 +181,7 @@ internal sealed class JournalStateReducer
         Update(current =>
         {
             DateTimeOffset? scoCooldownUntil =
-                current.ScoCooldownUntilUtc;
+                current.ScoEstimatedCooldownUntilUtc;
 
             if (!inSupercruise
                 || scoActive)
@@ -218,7 +218,7 @@ internal sealed class JournalStateReducer
                 FsdCharging = HasFlag(flags, 17) || HasFlag(flags, 30),
                 FsdCooldown = HasFlag(flags, 18),
                 ScoActive = scoActive,
-                ScoCooldownUntilUtc = scoCooldownUntil,
+                ScoEstimatedCooldownUntilUtc = scoCooldownUntil,
                 LowFuel = HasFlag(flags, 19),
                 OverHeating = HasFlag(flags, 20),
                 IsInDanger = HasFlag(flags, 22) || HasFlag(flags, 23),
@@ -295,6 +295,7 @@ internal sealed class JournalStateReducer
 
             state = CopyCollections(state with
             {
+                NavRouteRevision = state.NavRouteRevision + 1,
                 LastEventUtc =
                     MaxTimestamp(
                         state.LastEventUtc,

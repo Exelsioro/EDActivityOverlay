@@ -1442,6 +1442,10 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_DESTINATION_CLEAR">Clear mining destination</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELECT_ACTION">SELECT</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELECTED_FORMAT">Selected · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_SCO_ACTIVE">SCO ACTIVE</sys:String>
+    <sys:String x:Key="Loc_FSD_COOLDOWN">FSD COOLDOWN</sys:String>
+    <sys:String x:Key="Loc_SCO_COMBINED_COOLDOWN">FSD CD | SCO ~{0:0.0}s</sys:String>
+    <sys:String x:Key="Loc_SCO_ESTIMATED_COOLDOWN">SCO CD ~{0:0.0}s</sys:String>
 </ResourceDictionary>
 
 

@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Models;
 using EDActivityOverlay.Utils;
 
 namespace EDActivityOverlay.Services.Navigation;
@@ -26,6 +27,7 @@ public sealed class EliteRouteNavigationService
     private const ushort EnterKey = 0x0D;
 
     public static EliteRouteNavigationService Instance { get; } = new();
+    private readonly SemaphoreSlim navigationGate = new(1, 1);
 
     public EliteNavigationBindings DetectBindings() => EliteBindingsService.Detect(
         presetOverride: SettingsService.Instance.Settings.EliteBindingsPreset,
@@ -37,6 +39,21 @@ public sealed class EliteRouteNavigationService
         bool confirmAutomatically,
         CancellationToken cancellationToken = default)
     {
+        // All overlay surfaces share the game's keyboard and mouse.
+        try { await navigationGate.WaitAsync(cancellationToken); }
+        catch (OperationCanceledException) { return Failure(targetSystem, "Loc_NAVIGATION_CANCELLED"); }
+        try { return await PrepareCoreAsync(targetSystem, gameWindow, confirmAutomatically, cancellationToken); }
+        finally { navigationGate.Release(); }
+    }
+
+    private async Task<EliteNavigationResult> PrepareCoreAsync(
+        string targetSystem,
+        IntPtr gameWindow,
+        bool confirmAutomatically,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return Failure(targetSystem, "Loc_NAVIGATION_CANCELLED");
         if (string.IsNullOrWhiteSpace(targetSystem))
             return Failure(targetSystem, "Loc_NAVIGATION_NO_TARGET");
         if (gameWindow == IntPtr.Zero || !WindowsAPI.IsWindow(gameWindow))
@@ -45,6 +62,10 @@ public sealed class EliteRouteNavigationService
         AppSettings settings = SettingsService.Instance.Settings;
         if (confirmAutomatically && !settings.EnableExperimentalRouteAutomation)
             return Failure(targetSystem, "Loc_NAVIGATION_AUTO_DISABLED");
+
+        GameStateSnapshot initialState = JournalMonitorService.Instance.Current;
+        if (confirmAutomatically && IsRouteDestination(initialState.NavRoute, targetSystem))
+            return new EliteNavigationResult(EliteNavigationStatus.Completed, targetSystem, "Loc_NAVIGATION_VERIFIED");
 
         EliteNavigationBindings bindings;
         try { bindings = DetectBindings(); }
@@ -100,6 +121,7 @@ public sealed class EliteRouteNavigationService
             await EliteInputSender.HoldAsync(bindings.Select, 1300, cancellationToken);
             Logger.Logger.Info($"Galaxy Map automation: held UI Select ({bindings.Select.DisplayName}) to plot route; waiting for NavRoute.json.");
             bool verified = await WaitForRouteAsync(targetSystem,
+                initialState.NavRouteRevision,
                 TimeSpan.FromSeconds(settings.RouteAutomationVerificationSeconds), cancellationToken);
             return verified
                 ? new EliteNavigationResult(EliteNavigationStatus.Completed, targetSystem,
@@ -121,16 +143,23 @@ public sealed class EliteRouteNavigationService
         JournalMonitorService.Instance.Current.NavRoute.Any(star =>
             string.Equals(star.System, targetSystem, StringComparison.OrdinalIgnoreCase));
 
-    private static async Task<bool> WaitForRouteAsync(string targetSystem, TimeSpan timeout, CancellationToken token)
+    internal static bool IsRouteDestination(IReadOnlyList<NavRouteStar> route, string target) =>
+        !string.IsNullOrWhiteSpace(target) && route.Count > 0
+        && string.Equals(route[^1].System, target.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    internal static bool IsNewRouteToTarget(GameStateSnapshot state, string target, long previousRevision) =>
+        state.NavRouteRevision > previousRevision && IsRouteDestination(state.NavRoute, target);
+
+    private static async Task<bool> WaitForRouteAsync(string targetSystem, long previousRevision, TimeSpan timeout, CancellationToken token)
     {
         DateTime deadline = DateTime.UtcNow + timeout;
         while (DateTime.UtcNow < deadline)
         {
             token.ThrowIfCancellationRequested();
-            if (RouteContainsTarget(targetSystem)) return true;
+            if (IsNewRouteToTarget(JournalMonitorService.Instance.Current, targetSystem, previousRevision)) return true;
             await Task.Delay(250, token);
         }
-        return RouteContainsTarget(targetSystem);
+        return IsNewRouteToTarget(JournalMonitorService.Instance.Current, targetSystem, previousRevision);
     }
 
     private static async Task WaitFocusedAsync(IntPtr gameWindow, int milliseconds, CancellationToken token)

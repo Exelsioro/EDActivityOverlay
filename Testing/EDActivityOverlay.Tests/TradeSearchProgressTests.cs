@@ -104,6 +104,22 @@ public sealed class TradeSearchProgressTests
             completed.BestCandidates);
     }
 
+    [Fact]
+    public async Task EarlyEnumeratorDisposalCancelsAndDrainsPendingSearch()
+    {
+        var provider = new DelayedProvider(holdSlow: true);
+        var service = new TradeSearchService(provider);
+        await using var enumerator = service.SearchProgressAsync(Constraints()).GetAsyncEnumerator();
+        while (await enumerator.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)))
+        {
+            if (enumerator.Current.CompletedCommodities > 0)
+                break;
+        }
+        await provider.SlowStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await enumerator.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(provider.SlowStopped.Task.IsCompleted);
+    }
+
     private static TradeSearchConstraints Constraints() =>
         new()
         {
@@ -131,12 +147,17 @@ public sealed class TradeSearchProgressTests
     private sealed class DelayedProvider : ITradeDataProvider
     {
         private readonly bool failSecondCommodity;
+        private readonly bool holdSlow;
+        public TaskCompletionSource SlowStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource SlowStopped { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public DelayedProvider(
-            bool failSecondCommodity = false)
+            bool failSecondCommodity = false,
+            bool holdSlow = false)
         {
             this.failSecondCommodity =
                 failSecondCommodity;
+            this.holdSlow = holdSlow;
         }
 
         public string Name =>
@@ -193,6 +214,12 @@ public sealed class TradeSearchProgressTests
             TradeSearchConstraints constraints,
             CancellationToken cancellationToken = default)
         {
+            if (holdSlow && commodityName == "slow")
+            {
+                SlowStarted.TrySetResult();
+                try { await Task.Delay(Timeout.Infinite, cancellationToken); }
+                finally { SlowStopped.TrySetResult(); }
+            }
             await Task.Delay(
                 commodityName == "fast"
                     ? 10

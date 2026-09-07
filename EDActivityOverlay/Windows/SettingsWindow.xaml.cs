@@ -342,6 +342,13 @@ namespace EDActivityOverlay.Windows
         {
             bool enabled = EnableJournalCheckBox.IsChecked == true;
             string directory = JournalDirectoryTextBox.Text.Trim();
+            var previous = SettingsService.Instance.Settings;
+            if (previous.EnableJournalIntegration == enabled
+                && string.Equals(previous.JournalDirectory?.Trim() ?? string.Empty,
+                    directory, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
             SettingsService.Instance.SetJournalSettings(enabled, directory);
             if (enabled)
             {

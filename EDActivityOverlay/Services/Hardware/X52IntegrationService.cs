@@ -153,7 +153,11 @@ public sealed class X52IntegrationService : IDisposable
             && !game.LowFuel
             && !game.OverHeating
             && !scoCooldownActive
-            && !clearExpiredScoCooldown)
+            && !clearExpiredScoCooldown
+            && !RequiresMiningAnimation(
+                activity,
+                SettingsService.Instance.Settings.EnableExperimentalX52MiningCopilot,
+                MiningSessionService.Instance.Current))
         {
             return;
         }
@@ -161,6 +165,13 @@ public sealed class X52IntegrationService : IDisposable
         Interlocked.Increment(ref animationStep);
         RefreshOutput(game);
     }
+
+    internal static bool RequiresMiningAnimation(
+        ActivityType activity,
+        bool enabled,
+        MiningSessionSnapshot session) =>
+        enabled && activity == ActivityType.Mining
+        && MiningIntelligenceCalculator.CalculateLimpets(session).Critical;
 
     private void OnDeviceAvailabilityChanged(bool available)
     {

@@ -156,13 +156,13 @@ public sealed partial record GameStateSnapshot
     public bool FsdMassLocked { get; init; }
     public bool FsdCooldown { get; init; }
     public bool ScoActive { get; init; }
-    public DateTimeOffset? ScoCooldownUntilUtc { get; init; }
+    public DateTimeOffset? ScoEstimatedCooldownUntilUtc { get; init; }
 
     internal double GetScoCooldownRemainingSeconds(
         DateTimeOffset now)
     {
         if (ScoActive
-            || ScoCooldownUntilUtc is not { } until)
+            || ScoEstimatedCooldownUntilUtc is not { } until)
         {
             return 0;
         }
@@ -227,6 +227,7 @@ public sealed partial record GameStateSnapshot
     public double FuelPerLightYearEstimate { get; init; }
     public double MaxJumpRangeLy { get; init; }
     public IReadOnlyList<NavRouteStar> NavRoute { get; init; } = Array.Empty<NavRouteStar>();
+    public long NavRouteRevision { get; init; }
     public int SystemBodyCount { get; init; }
     public double FssProgress { get; init; }
     public int NonBodySignals { get; init; }

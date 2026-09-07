@@ -44,7 +44,7 @@ internal static class FsdScoStatusPresentation
 
         if (state.ScoActive)
         {
-            return "SCO ACTIVE";
+            return Loc.Get("Loc_SCO_ACTIVE");
         }
 
         double remaining =
@@ -54,16 +54,16 @@ internal static class FsdScoStatusPresentation
         if (state.FsdCooldown
             && remaining > 0)
         {
-            return $"FSD CD | SCO ~{FormatSeconds(remaining)}";
+            return Loc.Format("Loc_SCO_COMBINED_COOLDOWN", remaining);
         }
 
         if (state.FsdCooldown)
         {
-            return "FSD COOLDOWN";
+            return Loc.Get("Loc_FSD_COOLDOWN");
         }
 
         return remaining > 0
-            ? $"SCO CD ~{FormatSeconds(remaining)}"
+            ? Loc.Format("Loc_SCO_ESTIMATED_COOLDOWN", remaining)
             : string.Empty;
     }
 

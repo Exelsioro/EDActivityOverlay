@@ -72,6 +72,7 @@ public partial class EngineeringWindow
 
         materialTraderSearchCancellation =
             new CancellationTokenSource();
+        CancellationToken searchToken = materialTraderSearchCancellation.Token;
 
         MaterialTraderSearchButton.IsEnabled =
             false;
@@ -106,7 +107,9 @@ public partial class EngineeringWindow
                 await materialTraderFinder.FindNearestAsync(
                     origin,
                     desired,
-                    materialTraderSearchCancellation.Token);
+                    searchToken);
+
+            if (searchToken.IsCancellationRequested || !IsLoaded) return;
 
             MaterialTraderGrid.ItemsSource =
                 traders
@@ -130,6 +133,7 @@ public partial class EngineeringWindow
         }
         catch (Exception ex)
         {
+            if (searchToken.IsCancellationRequested || !IsLoaded) return;
             Logger.Logger.Warning(
                 $"Material trader search failed: {ex.Message}");
 
@@ -139,7 +143,7 @@ public partial class EngineeringWindow
         }
         finally
         {
-            if (IsLoaded)
+            if (IsLoaded && !searchToken.IsCancellationRequested)
             {
                 MaterialTraderSearchButton.IsEnabled =
                     true;
@@ -170,6 +174,7 @@ public partial class EngineeringWindow
 
         materialTraderRouteCancellation =
             new CancellationTokenSource();
+        CancellationToken routeToken = materialTraderRouteCancellation.Token;
 
         try
         {
@@ -197,7 +202,9 @@ public partial class EngineeringWindow
                 row.SystemName,
                 targetWindow,
                 automatic,
-                materialTraderRouteCancellation.Token);
+                routeToken);
+
+        if (routeToken.IsCancellationRequested || !IsLoaded) return;
 
         MaterialTraderStatusText.Text =
             string.IsNullOrWhiteSpace(

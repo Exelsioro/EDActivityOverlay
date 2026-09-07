@@ -48,6 +48,20 @@ public sealed class MiningSessionDestinationLinkTests
     }
 
     [Fact]
+    public void InferredHotspotRingCannotConfirmPhysicalDestination()
+    {
+        var session = Session("Lalande 34968", string.Empty);
+        var ring = new MiningRingContextSnapshot(1, "Lalande 34968",
+            "Lalande 34968 AB 8 A Ring", "Metallic", "Pristine", ["Platinum"]);
+        var enriched = MiningSessionService.EnrichRingContext(session, ring);
+        Assert.Equal(string.Empty, enriched.RingName);
+        var planned = MiningSessionDestinationLinker.Capture(enriched, Destination());
+        Assert.True(planned.Available);
+        Assert.False(planned.Confirmed);
+        Assert.False(MiningSessionDestinationLinker.Reconcile(enriched, planned).Confirmed);
+    }
+
+    [Fact]
     public void KnownDifferentRingDoesNotAttachDestination()
     {
         MiningSessionDestinationContext context =

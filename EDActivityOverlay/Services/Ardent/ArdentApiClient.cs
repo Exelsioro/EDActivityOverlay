@@ -129,8 +129,16 @@ public sealed partial class ArdentApiClient
         CancellationToken cancellationToken)
     {
         string json = await GetJsonAsync(path, ttl, cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<T>(json, JsonOptions)
-            ?? throw new InvalidOperationException($"Ardent returned an empty object for '{path}'.");
+        try
+        {
+            return JsonSerializer.Deserialize<T>(json, JsonOptions)
+                ?? throw new JsonException($"Ardent returned an empty object for '{path}'.");
+        }
+        catch (JsonException)
+        {
+            cache.Remove(path, json);
+            throw;
+        }
     }
 
     private async Task<IReadOnlyList<T>> GetArrayAsync<T>(
@@ -139,7 +147,59 @@ public sealed partial class ArdentApiClient
         CancellationToken cancellationToken)
     {
         string json = await GetJsonAsync(path, ttl, cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<T[]>(json, JsonOptions) ?? Array.Empty<T>();
+        try
+        {
+            if (typeof(T) != typeof(ArdentMarketOrderDto))
+                return JsonSerializer.Deserialize<T[]>(json, JsonOptions) ?? Array.Empty<T>();
+
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+                throw new JsonException($"Ardent market response is not an array: '{path}'.");
+
+            var rows = new List<T>();
+            int rejected = 0;
+            string firstFailure = string.Empty;
+            foreach (JsonElement element in document.RootElement.EnumerateArray())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    // The bulk endpoint includes stations without a market
+                    // row (confirmed in Ega: both join keys are explicitly
+                    // null). They are not orders, nor a failed market response.
+                    if (element.ValueKind == JsonValueKind.Object
+                        && element.TryGetProperty("marketId", out var marketId)
+                        && marketId.ValueKind == JsonValueKind.Null
+                        && element.TryGetProperty("commodityName", out var commodity)
+                        && commodity.ValueKind == JsonValueKind.Null)
+                        continue;
+                    var row = element.Deserialize<ArdentMarketOrderDto>(JsonOptions);
+                    if (row is null || row.MarketId <= 0)
+                        throw new JsonException("marketId is missing or non-positive.");
+                    rows.Add((T)(object)row);
+                }
+                catch (JsonException ex)
+                {
+                    rejected++;
+                    if (firstFailure.Length == 0) firstFailure = ex.Message;
+                }
+            }
+
+            if (rejected > 0)
+            {
+                cache.Remove(path, json);
+                Logger.Logger.Warning($"Ardent market rows rejected: {rejected}; accepted: {rows.Count}; path={path}; first={firstFailure}");
+                // An entirely invalid payload must trigger the existing
+                // fallback, not masquerade as a valid empty market.
+                if (rows.Count == 0) throw new JsonException($"Ardent returned no valid market rows: '{path}'.");
+            }
+            return rows;
+        }
+        catch (JsonException)
+        {
+            cache.Remove(path, json);
+            throw;
+        }
     }
 
     private async Task<string> GetJsonAsync(

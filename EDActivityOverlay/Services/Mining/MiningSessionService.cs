@@ -177,6 +177,13 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
                 session.SystemAddress,
                 session.SystemName);
 
+        return EnrichRingContext(session, ring);
+    }
+
+    internal static MiningSessionSnapshot EnrichRingContext(
+        MiningSessionSnapshot session,
+        MiningRingContextSnapshot ring)
+    {
         if (!ring.Available)
         {
             return session;
@@ -184,9 +191,9 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
 
         return session with
         {
-            RingName = string.IsNullOrWhiteSpace(session.RingName)
-                ? ring.RingName
-                : session.RingName,
+            // A hotspot-based inference supplies context, not proof of where
+            // the ship is. Preserve the journal-observed ring identity so the
+            // destination linker cannot confirm a different A/B ring.
             RingClass = ring.RingClass,
             ReserveLevel = ring.ReserveLevel,
             HotspotCommodityIds = ring.HotspotCommodityIds.ToArray()

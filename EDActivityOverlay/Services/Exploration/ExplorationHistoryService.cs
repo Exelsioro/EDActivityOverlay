@@ -10,6 +10,8 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
     private CancellationTokenSource? importCancellation;
     private bool started;
     private bool disposed;
+    private bool journalEnabled;
+    private string journalDirectory = string.Empty;
     private ExplorationHistoryImportState importState = ExplorationHistoryImportState.Idle;
 
     public static ExplorationHistoryService Instance { get; } = new();
@@ -31,9 +33,11 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
             SettingsService.Instance.SettingsChanged += OnSettingsChanged;
             started = true;
         }
-        if (SettingsService.Instance.Settings.EnableJournalIntegration)
+        journalEnabled = SettingsService.Instance.Settings.EnableJournalIntegration;
+        journalDirectory = ResolveDirectory(configuredDirectory);
+        if (journalEnabled)
         {
-            StartImport(ResolveDirectory(configuredDirectory));
+            StartImport(journalDirectory);
         }
     }
 
@@ -58,7 +62,12 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
-        if (e.Settings.EnableJournalIntegration) StartImport(ResolveDirectory(e.Settings.JournalDirectory));
+        string directory = ResolveDirectory(e.Settings.JournalDirectory);
+        if (journalEnabled == e.Settings.EnableJournalIntegration
+            && string.Equals(journalDirectory, directory, StringComparison.OrdinalIgnoreCase)) return;
+        journalEnabled = e.Settings.EnableJournalIntegration;
+        journalDirectory = directory;
+        if (journalEnabled) StartImport(directory);
         else CancelImport();
     }
 

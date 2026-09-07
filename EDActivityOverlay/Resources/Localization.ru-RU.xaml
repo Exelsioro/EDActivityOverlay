@@ -1442,6 +1442,10 @@
     <sys:String x:Key="Loc_MINING_DESTINATION_CLEAR">Сбросить выбранную точку добычи</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELECT_ACTION">ВЫБРАТЬ</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SELECTED_FORMAT">Выбрано · {0} · {1}</sys:String>
+    <sys:String x:Key="Loc_SCO_ACTIVE">SCO АКТИВЕН</sys:String>
+    <sys:String x:Key="Loc_FSD_COOLDOWN">ОХЛАЖДЕНИЕ FSD</sys:String>
+    <sys:String x:Key="Loc_SCO_COMBINED_COOLDOWN">ОХЛАЖДЕНИЕ FSD | SCO ~{0:0.0} с</sys:String>
+    <sys:String x:Key="Loc_SCO_ESTIMATED_COOLDOWN">ОХЛАЖДЕНИЕ SCO ~{0:0.0} с</sys:String>
 </ResourceDictionary>
 
 

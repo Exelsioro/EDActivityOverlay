@@ -101,7 +101,7 @@ namespace EDActivityOverlay.Services
                     WriteIndented = true
                 };
                 var json = JsonSerializer.Serialize(_settings, options);
-                File.WriteAllText(_settingsFilePath, json);
+                AtomicFileStorage.WriteAllText(_settingsFilePath, json);
                 
                 Logger.Logger.Info($"Settings saved to {_settingsFilePath}");
                 SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(_settings));
