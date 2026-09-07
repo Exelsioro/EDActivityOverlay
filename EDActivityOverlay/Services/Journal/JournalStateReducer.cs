@@ -191,12 +191,12 @@ internal sealed class JournalStateReducer
             else if (current.ScoActive
                      && !scoActive)
             {
-                // Live Status.json research on 2026-09-04 showed that SCO
-                // recharge is not represented by Flags bit 18. The observed
-                // falling-edge -> next accepted SCO activation interval is
-                // consistently ~10 seconds, so derive the missing cooldown.
+                // Status.json exposes SCO active but no ready/cooldown flag.
+                // Current-game measurements show a tight ~5 s reactivation
+                // threshold in ordinary supercruise. Keep this explicitly as
+                // an estimate because Elite does not expose the exact ready time.
                 scoCooldownUntil =
-                    observedUtc.AddSeconds(10);
+                    observedUtc.AddSeconds(5);
             }
 
             return current with

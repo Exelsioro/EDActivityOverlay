@@ -9,7 +9,7 @@ namespace EDActivityOverlay.LayoutTests;
 public sealed class FsdScoCooldownTests
 {
     [Fact]
-    public void StatusTracksScoAndStartsTenSecondDerivedCooldown()
+    public void StatusTracksScoAndStartsFiveSecondEstimatedCooldown()
     {
         var reducer =
             new JournalStateReducer();
@@ -60,12 +60,12 @@ public sealed class FsdScoCooldownTests
 
         Assert.InRange(
             until,
-            before.AddSeconds(10),
-            after.AddSeconds(10));
+            before.AddSeconds(5),
+            after.AddSeconds(5));
 
         Assert.True(
             cooling.GetScoCooldownRemainingSeconds(
-                after) > 9.5);
+                after) > 4.5);
 
         reducer.ApplyStatusJson(
             """
@@ -134,7 +134,7 @@ public sealed class FsdScoCooldownTests
                 now));
 
         Assert.Equal(
-            "FSD+SCO 7.3s",
+            "FSD+SCO ~7.3s",
             FsdScoStatusPresentation.BuildCompact(
                 GameStateSnapshot.Empty with
                 {
@@ -145,7 +145,7 @@ public sealed class FsdScoCooldownTests
                 now));
 
         Assert.Equal(
-            "FSD CD | SCO 7.3s",
+            "FSD CD | SCO ~7.3s",
             FsdScoStatusPresentation.BuildOverlay(
                 GameStateSnapshot.Empty with
                 {
@@ -156,7 +156,7 @@ public sealed class FsdScoCooldownTests
                 now));
 
         Assert.Equal(
-            "SCO CD 7.3s",
+            "SCO CD ~7.3s",
             FsdScoStatusPresentation.BuildCompact(
                 GameStateSnapshot.Empty with
                 {
@@ -196,7 +196,7 @@ public sealed class FsdScoCooldownTests
                 now);
 
         Assert.Equal(
-            "SCO CD 5.3s",
+            "SCO CD ~5.3s",
             lines[2]);
     }
 }

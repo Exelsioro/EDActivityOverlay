@@ -23,7 +23,7 @@ internal static class FsdScoStatusPresentation
         if (state.FsdCooldown
             && remaining > 0)
         {
-            return $"FSD+SCO {FormatSeconds(remaining)}";
+            return $"FSD+SCO ~{FormatSeconds(remaining)}";
         }
 
         if (state.FsdCooldown)
@@ -32,7 +32,7 @@ internal static class FsdScoStatusPresentation
         }
 
         return remaining > 0
-            ? $"SCO CD {FormatSeconds(remaining)}"
+            ? $"SCO CD ~{FormatSeconds(remaining)}"
             : string.Empty;
     }
 
@@ -54,7 +54,7 @@ internal static class FsdScoStatusPresentation
         if (state.FsdCooldown
             && remaining > 0)
         {
-            return $"FSD CD | SCO {FormatSeconds(remaining)}";
+            return $"FSD CD | SCO ~{FormatSeconds(remaining)}";
         }
 
         if (state.FsdCooldown)
@@ -63,7 +63,7 @@ internal static class FsdScoStatusPresentation
         }
 
         return remaining > 0
-            ? $"SCO CD {FormatSeconds(remaining)}"
+            ? $"SCO CD ~{FormatSeconds(remaining)}"
             : string.Empty;
     }
 

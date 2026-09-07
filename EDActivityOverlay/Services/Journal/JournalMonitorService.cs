@@ -274,6 +274,10 @@ public sealed class JournalMonitorService : IDisposable
                 await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using StreamReader reader = new(stream, Encoding.UTF8, true);
                 string json = await reader.ReadToEndAsync(token).ConfigureAwait(false);
+                if (fileName.Equals("Status.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    FsdScoCooldownResearchLogger.Instance.Record(json);
+                }
                 apply?.Invoke(json);
                 using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(json);
                 DateTimeOffset timestamp = DateTimeOffset.UtcNow;
