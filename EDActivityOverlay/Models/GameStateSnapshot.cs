@@ -68,6 +68,10 @@ public sealed record ExplorationBodySnapshot(
     IReadOnlyList<string> Genuses,
     ExplorationInterest Interest)
 {
+    /// <summary>True when the journal supplied WasDiscovered for this body.</summary>
+    public bool DiscoveryStatusKnown { get; init; }
+    /// <summary>True when the journal supplied WasMapped for this body.</summary>
+    public bool MappingStatusKnown { get; init; }
     public bool IsScanned { get; init; }
     public bool IsNotable => Interest != ExplorationInterest.None;
     public bool Landable { get; init; }
@@ -206,6 +210,8 @@ public sealed partial record GameStateSnapshot
     public long DestinationSystemAddress { get; init; }
     public int DestinationBodyId { get; init; } = -1;
     public string DestinationName { get; init; } = string.Empty;
+    /// <summary>True when the target represents a system, not a body/station.</summary>
+    public bool DestinationIsSystemTarget { get; init; }
     public IReadOnlyDictionary<string, int> Cargo { get; init; } =
         new ReadOnlyDictionary<string, int>(new Dictionary<string, int>());
     public IReadOnlyDictionary<string, CargoCommoditySnapshot> CargoByCommodityId { get; init; } =

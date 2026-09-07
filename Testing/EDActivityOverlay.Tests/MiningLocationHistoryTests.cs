@@ -98,6 +98,7 @@ public sealed class MiningLocationHistoryTests
         Assert.Equal(3, history.TargetBearingAsteroids);
         Assert.Equal(0.6, history.HitRate, 3);
         Assert.Equal(30, history.AverageTargetContentPercent, 3);
+        Assert.Equal(30, history.MedianTargetContentPercent, 3);
         Assert.True(history.HasQualitySignal);
 
         Assert.Collection(
@@ -117,7 +118,7 @@ public sealed class MiningLocationHistoryTests
     }
 
     [Fact]
-    public void PersonalMeasuredQualityOverridesExternalSurveyAfterSampleGate()
+    public void PersonalMeasuredQualityBlendsIntoExternalSurveyWithConfidence()
     {
         MiningLocationQuery query = new()
         {
@@ -167,12 +168,12 @@ public sealed class MiningLocationHistoryTests
             Prices());
 
         Assert.True(ranked.UsesPersonalQuality);
+        Assert.Equal(0.25, ranked.PersonalHistory.QualityConfidence, 3);
         Assert.Equal(
-            MiningLocationRanker.QualityScoreFor(18),
+            MiningLocationRanker.QualityScoreFor(24),
             ranked.QualityScore);
-        Assert.NotEqual(
-            MiningLocationRanker.QualityScoreFor(26),
-            ranked.QualityScore);
+        Assert.NotEqual(MiningLocationRanker.QualityScoreFor(18), ranked.QualityScore);
+        Assert.NotEqual(MiningLocationRanker.QualityScoreFor(26), ranked.QualityScore);
     }
 
     private static MiningSessionSnapshot Session(

@@ -818,6 +818,14 @@
     <sys:String x:Key="Loc_X52_PROFILE_NOT_FOUND">Профиль *_Overlay.pr0 не найден в общей папке Logitech.</sys:String>
     <sys:String x:Key="Loc_X52_CHEATSHEET_NOT_FOUND">Файл шпаргалки не найден. Переустановите или пересоберите приложение.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT">МАРШРУТ → {0} • точка {1}/{2}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_VISIT_FORMAT">ПЕРВЫЙ ВИЗИТ? · {0}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VISITED_BEFORE_FORMAT">УЖЕ ПОСЕЩАЛАСЬ · {0} · последний визит {1}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">ПЕРВОЕ ОТКРЫТИЕ?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">ПЕРВАЯ КАРТОГРАФИЯ?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">Кандидат на первое открытие (в журнале: WasDiscovered=false).</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">Кандидат на первую картографию (в журнале: WasMapped=false).</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">Журнал сообщает, что открытие уже выполнено.</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">Журнал сообщает, что картография уже выполнена.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">ЦЕЛЕВОЕ ТЕЛО</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% • тела {1} • DSS {2} • BIO {3}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">отложено {0} • вернуть можно в полном ассистенте</sys:String>
@@ -851,6 +859,8 @@
     <sys:String x:Key="Loc_EXPLORATION_STATE_COMPLETE">ЗАВЕРШЕНО</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_QUEUE_FULL_FORMAT">Очередь: осталось {0} • отложено {1} • завершено {2}</sys:String>
     <sys:String x:Key="Loc_FILTER_REMAINING">Осталось</sys:String>
+    <sys:String x:Key="Loc_FILTER_FIRST_DISCOVERY">Кандидаты на первое открытие</sys:String>
+    <sys:String x:Key="Loc_FILTER_FIRST_MAPPING">Кандидаты на первую картографию</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_BIO_COMPLETE_GUIDANCE">Все известные биологические сигналы на этом теле завершены.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_SAMPLE_RANGE_REMAINING_FORMAT">От последнего образца: {0:0} м • осталось {1:0} м из {2} м • удаляйтесь примерно по азимуту {3:0}°.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_STATE_ACTIVE">АКТИВНО</sys:String>
@@ -1419,10 +1429,10 @@
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY">Кольцо/тело: Spansh. Подтверждённые overlap/RES: список сообщества EliteMining.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Кольцо/тело и число сигналов: Spansh. Подтверждённого overlap/RES не найдено.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDTOOLS">Среднее содержание Platinum по замерам: high-yield survey E:D Tools (живой список).</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDAO">Личная история добычи: подтверждённые сессии EDAO именно в этом кольце. После набора минимальной выборки собственное качество имеет приоритет над внешними замерами в оценке.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDAO">Личная история добычи: подтверждённые сессии EDAO именно в этом кольце. Качество смешивается с внешними замерами и получает больший вес по мере роста уверенности.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT">{0}× · {1:0.#} т/ч</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT_SAMPLE">{0}× · выборка</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_HISTORY">ИСТОРИЯ EDAO · сессий {0} · с валидной скоростью {1} · средняя {2:0.#} т/ч · лучшая {3:0.#} т/ч · попадания {4:P0} · среднее содержание цели {5:0.##}%</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_HISTORY">ИСТОРИЯ EDAO · сессий {0} · с валидной скоростью {1} · средняя {2:0.#} т/ч · лучшая {3:0.#} т/ч · попадания {4:P0} · среднее цели {5:0.##}% · медиана {6:0.##}% · уверенность {7:P0}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_EDAO_REFINED">ДОБЫТО EDAO · {0}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_HIGH_YIELD_SHORT">HIGH-YIELD {0:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MEASURED_QUALITY">ЗАМЕРЫ · {0} среднее {1:0.00}%</sys:String>

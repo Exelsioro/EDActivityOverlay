@@ -52,22 +52,24 @@ public static class ExplorationValueCalculator
             (long)(previouslyMapped * EfficientMappingMultiplier));
     }
 
-    public static long SelectScanValue(ExplorationValueEstimate estimate, bool wasDiscovered) =>
-        wasDiscovered ? estimate.BaseScanValue : estimate.FirstDiscoveryScanValue;
+    public static long SelectScanValue(ExplorationValueEstimate estimate, bool? wasDiscovered) =>
+        wasDiscovered == false ? estimate.FirstDiscoveryScanValue : estimate.BaseScanValue;
 
     public static long SelectMappingValue(
         ExplorationValueEstimate estimate,
-        bool wasDiscovered,
-        bool wasMapped,
+        bool? wasDiscovered,
+        bool? wasMapped,
         bool efficient)
     {
-        if (!wasDiscovered && !wasMapped)
+        // Missing flags are unknown, not proof of a first discovery. Use the
+        // conservative previously-mapped value until the journal tells us more.
+        if (wasDiscovered == false && wasMapped == false)
         {
             return efficient
                 ? estimate.FirstDiscoveredAndMappedEfficientValue
                 : estimate.FirstDiscoveredAndMappedValue;
         }
-        if (!wasMapped)
+        if (wasMapped == false)
         {
             return efficient ? estimate.FirstMappedEfficientValue : estimate.FirstMappedValue;
         }

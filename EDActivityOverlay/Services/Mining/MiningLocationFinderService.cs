@@ -319,6 +319,7 @@ public sealed class MiningLocationFinderService
             .Where(candidate => !query.SpecialOnly || candidate.HasKnownSpecial)
             .OrderByDescending(candidate => candidate.Score)
             .ThenByDescending(candidate => candidate.HasPersonalHistory)
+            .ThenByDescending(candidate => candidate.PersonalHistory.QualityConfidence)
             .ThenByDescending(candidate => candidate.PersonalHistory.AverageTonsPerHour)
             .ThenByDescending(candidate => candidate.SpecialScore)
             .ThenByDescending(candidate => candidate.ReserveScore)
@@ -337,6 +338,7 @@ public sealed class MiningLocationFinderService
             .OrderByDescending(candidate => candidate.Score)
             .ThenByDescending(candidate => candidate.HasPersonalHistory)
             .ThenByDescending(candidate => candidate.PersonalHistory.RateSessions)
+            .ThenByDescending(candidate => candidate.PersonalHistory.QualityConfidence)
             .ThenByDescending(candidate => candidate.PersonalHistory.AverageTonsPerHour)
             .ThenByDescending(candidate => candidate.QualityScore)
             .ThenByDescending(candidate => candidate.SpecialScore)
@@ -412,12 +414,21 @@ public static class MiningLocationRanker
             .DefaultIfEmpty(0)
             .Max();
 
-        // Exact-ring EDAO observations are authoritative once the local sample
-        // reaches the minimum credibility gate. Until then the larger external
-        // survey remains the quality-score fallback.
-        double measuredAverage = candidate.PersonalHistory.HasQualitySignal
-            ? candidate.PersonalHistory.AverageTargetContentPercent
-            : externalMeasuredAverage;
+        // Blend the exact-ring EDAO observation into the external survey. A
+        // small personal sample should not overturn a broad community survey;
+        // after enough prospectors the personal signal becomes authoritative.
+        double personalMeasuredAverage =
+            candidate.PersonalHistory.AverageTargetContentPercent;
+        double personalConfidence =
+            candidate.PersonalHistory.QualityConfidence;
+        double measuredAverage = externalMeasuredAverage > 0
+            && personalMeasuredAverage > 0
+            ? externalMeasuredAverage
+              + (personalMeasuredAverage - externalMeasuredAverage)
+                * personalConfidence
+            : personalMeasuredAverage > 0
+                ? personalMeasuredAverage
+                : externalMeasuredAverage;
 
         int qualityScore = QualityScoreFor(measuredAverage);
 

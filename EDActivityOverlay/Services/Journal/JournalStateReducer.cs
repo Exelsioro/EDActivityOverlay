@@ -244,6 +244,8 @@ internal sealed class JournalStateReducer
                 DestinationName = destinationName,
                 DestinationSystemAddress = destinationSystemAddress,
                 DestinationBodyId = destinationBodyId,
+                DestinationIsSystemTarget = destinationBodyId < 0
+                    && destinationSystemAddress > 0,
                 FuelMain = fuelMain,
                 FuelReservoir = fuelReservoir
             };
@@ -481,6 +483,7 @@ internal sealed class JournalStateReducer
                     DestinationName = string.Empty,
                     DestinationSystemAddress = 0,
                     DestinationBodyId = -1,
+                    DestinationIsSystemTarget = false,
                     SystemBodyCount = 0,
                     FssProgress = 0,
                     NonBodySignals = 0,
@@ -501,7 +504,8 @@ internal sealed class JournalStateReducer
                     LastJumpFuelUsed = jumpFuelUsed > 0 ? jumpFuelUsed : current.LastJumpFuelUsed,
                     LastJumpDistanceLy = jumpDistance > 0 ? jumpDistance : current.LastJumpDistanceLy,
                     FuelPerLightYearEstimate = fuelRate
-                };            case "docked":
+                };
+            case "docked":
                 return current with
                 {
                     StarSystem = GetString(root, "StarSystem", current.StarSystem),
@@ -517,8 +521,12 @@ internal sealed class JournalStateReducer
                 {
                     Destination = fsdTargetName,
                     DestinationName = fsdTargetName,
-                    DestinationSystemAddress = TryGetInt64(root, "SystemAddress", current.DestinationSystemAddress),
-                    DestinationBodyId = -1
+                    // FSDTarget may omit SystemAddress. Keep zero in that
+                    // case so history lookup intentionally falls back to the
+                    // target name instead of reusing a stale address.
+                    DestinationSystemAddress = TryGetInt64(root, "SystemAddress"),
+                    DestinationBodyId = -1,
+                    DestinationIsSystemTarget = !string.IsNullOrWhiteSpace(fsdTargetName)
                 };
             case "navrouteclear":
                 navRoute.Clear();
@@ -527,7 +535,8 @@ internal sealed class JournalStateReducer
                     Destination = string.Empty,
                     DestinationName = string.Empty,
                     DestinationSystemAddress = 0,
-                    DestinationBodyId = -1
+                    DestinationBodyId = -1,
+                    DestinationIsSystemTarget = false
                 };
             case "fuelscoop":
                 return current with { FuelMain = TryGetDouble(root, "Total", current.FuelMain) };
@@ -883,8 +892,10 @@ internal sealed class JournalStateReducer
         bool terraformable = terraformState.Contains("Terraform", StringComparison.OrdinalIgnoreCase);
         double earthMasses = TryGetDouble(root, "MassEM", previous.EarthMasses);
         double solarMasses = TryGetDouble(root, "StellarMass", previous.SolarMasses);
-        bool wasDiscovered = GetBoolean(root, "WasDiscovered", previous.WasDiscovered);
-        bool wasMapped = GetBoolean(root, "WasMapped", previous.WasMapped);
+        bool? discoveredFlag = TryGetBoolean(root, "WasDiscovered");
+        bool? mappedFlag = TryGetBoolean(root, "WasMapped");
+        bool wasDiscovered = discoveredFlag ?? previous.WasDiscovered;
+        bool wasMapped = mappedFlag ?? previous.WasMapped;
         ExplorationValueEstimate values = ExplorationValueCalculator.Estimate(
             bodyType, bodyClass, terraformable, earthMasses, solarMasses);
         ExplorationInterest interest = DetermineInterest(
@@ -897,6 +908,8 @@ internal sealed class JournalStateReducer
             DistanceFromArrivalLs = TryGetDouble(root, "DistanceFromArrivalLS", previous.DistanceFromArrivalLs),
             WasDiscovered = wasDiscovered,
             WasMapped = wasMapped,
+            DiscoveryStatusKnown = discoveredFlag.HasValue || previous.DiscoveryStatusKnown,
+            MappingStatusKnown = mappedFlag.HasValue || previous.MappingStatusKnown,
             Interest = interest == ExplorationInterest.None ? previous.Interest : interest,
             Landable = GetBoolean(root, "Landable", previous.Landable),
             GravityG = TryGetDouble(root, "SurfaceGravity", previous.GravityG * 9.80665) / 9.80665,
@@ -910,9 +923,9 @@ internal sealed class JournalStateReducer
             Terraformable = terraformable,
             EarthMasses = earthMasses,
             SolarMasses = solarMasses,
-            EstimatedScanValue = ExplorationValueCalculator.SelectScanValue(values, wasDiscovered),
-            EstimatedMappingValue = ExplorationValueCalculator.SelectMappingValue(values, wasDiscovered, wasMapped, false),
-            EstimatedEfficientMappingValue = ExplorationValueCalculator.SelectMappingValue(values, wasDiscovered, wasMapped, true)
+            EstimatedScanValue = ExplorationValueCalculator.SelectScanValue(values, discoveredFlag ?? (previous.DiscoveryStatusKnown ? previous.WasDiscovered : null)),
+            EstimatedMappingValue = ExplorationValueCalculator.SelectMappingValue(values, discoveredFlag ?? (previous.DiscoveryStatusKnown ? previous.WasDiscovered : null), mappedFlag ?? (previous.MappingStatusKnown ? previous.WasMapped : null), false),
+            EstimatedEfficientMappingValue = ExplorationValueCalculator.SelectMappingValue(values, discoveredFlag ?? (previous.DiscoveryStatusKnown ? previous.WasDiscovered : null), mappedFlag ?? (previous.MappingStatusKnown ? previous.WasMapped : null), true)
         };
     }
 
@@ -1163,6 +1176,12 @@ internal sealed class JournalStateReducer
         element.TryGetProperty(property, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
             ? value.GetBoolean()
             : fallback;
+
+    private static bool? TryGetBoolean(JsonElement element, string property) =>
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
 
     private static int TryGetInt32(JsonElement element, string property, int fallback = 0)
     {

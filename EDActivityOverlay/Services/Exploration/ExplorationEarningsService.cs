@@ -10,8 +10,8 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
 {
     private sealed record BodyValue(
         ExplorationValueEstimate Estimate,
-        bool WasDiscovered,
-        bool WasMapped,
+        bool? WasDiscovered,
+        bool? WasMapped,
         long Value);
 
     private readonly object sync = new();
@@ -28,6 +28,7 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
     private long currentAddress;
     private DateTimeOffset? lastUcSale;
     private DateTimeOffset? lastBioSale;
+    private string commander = string.Empty;
 
     public static ExplorationEarningsService Instance { get; } = new();
     public ExplorationEarningsState Current { get; private set; } = ExplorationEarningsState.Empty;
@@ -122,6 +123,7 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
                 foreach (var item in rebuilt.Organics) organics[item.Key] = item.Value;
                 currentSystem = rebuilt.CurrentSystem;
                 currentAddress = rebuilt.CurrentAddress;
+                commander = rebuilt.Commander;
                 lastUcSale = rebuilt.LastUcSale;
                 lastBioSale = rebuilt.LastBioSale;
                 foreach (string line in queuedEvents) ApplyLine(line);
@@ -169,7 +171,8 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
     private void ApplyLine(string line)
     {
         using JsonDocument document = JsonDocument.Parse(line);
-        Apply(document.RootElement, bodies, organics, ref currentSystem, ref currentAddress, ref lastUcSale, ref lastBioSale);
+        Apply(document.RootElement, bodies, organics, ref currentSystem, ref currentAddress,
+            ref lastUcSale, ref lastBioSale, ref commander);
     }
 
     private void Publish()
@@ -194,11 +197,28 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
         ref string system,
         ref long address,
         ref DateTimeOffset? ucSale,
-        ref DateTimeOffset? bioSale)
+        ref DateTimeOffset? bioSale,
+        ref string commander)
     {
         string eventName = String(root, "event").ToLowerInvariant();
         DateTimeOffset timestamp = DateTimeOffset.TryParse(String(root, "timestamp"), out var parsed)
             ? parsed : DateTimeOffset.UtcNow;
+        if (eventName is "loadgame" or "commander")
+        {
+            string nextCommander = String(root, "Commander", String(root, "Name", commander)).Trim();
+            if (!string.IsNullOrWhiteSpace(nextCommander)
+                && !string.Equals(nextCommander, commander, StringComparison.OrdinalIgnoreCase))
+            {
+                bodyValues.Clear();
+                organicValues.Clear();
+                ucSale = null;
+                bioSale = null;
+                system = string.Empty;
+                address = 0;
+                commander = nextCommander;
+            }
+            return;
+        }
         if (eventName is "location" or "fsdjump" or "carrierjump")
         {
             system = String(root, "StarSystem", system);
@@ -207,13 +227,13 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
         }
         if (eventName is "sellexplorationdata" or "multisellexplorationdata")
         {
-            bodyValues.Clear();
+            if (!ApplyExplorationSale(root, bodyValues)) bodyValues.Clear();
             ucSale = timestamp;
             return;
         }
         if (eventName == "sellorganicdata")
         {
-            organicValues.Clear();
+            if (!ApplyOrganicSale(root, organicValues)) organicValues.Clear();
             bioSale = timestamp;
             return;
         }
@@ -226,11 +246,25 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
             var estimate = ExplorationValueCalculator.Estimate(
                 bodyType, bodyClass, terraformable,
                 Double(root, "MassEM"), Double(root, "StellarMass"));
-            bool wasDiscovered = Bool(root, "WasDiscovered");
-            bool wasMapped = Bool(root, "WasMapped");
-            bodyValues[BodyKey(root, address, system)] = new BodyValue(
-                estimate, wasDiscovered, wasMapped,
-                ExplorationValueCalculator.SelectScanValue(estimate, wasDiscovered));
+            bool? wasDiscovered = NullableBool(root, "WasDiscovered");
+            bool? wasMapped = NullableBool(root, "WasMapped");
+            string key = BodyKey(root, address, system);
+            long scanValue = ExplorationValueCalculator.SelectScanValue(estimate, wasDiscovered);
+            if (bodyValues.TryGetValue(key, out BodyValue? previous))
+            {
+                bodyValues[key] = previous with
+                {
+                    Estimate = estimate,
+                    WasDiscovered = wasDiscovered ?? previous.WasDiscovered,
+                    WasMapped = wasMapped ?? previous.WasMapped,
+                    // A later basic scan must not erase a higher DSS value.
+                    Value = Math.Max(previous.Value, scanValue)
+                };
+            }
+            else
+            {
+                bodyValues[key] = new BodyValue(estimate, wasDiscovered, wasMapped, scanValue);
+            }
             return;
         }
         if (eventName == "saascancomplete")
@@ -263,6 +297,7 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
         public Dictionary<string, (long Minimum, long Maximum)> Organics { get; } = new(StringComparer.OrdinalIgnoreCase);
         public string CurrentSystem = string.Empty;
         public long CurrentAddress;
+        public string Commander = string.Empty;
         public DateTimeOffset? LastUcSale;
         public DateTimeOffset? LastBioSale;
         public void Apply(string line)
@@ -271,7 +306,7 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
             {
                 using JsonDocument document = JsonDocument.Parse(line);
                 ExplorationEarningsService.Apply(document.RootElement, Bodies, Organics,
-                    ref CurrentSystem, ref CurrentAddress, ref LastUcSale, ref LastBioSale);
+                    ref CurrentSystem, ref CurrentAddress, ref LastUcSale, ref LastBioSale, ref Commander);
             }
             catch (JsonException) { }
         }
@@ -299,8 +334,112 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
         root.TryGetProperty(name, out JsonElement value) && value.TryGetInt64(out long result) ? result : fallback;
     private static double? Double(JsonElement root, string name) =>
         root.TryGetProperty(name, out JsonElement value) && value.TryGetDouble(out double result) ? result : null;
-    private static bool Bool(JsonElement root, string name) =>
-        root.TryGetProperty(name, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False && value.GetBoolean();
+    private static bool? NullableBool(JsonElement root, string name) =>
+        root.TryGetProperty(name, out JsonElement value)
+        && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
+
+    private static bool ApplyExplorationSale(
+        JsonElement root,
+        IDictionary<string, BodyValue> bodyValues)
+    {
+        var systems = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var bodies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool scoped = false;
+
+        if (root.TryGetProperty("Systems", out JsonElement systemList)
+            && systemList.ValueKind == JsonValueKind.Array)
+        {
+            scoped = true;
+            foreach (JsonElement item in systemList.EnumerateArray())
+                AddSystemIdentity(item, systems);
+        }
+        if (root.TryGetProperty("Discovered", out JsonElement discovered)
+            && discovered.ValueKind == JsonValueKind.Array)
+        {
+            scoped = true;
+            foreach (JsonElement item in discovered.EnumerateArray())
+                AddDiscoveredIdentity(item, systems, bodies);
+        }
+        string system = String(root, "System", String(root, "StarSystem"));
+        if (!string.IsNullOrWhiteSpace(system))
+        {
+            scoped = true;
+            systems.Add(system);
+        }
+        if (!scoped) return false;
+
+        foreach (string key in bodyValues.Keys.ToArray())
+        {
+            string[] parts = key.Split('|', 4);
+            if (parts.Length < 4) continue;
+            if (systems.Contains(parts[1]) || bodies.Contains(parts[3])) bodyValues.Remove(key);
+        }
+        return true;
+    }
+
+    private static void AddSystemIdentity(JsonElement item, ISet<string> systems)
+    {
+        if (item.ValueKind == JsonValueKind.String)
+        {
+            string value = item.GetString() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(value)) systems.Add(value);
+            return;
+        }
+        if (item.ValueKind != JsonValueKind.Object) return;
+        string system = String(item, "SystemName", String(item, "StarSystem", String(item, "System")));
+        if (!string.IsNullOrWhiteSpace(system)) systems.Add(system);
+    }
+
+    private static void AddDiscoveredIdentity(
+        JsonElement item,
+        ISet<string> systems,
+        ISet<string> bodies)
+    {
+        if (item.ValueKind == JsonValueKind.String)
+        {
+            string value = item.GetString() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(value)) bodies.Add(value);
+            return;
+        }
+        if (item.ValueKind != JsonValueKind.Object) return;
+        string system = String(item, "SystemName", String(item, "StarSystem", String(item, "System")));
+        string body = String(item, "BodyName", String(item, "Body"));
+        if (!string.IsNullOrWhiteSpace(system)) systems.Add(system);
+        if (!string.IsNullOrWhiteSpace(body)) bodies.Add(body);
+    }
+
+    private static bool ApplyOrganicSale(
+        JsonElement root,
+        IDictionary<string, (long Minimum, long Maximum)> organicValues)
+    {
+        if (!root.TryGetProperty("BioData", out JsonElement bioData)
+            || bioData.ValueKind != JsonValueKind.Array)
+            return false;
+        if (bioData.GetArrayLength() == 0) return false;
+
+        var identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (JsonElement item in bioData.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object) continue;
+            foreach (string property in new[] { "Variant", "Species", "Genus" })
+            {
+                string value = String(item, property);
+                if (!string.IsNullOrWhiteSpace(value)) identities.Add(value);
+            }
+        }
+        if (identities.Count == 0) return true;
+
+        foreach (string key in organicValues.Keys.ToArray())
+        {
+            string species = key.Split('|').LastOrDefault() ?? string.Empty;
+            if (identities.Contains(species)) organicValues.Remove(key);
+        }
+        // Legacy numeric species identifiers cannot always be joined to our
+        // codex keys; unmatched entries deliberately remain an estimate.
+        return true;
+    }
 
     public void Dispose()
     {

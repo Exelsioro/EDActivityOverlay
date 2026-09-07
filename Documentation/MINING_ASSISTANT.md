@@ -82,6 +82,14 @@ AUTO ranks only commodities compatible with the resolved ring class. When DSS ho
 
 Ring class, reserve level, and hotspot commodity IDs are copied into completed mining sessions and persisted with history.
 
+Exact-ring personal intelligence is blended with external quality data. The
+blend confidence grows from the number of prospected asteroids and target
+hits, so a small sample cannot overturn a larger survey while a mature sample
+can become the dominant signal. The location card shows session count,
+rate-ready sessions, hit-rate, average and median target content, average/best
+tons per hour and confidence. Results use those signals as tie-breakers after
+the bounded target/reserve/quality/special/travel/market score.
+
 ### Economics semantics
 
 Mining economic values are estimates based on current nearby Ardent market observations:

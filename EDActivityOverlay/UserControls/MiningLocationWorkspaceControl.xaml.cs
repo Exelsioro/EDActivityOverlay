@@ -463,7 +463,9 @@ public partial class MiningLocationWorkspaceControl : UserControl, IDisposable
                 history.AverageTonsPerHour,
                 history.BestTonsPerHour,
                 history.HitRate,
-                history.AverageTargetContentPercent));
+                history.AverageTargetContentPercent,
+                history.MedianTargetContentPercent,
+                history.QualityConfidence));
 
             string composition = string.Join(
                 " · ",

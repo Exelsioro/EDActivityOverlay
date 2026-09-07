@@ -427,6 +427,8 @@ public sealed class ExplorationVisitStateService : IDisposable
                 .Append(':')
                 .Append(body.WasDiscovered ? '1' : '0')
                 .Append(body.WasMapped ? '1' : '0')
+                .Append(body.DiscoveryStatusKnown ? '1' : '0')
+                .Append(body.MappingStatusKnown ? '1' : '0')
                 .Append(':')
                 .Append(body.BodyType)
                 .Append(':')

@@ -35,6 +35,7 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
         }
         journalEnabled = SettingsService.Instance.Settings.EnableJournalIntegration;
         journalDirectory = ResolveDirectory(configuredDirectory);
+        liveAccumulator.Reset();
         if (journalEnabled)
         {
             StartImport(journalDirectory);
@@ -44,16 +45,25 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
     public ExplorationSystemHistorySnapshot LoadSystem(GameStateSnapshot game) =>
         repository.LoadSystem(game.Commander, game.SystemAddress, game.StarSystem);
 
+    /// <summary>
+    /// Resolves a previously visited system without manufacturing a temporary
+    /// game snapshot. This is used for the destination preview shown before a
+    /// jump, where only the target name/address is available.
+    /// </summary>
+    public ExplorationSystemHistorySnapshot LoadSystem(
+        string commander,
+        long systemAddress,
+        string systemName) =>
+        repository.LoadSystem(commander, systemAddress, systemName);
+
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
-        // Historical reconstruction is already owned by the journal importer.
-        // Do not replay the current journal a second time through the live path.
-        if (journalEvent.Origin == JournalEventOrigin.Bootstrap)
-        {
-            return;
-        }
-
-        if (liveAccumulator.Apply(journalEvent.Data)) RaiseChanged();
+        // The importer owns closed journal files; the monitor's bootstrap is
+        // the only complete replay of the currently open file. Accepting it
+        // restores commander/system context after an overlay restart without
+        // double-processing historical files.
+        if (!liveAccumulator.Apply(journalEvent.Data)) return;
+        RaiseChanged();
     }
 
     public void OnCompanionFile(CompanionFileReceivedEventArgs companionFile)
@@ -67,6 +77,7 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
             && string.Equals(journalDirectory, directory, StringComparison.OrdinalIgnoreCase)) return;
         journalEnabled = e.Settings.EnableJournalIntegration;
         journalDirectory = directory;
+        liveAccumulator.Reset();
         if (journalEnabled) StartImport(directory);
         else CancelImport();
     }

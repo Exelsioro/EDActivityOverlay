@@ -818,6 +818,14 @@
     <sys:String x:Key="Loc_X52_PROFILE_NOT_FOUND">No *_Overlay.pr0 profile was found in the shared Logitech folder.</sys:String>
     <sys:String x:Key="Loc_X52_CHEATSHEET_NOT_FOUND">The control cheatsheet file is missing. Reinstall or rebuild the application.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT">ROUTE → {0} • stop {1}/{2}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_VISIT_FORMAT">FIRST VISIT CANDIDATE · {0}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VISITED_BEFORE_FORMAT">VISITED BEFORE · {0} · last {1}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">FIRST DISCOVERY?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">FIRST MAPPING?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">First discovery candidate (journal: WasDiscovered=false).</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">First mapping candidate (journal: WasMapped=false).</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">Journal reports that discovery already exists.</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">Journal reports that mapping already exists.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">BODY TARGET</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% • {1} bodies • DSS {2} • BIO {3}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">{0} deferred • open the full assistant to resume</sys:String>
@@ -851,6 +859,8 @@
     <sys:String x:Key="Loc_EXPLORATION_STATE_COMPLETE">COMPLETE</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_QUEUE_FULL_FORMAT">Queue: {0} remaining • {1} deferred • {2} complete</sys:String>
     <sys:String x:Key="Loc_FILTER_REMAINING">Remaining</sys:String>
+    <sys:String x:Key="Loc_FILTER_FIRST_DISCOVERY">First discovery candidates</sys:String>
+    <sys:String x:Key="Loc_FILTER_FIRST_MAPPING">First mapping candidates</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_BIO_COMPLETE_GUIDANCE">All known biological signals on this body are complete.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_SAMPLE_RANGE_REMAINING_FORMAT">Distance from last sample: {0:0} m • {1:0} m remaining of {2} m • move away around bearing {3:0}°.</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_STATE_ACTIVE">ACTIVE</sys:String>
@@ -1419,10 +1429,10 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_WITH_COMMUNITY">Ring/body data: Spansh. Confirmed overlap/RES: EliteMining community list.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_SPANSH">Ring/body and signal-count data: Spansh. No confirmed overlap/RES record matched.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDTOOLS">Measured Platinum average content: E:D Tools high-yield survey (live list).</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDAO">Personal mining history: confirmed EDAO sessions for this exact ring. Once the local sample is large enough it overrides external measured quality for scoring.</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_SOURCE_EDAO">Personal mining history: confirmed EDAO sessions for this exact ring. Quality is blended with external measurements and becomes dominant as confidence grows.</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT">{0}× · {1:0.#} t/h</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_EDAO_SHORT_SAMPLE">{0}× · sample</sys:String>
-    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_HISTORY">EDAO HISTORY · {0} sessions · {1} rate-ready · avg {2:0.#} t/h · best {3:0.#} t/h · hit {4:P0} · avg target {5:0.##}%</sys:String>
+    <sys:String x:Key="Loc_MINING_LOCATION_EDAO_HISTORY">EDAO HISTORY · {0} sessions · {1} rate-ready · avg {2:0.#} t/h · best {3:0.#} t/h · hit {4:P0} · avg target {5:0.##}% · median {6:0.##}% · confidence {7:P0}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_EDAO_REFINED">EDAO REFINED · {0}</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_HIGH_YIELD_SHORT">HIGH-YIELD {0:0.00}%</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_MEASURED_QUALITY">MEASURED · {0} average {1:0.00}%</sys:String>

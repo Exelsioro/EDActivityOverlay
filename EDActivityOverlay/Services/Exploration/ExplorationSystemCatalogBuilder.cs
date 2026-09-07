@@ -125,7 +125,9 @@ public static class ExplorationSystemCatalogBuilder
                 ? local.SurfacePressureAtmospheres
                 : external?.SurfacePressureAtmospheres ?? 0,
             LastProbesUsed = local.LastProbesUsed,
-            EfficiencyTarget = local.EfficiencyTarget
+            EfficiencyTarget = local.EfficiencyTarget,
+            DiscoveryStatusKnown = local.DiscoveryStatusKnown,
+            MappingStatusKnown = local.MappingStatusKnown
         };
     }
 

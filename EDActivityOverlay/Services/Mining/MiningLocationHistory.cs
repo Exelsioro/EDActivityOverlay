@@ -19,6 +19,7 @@ public sealed record MiningLocationHistorySnapshot
     public int TargetBearingAsteroids { get; init; }
     public double HitRate { get; init; }
     public double AverageTargetContentPercent { get; init; }
+    public double MedianTargetContentPercent { get; init; }
     public DateTimeOffset? LastSessionUtc { get; init; }
     public IReadOnlyList<MiningLocationRefinedCommodity> RefinedComposition { get; init; } =
         Array.Empty<MiningLocationRefinedCommodity>();
@@ -27,14 +28,28 @@ public sealed record MiningLocationHistorySnapshot
 
     public bool Available => Sessions > 0;
 
-    // Do not replace a larger external survey with a one-rock anecdote.
-    // Five prospectors / three target-bearing rocks is deliberately only a
-    // minimum credibility gate; the raw personal history is still displayed
-    // before this threshold is reached.
+    // Do not let a one-rock anecdote replace a larger external survey. The
+    // confidence value grows with the personal sample and is used to blend
+    // personal and community measurements gradually.
     public bool HasQualitySignal =>
         ProspectedAsteroids >= 5
         && TargetBearingAsteroids >= 3
         && AverageTargetContentPercent > 0;
+
+    public double QualityConfidence
+    {
+        get
+        {
+            if (TargetBearingAsteroids <= 0 || AverageTargetContentPercent <= 0)
+            {
+                return 0;
+            }
+
+            double prospectConfidence = Math.Clamp(ProspectedAsteroids / 20d, 0, 1);
+            double hitConfidence = Math.Clamp(TargetBearingAsteroids / 10d, 0, 1);
+            return Math.Clamp(Math.Min(prospectConfidence, hitConfidence), 0, 1);
+        }
+    }
 }
 
 public interface IMiningLocationHistoryProvider
@@ -194,6 +209,7 @@ public static class MiningLocationHistoryCalculator
             AverageTargetContentPercent = targetContents.Length > 0
                 ? targetContents.Average()
                 : 0,
+            MedianTargetContentPercent = Median(targetContents),
             LastSessionUtc = sessions
                 .Select(session => session.EndedUtc ?? session.LastActivityUtc)
                 .DefaultIfEmpty()
@@ -221,5 +237,19 @@ public static class MiningLocationHistoryCalculator
         return matches.Length == 0
             ? null
             : matches.Max();
+    }
+
+    private static double Median(IReadOnlyList<double> values)
+    {
+        if (values.Count == 0)
+        {
+            return 0;
+        }
+
+        double[] ordered = values.OrderBy(value => value).ToArray();
+        int middle = ordered.Length / 2;
+        return ordered.Length % 2 == 0
+            ? (ordered[middle - 1] + ordered[middle]) / 2
+            : ordered[middle];
     }
 }
