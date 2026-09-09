@@ -9,7 +9,7 @@ namespace EDActivityOverlay.LayoutTests;
 public sealed class FsdScoCooldownTests
 {
     [Fact]
-    public void StatusTracksScoAndStartsFiveSecondEstimatedCooldown()
+    public void StatusTracksScoWithoutInventingAnEstimatedCooldown()
     {
         var reducer =
             new JournalStateReducer();
@@ -34,9 +34,6 @@ public sealed class FsdScoCooldownTests
         Assert.Null(
             reducer.Current.ScoEstimatedCooldownUntilUtc);
 
-        DateTimeOffset before =
-            DateTimeOffset.UtcNow;
-
         reducer.ApplyStatusJson(
             $$"""
             {
@@ -45,27 +42,14 @@ public sealed class FsdScoCooldownTests
             }
             """);
 
-        DateTimeOffset after =
-            DateTimeOffset.UtcNow;
-
         GameStateSnapshot cooling =
             reducer.Current;
 
         Assert.False(
             cooling.ScoActive);
 
-        DateTimeOffset until =
-            Assert.IsType<DateTimeOffset>(
-                cooling.ScoEstimatedCooldownUntilUtc);
-
-        Assert.InRange(
-            until,
-            before.AddSeconds(5),
-            after.AddSeconds(5));
-
-        Assert.True(
-            cooling.GetScoCooldownRemainingSeconds(
-                after) > 4.5);
+        Assert.Null(
+            cooling.ScoEstimatedCooldownUntilUtc);
 
         reducer.ApplyStatusJson(
             """
@@ -108,7 +92,7 @@ public sealed class FsdScoCooldownTests
     }
 
     [Fact]
-    public void CompactDriveStatusPrioritizesActiveAndDirectCooldown()
+    public void CompactDriveStatusOnlyShowsDirectGameState()
     {
         DateTimeOffset now =
             DateTimeOffset.Parse(
@@ -134,32 +118,11 @@ public sealed class FsdScoCooldownTests
                 now));
 
         Assert.Equal(
-            "FSD+SCO ~7.3s",
+            "FSD COOLDOWN",
             FsdScoStatusPresentation.BuildCompact(
                 GameStateSnapshot.Empty with
                 {
                     FsdCooldown = true,
-                    ScoEstimatedCooldownUntilUtc =
-                        now.AddSeconds(7.25)
-                },
-                now));
-
-        Assert.Equal(
-            Loc.Format("Loc_SCO_COMBINED_COOLDOWN", 7.25),
-            FsdScoStatusPresentation.BuildOverlay(
-                GameStateSnapshot.Empty with
-                {
-                    FsdCooldown = true,
-                    ScoEstimatedCooldownUntilUtc =
-                        now.AddSeconds(7.25)
-                },
-                now));
-
-        Assert.Equal(
-            "SCO CD ~7.3s",
-            FsdScoStatusPresentation.BuildCompact(
-                GameStateSnapshot.Empty with
-                {
                     ScoEstimatedCooldownUntilUtc =
                         now.AddSeconds(7.25)
                 },
@@ -171,13 +134,13 @@ public sealed class FsdScoCooldownTests
                 GameStateSnapshot.Empty with
                 {
                     ScoEstimatedCooldownUntilUtc =
-                        now.AddMilliseconds(-1)
+                        now.AddSeconds(7.25)
                 },
                 now));
     }
 
     [Fact]
-    public void X52UsesDerivedScoCountdownInContextLine()
+    public void X52IgnoresDisabledScoCountdownInContextLine()
     {
         DateTimeOffset now =
             DateTimeOffset.Parse(
@@ -196,7 +159,7 @@ public sealed class FsdScoCooldownTests
                 now);
 
         Assert.Equal(
-            "SCO CD ~5.3s",
+            "SUPERCRUISE",
             lines[2]);
     }
 }

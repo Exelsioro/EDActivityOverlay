@@ -22,11 +22,15 @@ public partial class MiningWorkspaceControl
             ? currentSession.SystemName
             : currentJournal.StarSystem;
 
-        return MiningRingContextService.Instance.Resolve(
+        MiningRingContextSnapshot ring = MiningRingContextService.Instance.Resolve(
             ringName,
             bodyName,
             systemAddress,
             systemName);
+
+        return MiningRingContextService.EnrichFromDestination(
+            ring,
+            MiningDestinationService.Instance.Current);
     }
 
     private MiningTargetSelection CurrentTargetSelection(
@@ -43,63 +47,12 @@ public partial class MiningWorkspaceControl
     {
         AppSettings settings = SettingsService.Instance.Settings;
         MiningRingContextSnapshot ring = CurrentRingContext();
-        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        if (MiningTargetSelector.HasResolvedRingClass(ring.RingClass))
-        {
-            // Load the complete ring-compatible set only when the ring class is known.
-            // Unknown ring class must not be treated as "every mining commodity".
-            candidates.UnionWith(
-                MiningTargetSelector.GetCompatibleCommodityIds(ring.RingClass));
-        }
-        else if (!settings.MiningAutoSelectTargets)
-        {
-            candidates.UnionWith(
-                MiningTargetSelector.NormalizeManualTargets(settings));
-        }
-
-        // Prospect composition is authoritative for what is actually in this rock.
-        // Always price the reported materials even when ring context is unavailable
-        // or the catalog's ring compatibility table does not contain an entry yet.
         MiningProspectSnapshot? prospect = currentSession.Prospects.LastOrDefault();
-        if (prospect is not null)
-        {
-            foreach (MiningProspectMaterialSnapshot material in prospect.Materials)
-            {
-                MiningTargetOption? option =
-                    MiningTargetCatalog.Find(material.CommodityId)
-                    ?? MiningTargetCatalog.Find(material.DisplayName);
-                if (option is not null && !string.IsNullOrWhiteSpace(option.CommodityId))
-                {
-                    candidates.Add(option.CommodityId);
-                }
-            }
-
-            MiningTargetOption? core =
-                MiningTargetCatalog.Find(prospect.MotherlodeCommodityId)
-                ?? MiningTargetCatalog.Find(prospect.MotherlodeDisplayName);
-            if (core is not null && !string.IsNullOrWhiteSpace(core.CommodityId))
-            {
-                candidates.Add(core.CommodityId);
-            }
-        }
-
-        // Session economics and Mine -> Sell also need quotes for cargo already in the hold.
-        foreach (CargoCommoditySnapshot cargo in currentJournal.CargoByCommodityId.Values)
-        {
-            if (cargo.Count <= 0)
-            {
-                continue;
-            }
-
-            MiningTargetOption? option =
-                MiningTargetCatalog.Find(cargo.CommodityId)
-                ?? MiningTargetCatalog.Find(cargo.DisplayName);
-            if (option is not null && !string.IsNullOrWhiteSpace(option.CommodityId))
-            {
-                candidates.Add(option.CommodityId);
-            }
-        }
+        IReadOnlyList<string> candidates = MiningTargetSelector.GetMarketCandidates(
+            settings,
+            ring,
+            prospect,
+            currentJournal.CargoByCommodityId.Values);
 
         if (candidates.Count == 0)
         {
@@ -172,9 +125,7 @@ public partial class MiningWorkspaceControl
                     string commodityId = MiningTargetCatalog.Find(item.CommodityId)?.CommodityId
                         ?? MiningTargetCatalog.Find(item.DisplayName)?.CommodityId
                         ?? item.CommodityId;
-                    string price = prices.TryGet(commodityId, out MiningMarketPriceQuote? quote)
-                        ? FormatMarketPrice(quote!.ReferenceSellPrice)
-                        : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE");
+                    string price = FormatMarketPriceStatus(commodityId, prices);
                     bool target = selected.Contains(commodityId);
                     string name = target
                         ? item.DisplayName.ToUpperInvariant()
@@ -195,11 +146,7 @@ public partial class MiningWorkspaceControl
             : prospect.MotherlodeCommodityId;
         string stableCoreId = MiningTargetCatalog.Find(coreCommodity)?.CommodityId
             ?? coreCommodity;
-        string corePrice = prices.TryGet(
-                stableCoreId,
-                out MiningMarketPriceQuote? quote)
-            ? FormatMarketPrice(quote!.ReferenceSellPrice)
-            : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE");
+        string corePrice = FormatMarketPriceStatus(stableCoreId, prices);
         string coreName = string.IsNullOrWhiteSpace(prospect.MotherlodeDisplayName)
             ? MiningTargetCatalog.GetDisplayName(stableCoreId)
             : prospect.MotherlodeDisplayName;
@@ -306,9 +253,7 @@ public partial class MiningWorkspaceControl
                 .Take(Math.Max(1, limit))
                 .Select(item =>
                     $"{MiningTargetCatalog.GetDisplayName(item.Id)} "
-                    + (item.Price > 0
-                        ? FormatMarketPrice(item.Price)
-                        : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE"))));
+                    + FormatMarketPriceStatus(item.Id, prices)));
     }
 
     private static bool HasSellableMiningCargo(GameStateSnapshot state) =>
@@ -359,6 +304,32 @@ public partial class MiningWorkspaceControl
                 ? $"{price / 1_000d:0.#}k"
                 : price.ToString("N0");
         return Loc.Format("Loc_MINING_PRICE_FORMAT", compact);
+    }
+
+    private static string FormatMarketPriceStatus(
+        string commodityId,
+        MiningMarketPriceSnapshot prices)
+    {
+        if (prices.TryGet(commodityId, out MiningMarketPriceQuote? quote))
+        {
+            return FormatMarketPrice(quote!.ReferenceSellPrice);
+        }
+
+        if (prices.IsLoading)
+        {
+            return Loc.Get("Loc_MINING_PRICE_LOADING");
+        }
+
+        if (!string.IsNullOrWhiteSpace(prices.Error))
+        {
+            return Loc.Get("Loc_MINING_PRICE_PROVIDER_ERROR");
+        }
+
+        string stableId = MiningTargetCatalog.Find(commodityId)?.CommodityId
+            ?? commodityId;
+        return prices.Quotes.ContainsKey(stableId)
+            ? Loc.Get("Loc_MINING_PRICE_NO_RECENT_DATA")
+            : Loc.Get("Loc_MINING_PRICE_UNAVAILABLE");
     }
 
     private static string RingClassKey(string? ringClass)

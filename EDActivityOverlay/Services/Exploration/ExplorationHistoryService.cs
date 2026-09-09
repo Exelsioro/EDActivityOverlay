@@ -7,6 +7,7 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
 {
     private readonly ExplorationHistoryRepository repository = new();
     private readonly ExplorationHistoryAccumulator liveAccumulator;
+    private readonly ExplorationJumpVisitTracker jumpVisitTracker;
     private CancellationTokenSource? importCancellation;
     private bool started;
     private bool disposed;
@@ -18,10 +19,13 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
 
     public event EventHandler<ExplorationHistoryChangedEventArgs>? HistoryChanged;
     public ExplorationHistoryImportState ImportState => importState;
+    public ExplorationJumpVisitStatusSnapshot JumpVisitStatus =>
+        jumpVisitTracker.Current;
 
     private ExplorationHistoryService()
     {
         liveAccumulator = new ExplorationHistoryAccumulator(repository);
+        jumpVisitTracker = new ExplorationJumpVisitTracker(repository.LoadSystem);
     }
 
     public void Start(string? configuredDirectory = null)
@@ -58,12 +62,19 @@ public sealed class ExplorationHistoryService : IJournalDataConsumer, IDisposabl
 
     public void OnJournalEvent(JournalEventReceivedEventArgs journalEvent)
     {
+        bool jumpStatusChanged = jumpVisitTracker.Apply(
+            journalEvent,
+            JournalMonitorService.Instance.Current);
+
         // The importer owns closed journal files; the monitor's bootstrap is
         // the only complete replay of the currently open file. Accepting it
         // restores commander/system context after an overlay restart without
         // double-processing historical files.
-        if (!liveAccumulator.Apply(journalEvent.Data)) return;
-        RaiseChanged();
+        bool historyChanged = liveAccumulator.Apply(journalEvent.Data);
+        if (jumpStatusChanged || historyChanged)
+        {
+            RaiseChanged();
+        }
     }
 
     public void OnCompanionFile(CompanionFileReceivedEventArgs companionFile)

@@ -51,6 +51,25 @@ public sealed record ExplorationSystemHistorySnapshot(
     public bool WasVisited => FirstVisitedUtc is not null;
 }
 
+public sealed record ExplorationJumpVisitStatusSnapshot(
+    string SystemName,
+    long SystemAddress,
+    bool WasVisitedBeforeJump,
+    DateTimeOffset? LastVisitedUtc,
+    DateTimeOffset JumpStartedUtc,
+    bool Arrived)
+{
+    public static ExplorationJumpVisitStatusSnapshot Empty { get; } = new(
+        string.Empty,
+        0,
+        false,
+        null,
+        DateTimeOffset.MinValue,
+        false);
+
+    public bool Available => !string.IsNullOrWhiteSpace(SystemName);
+}
+
 public sealed record ExplorationHistoryImportState(
     bool IsRunning,
     int ProcessedFiles,

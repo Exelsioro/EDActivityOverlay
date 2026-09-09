@@ -23,7 +23,6 @@ public partial class MiningWorkspaceControl
             DestinationPanel.Visibility = Visibility.Collapsed;
             DestinationLabelText.Text = string.Empty;
             DestinationSystemText.Text = string.Empty;
-            DestinationBodyText.Text = string.Empty;
             DestinationMetaText.Text = string.Empty;
             return;
         }
@@ -47,12 +46,17 @@ public partial class MiningWorkspaceControl
                     ? "Loc_MINING_DESTINATION_IN_SYSTEM"
                     : "Loc_MINING_DESTINATION");
 
-        DestinationSystemText.Text = destination.SystemName;
-        DestinationBodyText.Text = string.IsNullOrWhiteSpace(destination.BodyName)
+        string body = string.IsNullOrWhiteSpace(destination.BodyName)
             ? MiningDestinationSnapshot.ShortRingName(
                 destination.SystemName,
                 destination.RingName)
             : destination.BodyName;
+        DestinationSystemText.Text = string.IsNullOrWhiteSpace(body)
+            ? destination.SystemName
+            : Loc.Format(
+                "Loc_MINING_DESTINATION_BODY_FORMAT",
+                destination.SystemName,
+                body);
         DestinationMetaText.Text = BuildDestinationMeta(destination);
         DestinationPanel.Visibility = Visibility.Visible;
     }

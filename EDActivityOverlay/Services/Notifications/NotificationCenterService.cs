@@ -158,13 +158,21 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                     "exploration:fss-complete", TimeSpan.FromSeconds(10), GetInt32(data, "BodyCount"));
                 break;
             case "scan":
+                string scannedBody = GetString(data, "BodyName");
                 string? notableMessage = GetNotableBodyMessageKey(data);
                 if (notableMessage is not null)
                 {
-                    string body = GetString(data, "BodyName");
                     Publish("exploration", NotificationSeverity.Success,
                         "Loc_Notification_Exploration", notableMessage,
-                        $"exploration:notable:{body}", TimeSpan.FromSeconds(2), body);
+                        $"exploration:notable:{scannedBody}", TimeSpan.FromSeconds(2), scannedBody);
+                }
+
+                string? discoveryMessage = GetDiscoveryCandidateMessageKey(data);
+                if (discoveryMessage is not null)
+                {
+                    Publish("exploration", NotificationSeverity.Success,
+                        "Loc_Notification_Exploration", discoveryMessage,
+                        $"exploration:discovery:{scannedBody}", TimeSpan.FromSeconds(3), scannedBody);
                 }
                 break;
             case "fssbodysignals":
@@ -300,6 +308,32 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
             || starType.Contains("BlackHole", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_BlackHole_Format";
         return null;
     }
+
+    internal static string? GetDiscoveryCandidateMessageKey(JsonElement element)
+    {
+        bool firstDiscovery = GetNullableBoolean(element, "WasDiscovered") == false;
+        bool firstMapping = GetNullableBoolean(element, "WasMapped") == false;
+
+        if (firstDiscovery && firstMapping)
+        {
+            return "Loc_Notification_First_Discovery_And_Mapping_Format";
+        }
+
+        if (firstDiscovery)
+        {
+            return "Loc_Notification_First_Discovery_Format";
+        }
+
+        return firstMapping
+            ? "Loc_Notification_First_Mapping_Format"
+            : null;
+    }
+
+    private static bool? GetNullableBoolean(JsonElement element, string property) =>
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
 
     private static string GetLocalizedName(JsonElement element, string property)
     {

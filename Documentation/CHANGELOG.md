@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-beta.2] - 2026-09-10
+
+### Mining
+
+- Improved target-material and motherlode recommendations, including explicit
+  skip guidance for non-target cores and more consistent X52 summaries.
+- Combined live Journal, DSS and personal-history ring metadata so the current
+  body, ring type, reserve level and hotspot context remain available together.
+- Improved buyer selection and price presentation: unknown prices stay unknown,
+  while live commodity data and DSS hotspot minerals are included in lookups.
+
+### Exploration and notifications
+
+- Corrected route visit tracking so `FIRST VISIT` describes the destination of
+  the jump currently in progress and remains visible after arrival.
+- Added live candidate notifications when a Journal `Scan` explicitly reports
+  `WasDiscovered=false` and/or `WasMapped=false`; unknown flags remain unknown.
+- Temporarily disabled the fixed SCO cooldown estimate in the overlay and X52
+  output until a ship- and mass-aware model can be validated.
+
+### Project support
+
+- Restored the localized Ko-fi support action in the startup window and
+  Settings, and added repository funding metadata for GitHub's Sponsor button.
+
+## [1.3.0-beta.1] - 2026-09-09
+
 ### Release infrastructure
 
 - Added branch and pull-request CI with dependency auditing, warning-free

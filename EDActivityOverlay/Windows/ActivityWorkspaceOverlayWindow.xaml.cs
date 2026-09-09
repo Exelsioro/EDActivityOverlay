@@ -2176,29 +2176,43 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private static string BuildDestinationVisitStatus(GameStateSnapshot state)
     {
-        string target = state.DestinationName;
-        if (string.IsNullOrWhiteSpace(target)
-            || !state.DestinationIsSystemTarget
-            || string.Equals(target, state.StarSystem, StringComparison.OrdinalIgnoreCase))
+        ExplorationJumpVisitStatusSnapshot jump =
+            ExplorationHistoryService.Instance.JumpVisitStatus;
+        if (!jump.Available)
         {
             return string.Empty;
         }
 
-        ExplorationSystemHistorySnapshot history =
-            ExplorationHistoryService.Instance.LoadSystem(
-                state.Commander,
-                state.DestinationSystemAddress,
-                target);
-
-        if (!history.WasVisited)
+        // Once arrived, keep the pre-jump result visible while this system is
+        // current. Never let a Status.json update for the next route hop replace it.
+        if (jump.Arrived
+            && !jump.SystemName.Equals(
+                state.StarSystem,
+                StringComparison.OrdinalIgnoreCase))
         {
-            return Loc.Format("Loc_EXPLORATION_FIRST_VISIT_FORMAT", target);
+            return string.Empty;
         }
 
-        string lastVisit = history.LastVisitedUtc is { } timestamp
+        string phaseKey = jump.Arrived
+            ? "Loc_EXPLORATION_VISIT_PHASE_ARRIVED"
+            : "Loc_EXPLORATION_VISIT_PHASE_JUMP";
+        string phase = Loc.Get(phaseKey);
+        if (!jump.WasVisitedBeforeJump)
+        {
+            return Loc.Format(
+                "Loc_EXPLORATION_NO_PERSONAL_HISTORY_FORMAT",
+                phase,
+                jump.SystemName);
+        }
+
+        string lastVisit = jump.LastVisitedUtc is { } timestamp
             ? timestamp.ToLocalTime().ToString("g")
             : Loc.Get("Loc_VALUE_UNKNOWN");
-        return Loc.Format("Loc_EXPLORATION_VISITED_BEFORE_FORMAT", target, lastVisit);
+        return Loc.Format(
+            "Loc_EXPLORATION_PERSONAL_HISTORY_FORMAT",
+            phase,
+            jump.SystemName,
+            lastVisit);
     }
 
     private static string BuildAdaptiveExplorationFooter(

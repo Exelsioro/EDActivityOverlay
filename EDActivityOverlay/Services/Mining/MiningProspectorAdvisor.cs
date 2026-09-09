@@ -29,7 +29,7 @@ public static class MiningProspectorAdvisor
         MiningExtractionMethod recommendedMethod = RecommendMethod(prospect);
         if (string.IsNullOrWhiteSpace(target))
         {
-            return new MiningProspectAdvice(
+            return WithCoreOpportunity(new MiningProspectAdvice(
                 MiningProspectDecision.NoTarget,
                 recommendedMethod,
                 MiningExtractionMethod.Unknown,
@@ -37,7 +37,7 @@ public static class MiningProspectorAdvisor
                 string.Empty,
                 null,
                 false,
-                false);
+                false), prospect);
         }
 
         bool motherlodeMatches = Matches(
@@ -65,7 +65,7 @@ public static class MiningProspectorAdvisor
 
         if (material is not null)
         {
-            return new MiningProspectAdvice(
+            return WithCoreOpportunity(new MiningProspectAdvice(
                 material.Proportion >= threshold
                     ? MiningProspectDecision.Mine
                     : MiningProspectDecision.Skip,
@@ -77,10 +77,10 @@ public static class MiningProspectorAdvisor
                     : material.DisplayName,
                 material.Proportion,
                 true,
-                false);
+                false), prospect);
         }
 
-        return new MiningProspectAdvice(
+        return WithCoreOpportunity(new MiningProspectAdvice(
             MiningProspectDecision.Skip,
             recommendedMethod,
             MiningExtractionMethod.Unknown,
@@ -88,7 +88,7 @@ public static class MiningProspectorAdvisor
             string.Empty,
             null,
             false,
-            false);
+            false), prospect);
     }
 
     public static MiningProspectAdvice Evaluate(
@@ -169,6 +169,22 @@ public static class MiningProspectorAdvisor
                    CommodityIdentity.Normalize(displayName),
                    StringComparison.OrdinalIgnoreCase)
                || target.Equals(displayName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static MiningProspectAdvice WithCoreOpportunity(
+        MiningProspectAdvice advice,
+        MiningProspectSnapshot prospect)
+    {
+        if (!prospect.HasMotherlode || advice.MotherlodeMatches)
+        {
+            return advice;
+        }
+
+        return advice with
+        {
+            OpportunityCommodityId = prospect.MotherlodeCommodityId,
+            OpportunityDisplayName = prospect.MotherlodeDisplayName
+        };
     }
 }
 

@@ -129,6 +129,12 @@ an Inno Setup installer and SHA-256 checksums.
 
 Existing application data from the pre-rebrand installation is migrated automatically to the new `EDActivityOverlay` application-data folders on startup.
 
+## Support Development
+
+ED Activity Overlay is free and open source. If it is useful to you, you can
+[support continued development on Ko-fi](https://ko-fi.com/exelsior). The same
+link is available from the startup window and Settings inside the application.
+
 ## Documentation
 
 See the [Documentation index](Documentation/README.md) for maintained feature, architecture, testing, hardware and attribution documentation.

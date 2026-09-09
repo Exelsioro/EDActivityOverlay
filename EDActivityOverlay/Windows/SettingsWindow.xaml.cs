@@ -1238,6 +1238,11 @@ namespace EDActivityOverlay.Windows
             this.Close();
         }
 
+        private void SupportDeveloperButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProjectSupportService.OpenKoFi();
+        }
+
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (!overlayMode || e.LeftButton != MouseButtonState.Pressed)

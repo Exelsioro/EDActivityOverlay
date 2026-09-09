@@ -85,6 +85,95 @@ public sealed class MiningMarketTargetTests
     }
 
     [Fact]
+    public void AutoMarketCandidatesAlwaysIncludeObservedDssHotspots()
+    {
+        var settings = new AppSettings
+        {
+            MiningAutoSelectTargets = true
+        };
+        var ring = new MiningRingContextSnapshot(
+            42,
+            "Test",
+            "Test 1 B Ring",
+            string.Empty,
+            string.Empty,
+            ["Monazite", "Painite"]);
+
+        IReadOnlyList<string> candidates = MiningTargetSelector.GetMarketCandidates(
+            settings,
+            ring,
+            null,
+            Array.Empty<CargoCommoditySnapshot>());
+
+        Assert.Contains("Monazite", candidates);
+        Assert.Contains("Painite", candidates);
+    }
+
+    [Fact]
+    public void ExactDestinationFillsMissingRingMetadataWithoutOverwritingJournal()
+    {
+        var destination = new MiningDestinationSnapshot
+        {
+            SystemName = "Test",
+            BodyName = "1",
+            RingName = "Test 1 B Ring",
+            RingClass = "Metal Rich",
+            ReserveLevel = "Pristine"
+        };
+        var observed = new MiningRingContextSnapshot(
+            42,
+            "Test",
+            "Test 1 B Ring",
+            string.Empty,
+            string.Empty,
+            ["Monazite"]);
+
+        MiningRingContextSnapshot enriched =
+            MiningRingContextService.EnrichFromDestination(observed, destination);
+
+        Assert.Equal("Metal Rich", enriched.RingClass);
+        Assert.Equal("Pristine", enriched.ReserveLevel);
+        Assert.Equal(["Monazite"], enriched.HotspotCommodityIds);
+
+        MiningRingContextSnapshot authoritative =
+            MiningRingContextService.EnrichFromDestination(
+                observed with
+                {
+                    RingClass = "eRingClass_Rocky",
+                    ReserveLevel = "$MajorResources;"
+                },
+                destination);
+
+        Assert.Equal("eRingClass_Rocky", authoritative.RingClass);
+        Assert.Equal("$MajorResources;", authoritative.ReserveLevel);
+    }
+
+    [Fact]
+    public void DestinationMetadataIsNotAppliedToAnotherRing()
+    {
+        var destination = new MiningDestinationSnapshot
+        {
+            SystemName = "Test",
+            RingName = "Test 1 B Ring",
+            RingClass = "Metal Rich",
+            ReserveLevel = "Pristine"
+        };
+        var observed = new MiningRingContextSnapshot(
+            42,
+            "Test",
+            "Test 1 A Ring",
+            string.Empty,
+            string.Empty,
+            Array.Empty<string>());
+
+        MiningRingContextSnapshot enriched =
+            MiningRingContextService.EnrichFromDestination(observed, destination);
+
+        Assert.Empty(enriched.RingClass);
+        Assert.Empty(enriched.ReserveLevel);
+    }
+
+    [Fact]
     public void RingContextReadsScanAndSaaHotspot()
     {
         using var service = new MiningRingContextService();

@@ -136,6 +136,40 @@ public sealed class MiningRingContextService : IJournalDataConsumer, IDisposable
         }
     }
 
+    /// <summary>
+    /// Fills journal metadata gaps from the exact user-selected destination.
+    /// Journal observations remain authoritative whenever they contain a value.
+    /// </summary>
+    internal static MiningRingContextSnapshot EnrichFromDestination(
+        MiningRingContextSnapshot ring,
+        MiningDestinationSnapshot destination)
+    {
+        ArgumentNullException.ThrowIfNull(ring);
+        ArgumentNullException.ThrowIfNull(destination);
+
+        if (!ring.Available
+            || !destination.Available
+            || !ring.SystemName.Equals(
+                destination.SystemName,
+                StringComparison.OrdinalIgnoreCase)
+            || !ring.RingName.Equals(
+                destination.RingName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return ring;
+        }
+
+        return ring with
+        {
+            RingClass = string.IsNullOrWhiteSpace(ring.RingClass)
+                ? destination.RingClass
+                : ring.RingClass,
+            ReserveLevel = string.IsNullOrWhiteSpace(ring.ReserveLevel)
+                ? destination.ReserveLevel
+                : ring.ReserveLevel
+        };
+    }
+
     private static MiningRingContextSnapshot? ResolveUnambiguous(
         IReadOnlyList<MutableRingContext> candidates) =>
         candidates.Count == 1

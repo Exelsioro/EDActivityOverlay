@@ -539,6 +539,9 @@
     <sys:String x:Key="Loc_Notification_Terraformable_Format">Terraformable body detected: {0}.</sys:String>
     <sys:String x:Key="Loc_Notification_NeutronStar_Format">Neutron star detected: {0}.</sys:String>
     <sys:String x:Key="Loc_Notification_BlackHole_Format">Black hole detected: {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_First_Discovery_And_Mapping_Format">First discovery and first mapping candidate: {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_First_Discovery_Format">First discovery candidate: {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_First_Mapping_Format">First mapping candidate: {0}.</sys:String>
     <sys:String x:Key="Loc_Notification_Severity_Information">INFO</sys:String>
     <sys:String x:Key="Loc_Notification_Severity_Success">SUCCESS</sys:String>
     <sys:String x:Key="Loc_Notification_Severity_Warning">WARNING</sys:String>
@@ -820,6 +823,10 @@
     <sys:String x:Key="Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT">ROUTE → {0} • stop {1}/{2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_VISIT_FORMAT">FIRST VISIT CANDIDATE · {0}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_VISITED_BEFORE_FORMAT">VISITED BEFORE · {0} · last {1}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VISIT_PHASE_JUMP">CURRENT JUMP</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VISIT_PHASE_ARRIVED">ARRIVAL</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_NO_PERSONAL_HISTORY_FORMAT">{0} · {1} · NOT IN PERSONAL HISTORY</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_PERSONAL_HISTORY_FORMAT">{0} · {1} · LAST VISIT {2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">FIRST DISCOVERY?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">FIRST MAPPING?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">First discovery candidate (journal: WasDiscovered=false).</sys:String>
@@ -1251,6 +1258,7 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_DECISION_MINE">MINE</sys:String>
     <sys:String x:Key="Loc_MINING_DECISION_SKIP">SKIP</sys:String>
     <sys:String x:Key="Loc_MINING_DECISION_CORE">CORE</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_CORE_OPPORTUNITY">CORE · OUTSIDE TARGETS</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_LASER">LASER</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_CORE">CORE</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_UNKNOWN">UNKNOWN</sys:String>
@@ -1297,7 +1305,8 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_PHASE_MINING">MINING</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_PHASE_NEAR_FULL">NEAR FULL</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_PHASE_FULL">CARGO FULL</sys:String>
-    <sys:String x:Key="Loc_MINING_INTEL_FIELD_UNKNOWN">FIELD ?</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_UNKNOWN">FIELD QUALITY · NO DATA</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_WARMING_FORMAT">FIELD QUALITY · {0}/{1}</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_FIELD_GOOD">FIELD GOOD</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_FIELD_STABLE">FIELD STABLE</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_FIELD_DECLINING">FIELD DECLINING</sys:String>
@@ -1326,6 +1335,9 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_TARGETS_FORMAT">TARGETS {0} · min {1:0.#}%</sys:String>
     <sys:String x:Key="Loc_MINING_PRICE_FORMAT">~{0} CR/t</sys:String>
     <sys:String x:Key="Loc_MINING_PRICE_UNAVAILABLE">price —</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_LOADING">price loading</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_NO_RECENT_DATA">no recent prices</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_PROVIDER_ERROR">price API error</sys:String>
     <sys:String x:Key="Loc_MINING_PRICE_TOOLTIP">Approximate nearby median station sell price from Ardent, within 80 LY, data up to 3 days old. Fleet Carriers excluded. Asteroid percentage does not alter market price.</sys:String>
     <sys:String x:Key="Loc_MINING_RING_CONTEXT_FORMAT">{0} · {1}</sys:String>
     <sys:String x:Key="Loc_MINING_MARKET_CONTEXT_FORMAT">NEARBY MEDIAN · {0}</sys:String>
@@ -1446,6 +1458,7 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_MINING_LOCATION_RES_LOW">LOW RES</sys:String>
     <sys:String x:Key="Loc_MINING_DESTINATION">MINING DESTINATION</sys:String>
     <sys:String x:Key="Loc_MINING_DESTINATION_IN_SYSTEM">DESTINATION · IN SYSTEM</sys:String>
+    <sys:String x:Key="Loc_MINING_DESTINATION_BODY_FORMAT">{0} · BODY {1}</sys:String>
     <sys:String x:Key="Loc_MINING_CURRENT_RING">CURRENT RING</sys:String>
     <sys:String x:Key="Loc_MINING_CURRENT_LOCATION_FORMAT">NOW · {0}</sys:String>
     <sys:String x:Key="Loc_MINING_CURRENT_LOCATION_RING_FORMAT">NOW · {0} · {1}</sys:String>
@@ -1456,6 +1469,8 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_FSD_COOLDOWN">FSD COOLDOWN</sys:String>
     <sys:String x:Key="Loc_SCO_COMBINED_COOLDOWN">FSD CD | SCO ~{0:0.0}s</sys:String>
     <sys:String x:Key="Loc_SCO_ESTIMATED_COOLDOWN">SCO CD ~{0:0.0}s</sys:String>
+    <sys:String x:Key="Loc_SUPPORT_DEVELOPER">SUPPORT DEVELOPER</sys:String>
+    <sys:String x:Key="Loc_SUPPORT_DEVELOPER_HINT">Open the ED Activity Overlay page on Ko-fi</sys:String>
 </ResourceDictionary>
 
 

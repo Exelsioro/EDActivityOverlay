@@ -26,6 +26,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         MiningSessionService.Instance.Changed += OnMiningSessionChanged;
         MiningEngineeringMaterialTrackerService.Instance.Changed += OnMiningEngineeringMaterialsChanged;
         MiningRingContextService.Instance.Changed += OnMiningRingContextChanged;
+        MiningDestinationService.Instance.Changed += OnMiningDestinationChanged;
         MiningMarketPriceService.Instance.Changed += OnMiningMarketPriceChanged;
         LoadTargetInputs();
         RefreshTargetInputEnabledState();
@@ -92,6 +93,24 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             new Action(RefreshPresentation));
     }
 
+    private void OnMiningDestinationChanged(
+        object? sender,
+        MiningDestinationChangedEventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            RequestMarketRefresh();
+            RefreshPresentation();
+            return;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            RequestMarketRefresh();
+            RefreshPresentation();
+        }));
+    }
+
     private void RefreshPresentation()
     {
         AppSettings settings = SettingsService.Instance.Settings;
@@ -156,13 +175,15 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
                 prospect,
                 prices,
                 selection.CommodityIds);
-            DecisionText.Text = Loc.Get(advice.Decision switch
-            {
-                MiningProspectDecision.Mine => "Loc_MINING_DECISION_MINE",
-                MiningProspectDecision.Skip => "Loc_MINING_DECISION_SKIP",
-                MiningProspectDecision.Core => "Loc_MINING_DECISION_CORE",
-                _ => "Loc_MINING_DECISION_NO_TARGET"
-            });
+            DecisionText.Text = advice.HasCoreOpportunity
+                ? Loc.Get("Loc_MINING_DECISION_CORE_OPPORTUNITY")
+                : Loc.Get(advice.Decision switch
+                {
+                    MiningProspectDecision.Mine => "Loc_MINING_DECISION_MINE",
+                    MiningProspectDecision.Skip => "Loc_MINING_DECISION_SKIP",
+                    MiningProspectDecision.Core => "Loc_MINING_DECISION_CORE",
+                    _ => "Loc_MINING_DECISION_NO_TARGET"
+                });
 
             MiningExtractionMethod method = advice.RecommendedMethod;
             string methodLabel = Loc.Get(method switch
@@ -205,7 +226,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
             : Visibility.Visible;
         SellCargoButton.IsEnabled = HasSellableMiningCargo(currentJournal);
 
-        IntelligenceText.Text = BuildIntelligenceText(intelligence);
+        IntelligenceText.Text = BuildIntelligenceText(intelligence, currentSession);
 
         string engineeringMaterials = BuildEngineeringMaterialsText(
             MiningEngineeringMaterialTrackerService.Instance.Current);
@@ -450,6 +471,7 @@ public partial class MiningWorkspaceControl : UserControl, IDisposable
         MiningSessionService.Instance.Changed -= OnMiningSessionChanged;
         MiningEngineeringMaterialTrackerService.Instance.Changed -= OnMiningEngineeringMaterialsChanged;
         MiningRingContextService.Instance.Changed -= OnMiningRingContextChanged;
+        MiningDestinationService.Instance.Changed -= OnMiningDestinationChanged;
         MiningMarketPriceService.Instance.Changed -= OnMiningMarketPriceChanged;
     }
 }

@@ -47,7 +47,6 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock x:Name="DestinationLabelText"
                                        FontSize="7"
@@ -72,16 +71,8 @@
                                        FontWeight="Bold"
                                        TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource PrimaryTextColorBrush}"/>
-                            <TextBlock x:Name="DestinationBodyText"
-                                       Grid.Row="2"
-                                       Grid.ColumnSpan="2"
-                                       Margin="0,1,0,0"
-                                       FontSize="10"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis"
-                                       Foreground="{DynamicResource AccentColorBrush}"/>
                             <TextBlock x:Name="DestinationMetaText"
-                                       Grid.Row="3"
+                                       Grid.Row="2"
                                        Grid.ColumnSpan="2"
                                        Margin="0,2,0,0"
                                        FontSize="8"

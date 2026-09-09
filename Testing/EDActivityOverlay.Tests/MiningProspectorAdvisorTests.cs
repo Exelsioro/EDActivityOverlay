@@ -86,6 +86,21 @@ public sealed class MiningProspectorAdvisorTests
         Assert.Equal(MiningProspectDecision.Skip, advice.Decision);
         Assert.Equal(MiningExtractionMethod.Core, advice.RecommendedMethod);
         Assert.Equal(MiningExtractionMethod.Unknown, advice.TargetMethod);
+        Assert.True(advice.HasCoreOpportunity);
+        Assert.Equal("alexandrite", advice.OpportunityCommodityId);
+        Assert.Equal("Alexandrite", advice.OpportunityDisplayName);
+    }
+
+    [Fact]
+    public void MatchingCoreTargetIsNotReportedAsOutsideTargetOpportunity()
+    {
+        MiningProspectAdvice advice = MiningProspectorAdvisor.Evaluate(
+            Prospect(1, "alexandrite", "Alexandrite"),
+            "Alexandrite",
+            25);
+
+        Assert.Equal(MiningProspectDecision.Core, advice.Decision);
+        Assert.False(advice.HasCoreOpportunity);
     }
 
     [Fact]

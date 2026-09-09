@@ -93,7 +93,9 @@ internal static class X52MiningCopilotFormatter
                 result,
                 9,
                 10,
-                advice.Decision switch
+                advice.HasCoreOpportunity
+                    ? LedColor.Amber
+                    : advice.Decision switch
                 {
                     MiningProspectDecision.Mine => LedColor.Green,
                     MiningProspectDecision.Core => LedColor.Amber,
@@ -152,13 +154,15 @@ internal static class X52MiningCopilotFormatter
                     targetCommodity,
                     threshold);
 
-            string decision = advice.Decision switch
-            {
-                MiningProspectDecision.Mine => "MINE",
-                MiningProspectDecision.Skip => "SKIP",
-                MiningProspectDecision.Core => "CORE",
-                _ => "NO TARGET"
-            };
+            string decision = advice.HasCoreOpportunity
+                ? "CORE ALT"
+                : advice.Decision switch
+                {
+                    MiningProspectDecision.Mine => "MINE",
+                    MiningProspectDecision.Skip => "SKIP",
+                    MiningProspectDecision.Core => "CORE",
+                    _ => "NO TARGET"
+                };
 
             return advice.TargetProportion is { } proportion
                 ? $"{decision} {proportion:0.#}%"

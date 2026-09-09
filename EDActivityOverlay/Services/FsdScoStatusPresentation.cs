@@ -1,4 +1,3 @@
-using System.Globalization;
 using EDActivityOverlay.Models;
 
 namespace EDActivityOverlay.Services;
@@ -16,24 +15,12 @@ internal static class FsdScoStatusPresentation
             return "SCO ACTIVE";
         }
 
-        double remaining =
-            state.GetScoCooldownRemainingSeconds(
-                now ?? DateTimeOffset.UtcNow);
-
-        if (state.FsdCooldown
-            && remaining > 0)
-        {
-            return $"FSD+SCO ~{FormatSeconds(remaining)}";
-        }
-
         if (state.FsdCooldown)
         {
             return "FSD COOLDOWN";
         }
 
-        return remaining > 0
-            ? $"SCO CD ~{FormatSeconds(remaining)}"
-            : string.Empty;
+        return string.Empty;
     }
 
     public static string BuildOverlay(
@@ -47,27 +34,11 @@ internal static class FsdScoStatusPresentation
             return Loc.Get("Loc_SCO_ACTIVE");
         }
 
-        double remaining =
-            state.GetScoCooldownRemainingSeconds(
-                now ?? DateTimeOffset.UtcNow);
-
-        if (state.FsdCooldown
-            && remaining > 0)
-        {
-            return Loc.Format("Loc_SCO_COMBINED_COOLDOWN", remaining);
-        }
-
         if (state.FsdCooldown)
         {
             return Loc.Get("Loc_FSD_COOLDOWN");
         }
 
-        return remaining > 0
-            ? Loc.Format("Loc_SCO_ESTIMATED_COOLDOWN", remaining)
-            : string.Empty;
+        return string.Empty;
     }
-
-    private static string FormatSeconds(
-        double seconds) =>
-        $"{seconds.ToString("0.0", CultureInfo.InvariantCulture)}s";
 }

@@ -539,6 +539,9 @@
     <sys:String x:Key="Loc_Notification_Terraformable_Format">Обнаружено тело, пригодное для терраформирования: {0}.</sys:String>
     <sys:String x:Key="Loc_Notification_NeutronStar_Format">Обнаружена нейтронная звезда: {0}.</sys:String>
     <sys:String x:Key="Loc_Notification_BlackHole_Format">Обнаружена чёрная дыра: {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_First_Discovery_And_Mapping_Format">Кандидат на первое открытие и первую картографию: {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_First_Discovery_Format">Кандидат на первое открытие: {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_First_Mapping_Format">Кандидат на первую картографию: {0}.</sys:String>
     <sys:String x:Key="Loc_Notification_Severity_Information">ИНФО</sys:String>
     <sys:String x:Key="Loc_Notification_Severity_Success">УСПЕХ</sys:String>
     <sys:String x:Key="Loc_Notification_Severity_Warning">ВНИМАНИЕ</sys:String>
@@ -820,6 +823,10 @@
     <sys:String x:Key="Loc_EXPLORATION_ROUTE_NEXT_HUD_FORMAT">МАРШРУТ → {0} • точка {1}/{2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_VISIT_FORMAT">ПЕРВЫЙ ВИЗИТ? · {0}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_VISITED_BEFORE_FORMAT">УЖЕ ПОСЕЩАЛАСЬ · {0} · последний визит {1}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VISIT_PHASE_JUMP">ТЕКУЩИЙ ПРЫЖОК</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_VISIT_PHASE_ARRIVED">ПРИБЫТИЕ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_NO_PERSONAL_HISTORY_FORMAT">{0} · {1} · НЕТ В ЛИЧНОЙ ИСТОРИИ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_PERSONAL_HISTORY_FORMAT">{0} · {1} · ПОСЛЕДНИЙ ВИЗИТ {2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">ПЕРВОЕ ОТКРЫТИЕ?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">ПЕРВАЯ КАРТОГРАФИЯ?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">Кандидат на первое открытие (в журнале: WasDiscovered=false).</sys:String>
@@ -1251,6 +1258,7 @@
     <sys:String x:Key="Loc_MINING_DECISION_MINE">КОПАТЬ</sys:String>
     <sys:String x:Key="Loc_MINING_DECISION_SKIP">ПРОПУСТИТЬ</sys:String>
     <sys:String x:Key="Loc_MINING_DECISION_CORE">ЯДРО</sys:String>
+    <sys:String x:Key="Loc_MINING_DECISION_CORE_OPPORTUNITY">ЯДРО · ВНЕ ЦЕЛЕЙ</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_LASER">ЛАЗЕР</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_CORE">ЯДРО</sys:String>
     <sys:String x:Key="Loc_MINING_METHOD_UNKNOWN">НЕИЗВЕСТНО</sys:String>
@@ -1297,7 +1305,8 @@
     <sys:String x:Key="Loc_MINING_INTEL_PHASE_MINING">ДОБЫЧА</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_PHASE_NEAR_FULL">ТРЮМ ПОЧТИ ПОЛОН</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_PHASE_FULL">ТРЮМ ПОЛОН</sys:String>
-    <sys:String x:Key="Loc_MINING_INTEL_FIELD_UNKNOWN">ПОЛЕ ?</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_UNKNOWN">КАЧЕСТВО УЧАСТКА · НЕТ ДАННЫХ</sys:String>
+    <sys:String x:Key="Loc_MINING_INTEL_FIELD_WARMING_FORMAT">КАЧЕСТВО УЧАСТКА · {0}/{1}</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_FIELD_GOOD">ПОЛЕ ХОРОШЕЕ</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_FIELD_STABLE">ПОЛЕ СТАБИЛЬНО</sys:String>
     <sys:String x:Key="Loc_MINING_INTEL_FIELD_DECLINING">ПОЛЕ УХУДШАЕТСЯ</sys:String>
@@ -1326,6 +1335,9 @@
     <sys:String x:Key="Loc_MINING_TARGETS_FORMAT">ЦЕЛИ {0} · мин. {1:0.#}%</sys:String>
     <sys:String x:Key="Loc_MINING_PRICE_FORMAT">~{0} кр./т</sys:String>
     <sys:String x:Key="Loc_MINING_PRICE_UNAVAILABLE">цена —</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_LOADING">цена загружается</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_NO_RECENT_DATA">нет свежих цен</sys:String>
+    <sys:String x:Key="Loc_MINING_PRICE_PROVIDER_ERROR">ошибка API цен</sys:String>
     <sys:String x:Key="Loc_MINING_PRICE_TOOLTIP">Приблизительная медианная цена продажи станциям по Ardent в радиусе 80 св. лет, данные не старше 3 дней. Fleet Carrier исключены. Процент содержания в астероиде не изменяет рыночную цену.</sys:String>
     <sys:String x:Key="Loc_MINING_RING_CONTEXT_FORMAT">{0} · {1}</sys:String>
     <sys:String x:Key="Loc_MINING_MARKET_CONTEXT_FORMAT">МЕДИАНА РЯДОМ · {0}</sys:String>
@@ -1446,6 +1458,7 @@
     <sys:String x:Key="Loc_MINING_LOCATION_RES_LOW">LOW RES</sys:String>
     <sys:String x:Key="Loc_MINING_DESTINATION">ТОЧКА ДОБЫЧИ</sys:String>
     <sys:String x:Key="Loc_MINING_DESTINATION_IN_SYSTEM">ТОЧКА ДОБЫЧИ · В СИСТЕМЕ</sys:String>
+    <sys:String x:Key="Loc_MINING_DESTINATION_BODY_FORMAT">{0} · ТЕЛО {1}</sys:String>
     <sys:String x:Key="Loc_MINING_CURRENT_RING">ТЕКУЩЕЕ КОЛЬЦО</sys:String>
     <sys:String x:Key="Loc_MINING_CURRENT_LOCATION_FORMAT">СЕЙЧАС · {0}</sys:String>
     <sys:String x:Key="Loc_MINING_CURRENT_LOCATION_RING_FORMAT">СЕЙЧАС · {0} · {1}</sys:String>
@@ -1456,6 +1469,8 @@
     <sys:String x:Key="Loc_FSD_COOLDOWN">ОХЛАЖДЕНИЕ FSD</sys:String>
     <sys:String x:Key="Loc_SCO_COMBINED_COOLDOWN">ОХЛАЖДЕНИЕ FSD | SCO ~{0:0.0} с</sys:String>
     <sys:String x:Key="Loc_SCO_ESTIMATED_COOLDOWN">ОХЛАЖДЕНИЕ SCO ~{0:0.0} с</sys:String>
+    <sys:String x:Key="Loc_SUPPORT_DEVELOPER">ПОДДЕРЖАТЬ РАЗРАБОТЧИКА</sys:String>
+    <sys:String x:Key="Loc_SUPPORT_DEVELOPER_HINT">Открыть страницу ED Activity Overlay на Ko-fi</sys:String>
 </ResourceDictionary>
 
 

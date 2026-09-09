@@ -1,12 +1,14 @@
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
+using EDActivityOverlay.Services.Mining;
 
 namespace EDActivityOverlay.UserControls;
 
 public partial class MiningWorkspaceControl
 {
     private static string BuildIntelligenceText(
-        MiningIntelligenceSnapshot intelligence)
+        MiningIntelligenceSnapshot intelligence,
+        MiningSessionSnapshot session)
     {
         var lines = new List<string>();
 
@@ -21,8 +23,16 @@ public partial class MiningWorkspaceControl
                 _ => "Loc_MINING_INTEL_PHASE_IDLE"
             });
 
-        string field = Loc.Get(
-            intelligence.FieldQuality switch
+        string field = intelligence.FieldQuality == MiningFieldQuality.Unknown
+            && session.IsActive
+            ? Loc.Format(
+                "Loc_MINING_INTEL_FIELD_WARMING_FORMAT",
+                Math.Min(
+                    session.ProspectedAsteroids,
+                    MiningIntelligenceCalculator.FieldQualityMinimumProspects),
+                MiningIntelligenceCalculator.FieldQualityMinimumProspects)
+            : Loc.Get(
+                intelligence.FieldQuality switch
             {
                 MiningFieldQuality.Good => "Loc_MINING_INTEL_FIELD_GOOD",
                 MiningFieldQuality.Stable => "Loc_MINING_INTEL_FIELD_STABLE",

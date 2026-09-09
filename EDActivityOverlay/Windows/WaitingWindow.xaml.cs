@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Windows;
-using System.Windows.Navigation;
 using System.Windows.Threading;
 using EDActivityOverlay.Utils;
 using EDActivityOverlay.Services;
@@ -189,26 +187,9 @@ namespace EDActivityOverlay.Windows
             }
         }
 
-        private void KofiLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        private void SupportDeveloperButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                Logger.Logger.Info($"User clicked Ko-fi link: {e.Uri}");
-                Logger.Logger.LogUserAction("Ko-fi link clicked", new { Uri = e.Uri.ToString() });
-                
-                // Open the URL in the default browser
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = e.Uri.AbsoluteUri,
-                    UseShellExecute = true
-                });
-                
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Logger.Error($"Error opening Ko-fi link: {ex.Message}");
-            }
+            ProjectSupportService.OpenKoFi();
         }
 
         private void StartOverlayButton_Click(object sender, RoutedEventArgs e)
