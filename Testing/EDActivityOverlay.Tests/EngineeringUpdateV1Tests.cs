@@ -17,6 +17,166 @@ public sealed class EngineeringUpdateV1Tests : IDisposable
             $"ed-overlay-engineering-update-{Guid.NewGuid():N}.db");
 
     [Fact]
+    public void EncodedJournalSymbolUpdatesCoriolisNamedRequirement()
+    {
+        using EngineeringService service =
+            CreateService();
+
+        BlueprintRecipe recipe =
+            Recipe(
+                "Encoded:G1",
+                1,
+                "atypicaldisruptedwakeechoes",
+                ingredientCount: 3);
+
+        service.Catalog.SetRecipesForTests(
+            [recipe]);
+
+        service.AddOrIncreaseWishlist(
+            recipe,
+            1);
+
+        using JsonDocument initial =
+            JsonDocument.Parse(
+                """
+                {
+                  "Raw":[],
+                  "Manufactured":[],
+                  "Encoded":[{"Name":"disruptedwakeechoes","Count":1}]
+                }
+                """);
+
+        service.OnJournalEvent(
+            new JournalEventReceivedEventArgs(
+                "Materials",
+                DateTimeOffset.Parse(
+                    "2026-09-04T10:00:00Z"),
+                initial.RootElement.Clone()));
+
+        MaterialRequirement before =
+            service.Current.Requirements
+                .Single(
+                    item =>
+                        item.MaterialId
+                        == "atypicaldisruptedwakeechoes");
+
+        Assert.Equal(1, before.Available);
+        Assert.Equal(2, before.Missing);
+
+        using JsonDocument collected =
+            JsonDocument.Parse(
+                """
+                {
+                  "Name":"disruptedwakeechoes",
+                  "Category":"Encoded",
+                  "Count":2
+                }
+                """);
+
+        service.OnJournalEvent(
+            new JournalEventReceivedEventArgs(
+                "MaterialCollected",
+                DateTimeOffset.Parse(
+                    "2026-09-04T10:01:00Z"),
+                collected.RootElement.Clone()));
+
+        MaterialRequirement after =
+            service.Current.Requirements
+                .Single(
+                    item =>
+                        item.MaterialId
+                        == "atypicaldisruptedwakeechoes");
+
+        Assert.Equal(3, after.Available);
+        Assert.Equal(0, after.Missing);
+        Assert.Equal(
+            EngineeringMaterialCategory.Encoded,
+            after.Category);
+    }
+
+    [Fact]
+    public void ManufacturedJournalAliasUpdatesRequirement()
+    {
+        using EngineeringService service =
+            CreateService();
+
+        BlueprintRecipe recipe =
+            Recipe(
+                "Manufactured:G1",
+                1,
+                "flawedfocuscrystals",
+                ingredientCount: 2);
+
+        service.Catalog.SetRecipesForTests(
+            [recipe]);
+
+        service.AddOrIncreaseWishlist(
+            recipe,
+            1);
+
+        using JsonDocument initial =
+            JsonDocument.Parse(
+                """
+                {
+                  "Raw":[],
+                  "Manufactured":[{"Name":"uncutfocuscrystals","Count":1}],
+                  "Encoded":[]
+                }
+                """);
+
+        service.OnJournalEvent(
+            new JournalEventReceivedEventArgs(
+                "Materials",
+                DateTimeOffset.Parse(
+                    "2026-09-04T11:00:00Z"),
+                initial.RootElement.Clone()));
+
+        using JsonDocument collected =
+            JsonDocument.Parse(
+                """
+                {
+                  "Name":"uncutfocuscrystals",
+                  "Category":"Manufactured",
+                  "Count":1
+                }
+                """);
+
+        service.OnJournalEvent(
+            new JournalEventReceivedEventArgs(
+                "MaterialCollected",
+                DateTimeOffset.Parse(
+                    "2026-09-04T11:01:00Z"),
+                collected.RootElement.Clone()));
+
+        MaterialRequirement requirement =
+            service.Current.Requirements
+                .Single(
+                    item =>
+                        item.MaterialId
+                        == "flawedfocuscrystals");
+
+        Assert.Equal(2, requirement.Available);
+        Assert.Equal(0, requirement.Missing);
+        Assert.Equal(
+            EngineeringMaterialCategory.Manufactured,
+            requirement.Category);
+    }
+
+    [Theory]
+    [InlineData("disruptedwakeechoes", "Atypical Disrupted Wake Echoes")]
+    [InlineData("dataminedwake", "Datamined Wake Exceptions")]
+    [InlineData("uncutfocuscrystals", "Flawed Focus Crystals")]
+    [InlineData("fedcorecomposites", "Core Dynamics Composites")]
+    public void FrontierJournalAndBlueprintNamesShareCanonicalMaterialIdentity(
+        string journalName,
+        string blueprintName)
+    {
+        Assert.Equal(
+            MaterialName.Normalize(blueprintName),
+            MaterialName.Normalize(journalName));
+    }
+
+    [Fact]
     public void FullGradePathUsesOneThroughFiveApplications()
     {
         using EngineeringService service =

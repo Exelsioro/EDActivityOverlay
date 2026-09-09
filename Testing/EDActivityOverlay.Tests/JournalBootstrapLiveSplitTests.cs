@@ -154,7 +154,7 @@ public sealed class JournalBootstrapLiveSplitTests
     }
 
     [Fact]
-    public void ExplorationLogOnlyExposesEntriesCreatedThisAppSession()
+    public void ExplorationLogExposesPersistedEntriesAcrossAppSessions()
     {
         string explorationLog =
             File.ReadAllText(
@@ -164,13 +164,18 @@ public sealed class JournalBootstrapLiveSplitTests
                     "Exploration",
                     "ExplorationLogService.cs"));
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "sessionEntryIds.Contains",
             explorationLog,
             StringComparison.Ordinal);
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             "sessionEntryIds.Add",
+            explorationLog,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            ".OrderByDescending(item => item.TimestampUtc)",
             explorationLog,
             StringComparison.Ordinal);
     }

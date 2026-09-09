@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
+using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Trading;
 
 namespace EDActivityOverlay.UserControls;
@@ -31,6 +32,20 @@ public partial class TradeWorkspaceControl
         new();
 
     private CargoSaleCandidate? selectedCargoSaleCandidate;
+
+    public event Action<CargoSaleCandidate>? CargoSalePinRequested;
+
+    public void ActivatePinnedCargoSale(
+        TradeRouteProgressTracker? tracker)
+    {
+        AttachExecutionTracker(
+            tracker);
+
+        SetFullMode(
+            false);
+
+        RefreshCompactPresentation();
+    }
 
     private bool IsCargoSaleMode =>
         string.Equals(
@@ -354,7 +369,8 @@ public partial class TradeWorkspaceControl
         CargoSaleCandidate? candidate)
     {
         PinRouteButton.IsEnabled =
-            false;
+            candidate is not null
+            && !candidate.IsCurrentMarket;
 
         ClearConfidence();
 
@@ -779,9 +795,11 @@ public partial class TradeWorkspaceControl
     private string SearchIdleResourceKey() =>
         IsCargoSaleMode
             ? "Loc_TRADE_CARGO_SEARCH"
-            : IsContinuousMode
-                ? "Loc_TRADE_CONTINUOUS_SEARCH"
-                : "Loc_SEARCH_ROUTES";
+            : IsCommodityLookupMode
+                ? "Loc_TRADE_FIND_COMMODITY"
+                : IsContinuousMode
+                    ? "Loc_TRADE_CONTINUOUS_SEARCH"
+                    : "Loc_SEARCH_ROUTES";
 
     private void ApplyCargoSaleControlAvailability(
         bool running)

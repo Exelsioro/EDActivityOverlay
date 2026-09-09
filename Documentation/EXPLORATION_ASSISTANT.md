@@ -23,7 +23,9 @@ owns overlay interaction and the cursor until **Close** is pressed, then restore
 the previous interaction state.
 
 The catalog supports text search and filters for notable, valuable, biological,
-unmapped and landable bodies. Selecting a body shows scan/mapping estimates,
+unmapped, first-discovery candidates, first-mapping candidates and landable bodies.
+Candidates are shown only when the journal explicitly reports the corresponding
+`WasDiscovered=false`/`WasMapped=false`; missing flags remain unknown. Selecting a body shows scan/mapping estimates,
 distance, gravity, temperature, atmosphere, volcanism, biological signals and
 the exact data source. System and body names can be copied independently.
 
@@ -52,6 +54,11 @@ Fuel advice uses `Status.json`, `Loadout`, observed jump consumption and
 `NavRoute.json`. It identifies the next scoopable star, estimates fuel needed to
 reach it and preserves an emergency reserve. It is a warning model rather than
 a replacement for the galaxy-map route plotter.
+
+When a system is selected as the next Galaxy Map target, the compact widget
+checks the commander-scoped visit history and displays either a first-visit
+candidate or the last recorded visit date. A missing community record is never
+treated as proof of a first discovery.
 
 ## Nearby points of interest
 
@@ -87,11 +94,13 @@ in `%APPDATA%\EDActivityOverlay\exploration-log.json`.
 
 The assistant reconstructs unsold Universal Cartographics and exobiology
 estimates from all available Journal files in a background task. Body values
-are replaced by their mapped result rather than double-counting Scan and DSS.
-`SellExplorationData`/`MultiSellExplorationData` reset the cartographic ledger;
-`SellOrganicData` resets the biological ledger. The result is explicitly shown
-as an estimate because first-discovery/first-mapped and exobiology bonuses can
-make the station's final payout differ.
+are kept at the highest observed stage, so a later basic Scan does not erase a
+mapped result. `SellExplorationData` and `MultiSellExplorationData` remove only
+the systems/bodies listed by the journal; an event without a sale scope retains
+the legacy full-sale behavior. `SellOrganicData.BioData` removes matching codex
+variants/species when they can be joined; unknown legacy identifiers remain
+estimated instead of clearing unrelated samples. First-discovery/first-mapped
+and exobiology bonuses can still make the station's final payout differ.
 
 ## Community-data disclosure
 
@@ -109,8 +118,9 @@ so it must remain an explicit choice.
 ## Persistence and limitations
 
 - Closed historical Journal files are imported in the background into
-  `%APPDATA%\EDActivityOverlay\companion.db`. The current Journal continues
-  through the live monitor and becomes importable after it is closed.
+  `%APPDATA%\EDActivityOverlay\companion.db`; the currently open file is
+  replayed through the monitor bootstrap and live accumulator, then becomes
+  importable after rotation/close.
 - Personal body history is keyed by commander, system and body and records
   scanning, mapping, efficiency, first-discovery/mapping evidence, biological
   signal counts and completed organic species. Re-importing an unchanged file

@@ -4,10 +4,18 @@ namespace EDActivityOverlay.Services.Exploration;
 
 internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository repository)
 {
-    private readonly Dictionary<int, (bool WasDiscovered, bool WasMapped, string Name)> scanFlags = new();
+    private readonly Dictionary<int, (bool? WasDiscovered, bool? WasMapped, string Name)> scanFlags = new();
     private string commander = string.Empty;
     private long systemAddress;
     private string systemName = string.Empty;
+
+    public void Reset()
+    {
+        scanFlags.Clear();
+        commander = string.Empty;
+        systemAddress = 0;
+        systemName = string.Empty;
+    }
 
     public bool Apply(JsonElement root)
     {
@@ -17,8 +25,18 @@ internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository
         {
             case "commander":
             case "loadgame":
-                commander = GetString(root, "Name", GetString(root, "Commander", commander));
+            {
+                string nextCommander = GetString(root, "Name", GetString(root, "Commander", commander));
+                if (!string.IsNullOrWhiteSpace(nextCommander)
+                    && !string.Equals(nextCommander, commander, StringComparison.OrdinalIgnoreCase))
+                {
+                    systemAddress = 0;
+                    systemName = string.Empty;
+                    scanFlags.Clear();
+                    commander = nextCommander;
+                }
                 return false;
+            }
             case "location":
             case "fsdjump":
             case "carrierjump":
@@ -26,68 +44,68 @@ internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository
                 repository.RecordVisit(commander, systemAddress, systemName, timestamp);
                 return true;
             case "scan":
-            {
-                SetSystemIfPresent(root);
-                int bodyId = GetInt(root, "BodyID", -1);
-                string bodyName = GetString(root, "BodyName");
-                bool wasDiscovered = GetBool(root, "WasDiscovered");
-                bool wasMapped = GetBool(root, "WasMapped");
-                if (bodyId >= 0) scanFlags[bodyId] = (wasDiscovered, wasMapped, bodyName);
-                repository.RecordBody(
-                    commander, systemAddress, systemName, bodyId, bodyName,
-                    GetString(root, "PlanetClass", GetString(root, "StarType")), timestamp,
-                    scanned: true,
-                    firstDiscovered: !wasDiscovered);
-                return true;
-            }
+                {
+                    SetSystemIfPresent(root);
+                    int bodyId = GetInt(root, "BodyID", -1);
+                    string bodyName = GetString(root, "BodyName");
+                    bool? wasDiscovered = GetNullableBool(root, "WasDiscovered");
+                    bool? wasMapped = GetNullableBool(root, "WasMapped");
+                    if (bodyId >= 0) scanFlags[bodyId] = (wasDiscovered, wasMapped, bodyName);
+                    repository.RecordBody(
+                        commander, systemAddress, systemName, bodyId, bodyName,
+                        GetString(root, "PlanetClass", GetString(root, "StarType")), timestamp,
+                        scanned: true,
+                        firstDiscovered: wasDiscovered == false);
+                    return true;
+                }
             case "saascancomplete":
-            {
-                SetSystemIfPresent(root);
-                int bodyId = GetInt(root, "BodyID", -1);
-                scanFlags.TryGetValue(bodyId, out var previous);
-                int used = GetInt(root, "ProbesUsed");
-                int target = GetInt(root, "EfficiencyTarget");
-                repository.RecordBody(
-                    commander, systemAddress, systemName, bodyId,
-                    GetString(root, "BodyName", previous.Name), string.Empty, timestamp,
-                    mapped: true,
-                    efficient: target > 0 && used > 0 && used <= target,
-                    firstMapped: !string.IsNullOrWhiteSpace(previous.Name) && !previous.WasMapped);
-                return true;
-            }
+                {
+                    SetSystemIfPresent(root);
+                    int bodyId = GetInt(root, "BodyID", -1);
+                    scanFlags.TryGetValue(bodyId, out var previous);
+                    int used = GetInt(root, "ProbesUsed");
+                    int target = GetInt(root, "EfficiencyTarget");
+                    repository.RecordBody(
+                        commander, systemAddress, systemName, bodyId,
+                        GetString(root, "BodyName", previous.Name), string.Empty, timestamp,
+                        mapped: true,
+                        efficient: target > 0 && used > 0 && used <= target,
+                        firstMapped: !string.IsNullOrWhiteSpace(previous.Name) && previous.WasMapped == false);
+                    return true;
+                }
             case "fssbodysignals":
             case "saasignalsfound":
-            {
-                SetSystemIfPresent(root);
-                int bodyId = GetInt(root, "BodyID", -1);
-                string bodyName = GetString(root, "BodyName");
-                repository.RecordBody(
-                    commander, systemAddress, systemName,
-                    bodyId, bodyName, string.Empty, timestamp,
-                    biologicalSignals: ReadBiologicalSignals(root));
-                repository.RecordBodyGenuses(
-                    commander, systemAddress, systemName,
-                    bodyId, bodyName, ReadGenuses(root), timestamp);
-                return true;
-            }
+                {
+                    SetSystemIfPresent(root);
+                    int bodyId = GetInt(root, "BodyID", -1);
+                    string bodyName = GetString(root, "BodyName");
+                    repository.RecordBody(
+                        commander, systemAddress, systemName,
+                        bodyId, bodyName, string.Empty, timestamp,
+                        biologicalSignals: ReadBiologicalSignals(root));
+                    repository.RecordBodyGenuses(
+                        commander, systemAddress, systemName,
+                        bodyId, bodyName, ReadGenuses(root), timestamp);
+                    return true;
+                }
             case "scanorganic":
-            {
-                SetSystemIfPresent(root);
-                int bodyId = GetInt(root, "Body", GetInt(root, "BodyID", -1));
-                scanFlags.TryGetValue(bodyId, out var previous);
-                string variant = GetString(root, "Variant");
-                string species = GetString(root, "Species");
-                repository.RecordOrganic(
-                    commander, systemAddress, systemName, bodyId, previous.Name,
-                    GetString(root, "Species"), GetLocalized(root, "Species"),
-                    GetString(root, "ScanType").Equals("Analyse", StringComparison.OrdinalIgnoreCase),
-                    timestamp,
-                    genusKey: GetString(root, "Genus"),
-                    genusName: GetLocalized(root, "Genus"),
-                    variantKey: variant,
-                    variantName: GetLocalized(root, "Variant"));
-                return true;
-            }
+                {
+                    SetSystemIfPresent(root);
+                    int bodyId = GetInt(root, "Body", GetInt(root, "BodyID", -1));
+                    scanFlags.TryGetValue(bodyId, out var previous);
+                    string variant = GetString(root, "Variant");
+                    string species = GetString(root, "Species");
+                    repository.RecordOrganic(
+                        commander, systemAddress, systemName, bodyId, previous.Name,
+                        GetString(root, "Species"), GetLocalized(root, "Species"),
+                        GetString(root, "ScanType").Equals("Analyse", StringComparison.OrdinalIgnoreCase),
+                        timestamp,
+                        genusKey: GetString(root, "Genus"),
+                        genusName: GetLocalized(root, "Genus"),
+                        variantKey: variant,
+                        variantName: GetLocalized(root, "Variant"));
+                    return true;
+                }
             default:
                 return false;
         }
@@ -152,10 +170,11 @@ internal sealed class ExplorationHistoryAccumulator(ExplorationHistoryRepository
     private static long GetLong(JsonElement root, string name, long fallback = 0) =>
         root.TryGetProperty(name, out JsonElement value) && value.TryGetInt64(out long result) ? result : fallback;
 
-    private static bool GetBool(JsonElement root, string name) =>
+    private static bool? GetNullableBool(JsonElement root, string name) =>
         root.TryGetProperty(name, out JsonElement value)
         && value.ValueKind is JsonValueKind.True or JsonValueKind.False
-        && value.GetBoolean();
+            ? value.GetBoolean()
+            : null;
 
     private static DateTimeOffset GetTimestamp(JsonElement root) =>
         DateTimeOffset.TryParse(GetString(root, "timestamp"), out DateTimeOffset value)

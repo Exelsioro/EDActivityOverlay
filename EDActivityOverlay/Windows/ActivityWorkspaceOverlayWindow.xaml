@@ -79,6 +79,13 @@
                         </Grid>
                     </Border>
 
+                    <TextBlock x:Name="DestinationVisitStatusText"
+                               Margin="9,0,9,7"
+                               TextWrapping="Wrap"
+                               FontSize="9"
+                               Foreground="{DynamicResource AccentColorBrush}"
+                               Visibility="Collapsed"/>
+
                     <Border x:Name="SystemContextPanel"
                             Padding="9,7" Margin="0,0,0,7"
                             Background="{DynamicResource SecondaryBackgroundColorBrush}"

@@ -597,7 +597,69 @@
 
                                 <CheckBox x:Name="EnableX52LedCheckBox" Content="{DynamicResource Loc_Control_X52_lighting_from_game_state}" Margin="14,0,0,9" />
 
-                                <CheckBox x:Name="EnableX52ControlsCheckBox" Content="{DynamicResource Loc_Use_X52_MFD_wheel_for_activity_widgets}" Margin="14,0,0,14" />
+                                <CheckBox x:Name="EnableX52ControlsCheckBox" Content="{DynamicResource Loc_Use_X52_MFD_wheel_for_activity_widgets}" Margin="14,0,0,9" />
+
+                                <CheckBox x:Name="EnableExperimentalX52MiningCopilotCheckBox"
+                                          Content="{DynamicResource Loc_X52_MINING_COPILOT_EXPERIMENTAL}"
+                                          Foreground="{DynamicResource AccentColorBrush}"
+                                          Margin="14,0,0,14" />
+
+                                <TextBlock Text="{DynamicResource Loc_X52_STARTUP_PROFILE}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" />
+
+                                <TextBlock Text="{DynamicResource Loc_X52_PROFILE_FILE}"
+                                           Margin="0,6,0,4"
+                                           Foreground="{DynamicResource SecondaryTextColorBrush}" />
+
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <ComboBox x:Name="X52StartupProfileComboBox"
+                                              Height="30"
+                                              DisplayMemberPath="Label"
+                                              SelectionChanged="X52StartupProfileComboBox_SelectionChanged" />
+
+                                    <Button Grid.Column="1"
+                                            Content="{DynamicResource Loc_BROWSE}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="8,0,0,0"
+                                            Click="BrowseX52StartupProfileButton_Click" />
+                                </Grid>
+
+                                <TextBlock x:Name="X52StartupProfileStatusText"
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource PrimaryTextColorBrush}" />
+
+                                <WrapPanel Margin="0,8,0,14">
+                                    <Button x:Name="ConfigureX52StartupProfileButton"
+                                            Content="{DynamicResource Loc_X52_SET_STARTUP_PROFILE}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="0,0,8,6"
+                                            Click="ConfigureX52StartupProfileButton_Click" />
+                                    <Button x:Name="ApplyX52StartupProfileNowButton"
+                                            Content="{DynamicResource Loc_X52_APPLY_PROFILE_NOW}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="0,0,8,6"
+                                            Click="ApplyX52StartupProfileNowButton_Click" />
+                                    <Button x:Name="RestoreX52StartupProfileButton"
+                                            Content="{DynamicResource Loc_X52_RESTORE_STARTUP_PROFILE}"
+                                            Height="30"
+                                            Padding="10,3"
+                                            Margin="0,0,0,6"
+                                            Click="RestoreX52StartupProfileButton_Click" />
+                                </WrapPanel>
+
+                                <TextBlock Text="{DynamicResource Loc_X52_STARTUP_PROFILE_HINT}"
+                                           Margin="0,0,0,14"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextColorBrush}"
+                                           FontSize="10" />
 
                                 <TextBlock Text="{DynamicResource Loc_CURRENT_STATUS}" Foreground="{DynamicResource AccentColorBrush}" FontWeight="Bold" />
 

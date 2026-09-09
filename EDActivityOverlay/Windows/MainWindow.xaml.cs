@@ -40,12 +40,9 @@ namespace EDActivityOverlay
         private ShipStatusOverlayWindow? shipStatusOverlayWindow;
         private DssPrototypeController? dssPrototypeController;
         private readonly X52OverlayPointerController x52OverlayPointerController;
-        private bool isToggleActive = false;
         private bool isResultsActive = false;
         private bool isPinnedRouteActive = false;
         private bool overlaysSuppressedByHotkey = false;
-        private bool restoreTradeVisible = false;
-        private bool restoreResultsVisible = false;
         private bool restorePinnedVisible = false;
         private bool restoreEngineeringVisible = false;
         private bool forceVisible = false; // Flag to ensure visibility after target detection

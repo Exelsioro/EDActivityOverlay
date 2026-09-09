@@ -758,7 +758,7 @@ public partial class TradeRouteWindow
                 ex.Message;
 
             constraints =
-                null;
+                null!;
 
             return
                 false;

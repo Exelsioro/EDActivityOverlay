@@ -191,6 +191,7 @@ public sealed class TradeSearchService
                     stopwatch.Elapsed
             };
 
+        using var workerCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var gate =
             new SemaphoreSlim(
                 constraints.MaxConcurrentCommoditySearches,
@@ -206,7 +207,7 @@ public sealed class TradeSearchService
                             constraints,
                             originOrdersByCommodity,
                             gate,
-                            cancellationToken))
+                            workerCancellation.Token))
                 .ToList();
 
         IReadOnlyList<TradeRouteCandidate> best =
@@ -218,66 +219,78 @@ public sealed class TradeSearchService
         int failedCount =
             0;
 
-        while (pending.Count > 0)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            while (pending.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
 
-            Task<CommoditySearchOutcome> finished =
-                await Task.WhenAny(
-                        pending)
-                    .ConfigureAwait(
+                Task<CommoditySearchOutcome> finished =
+                    await Task.WhenAny(
+                            pending)
+                        .ConfigureAwait(
+                            false);
+
+                pending.Remove(
+                    finished);
+
+                CommoditySearchOutcome outcome =
+                    await finished.ConfigureAwait(
                         false);
 
-            pending.Remove(
-                finished);
+                completedCount++;
 
-            CommoditySearchOutcome outcome =
-                await finished.ConfigureAwait(
-                    false);
-
-            completedCount++;
-
-            if (outcome.Error is not null)
-            {
-                failedCount++;
-            }
-            else if (outcome.Candidates.Count > 0)
-            {
-                best =
-                    MergeTopCandidates(
-                        best,
-                        outcome.Candidates,
-                        constraints.MaxResults,
-                        constraints);
-            }
-
-            yield return
-                new TradeSearchProgress
+                if (outcome.Error is not null)
                 {
-                    Stage =
-                        TradeSearchStage.Searching,
-                    Origin =
-                        origin,
-                    CommodityReportsAvailable =
-                        reports.Count,
-                    TotalCommodities =
-                        shortlisted.Length,
-                    CompletedCommodities =
-                        completedCount,
-                    FailedCommodities =
-                        failedCount,
-                    CompletedCommodity =
-                        outcome.CommodityName,
-                    LastError =
-                        outcome.Error?.Message
-                        ?? string.Empty,
-                    NewCandidateCount =
-                        outcome.Candidates.Count,
-                    BestCandidates =
-                        best,
-                    Elapsed =
-                        stopwatch.Elapsed
-                };
+                    failedCount++;
+                }
+                else if (outcome.Candidates.Count > 0)
+                {
+                    best =
+                        MergeTopCandidates(
+                            best,
+                            outcome.Candidates,
+                            constraints.MaxResults,
+                            constraints);
+                }
+
+                yield return
+                    new TradeSearchProgress
+                    {
+                        Stage =
+                            TradeSearchStage.Searching,
+                        Origin =
+                            origin,
+                        CommodityReportsAvailable =
+                            reports.Count,
+                        TotalCommodities =
+                            shortlisted.Length,
+                        CompletedCommodities =
+                            completedCount,
+                        FailedCommodities =
+                            failedCount,
+                        CompletedCommodity =
+                            outcome.CommodityName,
+                        LastError =
+                            outcome.Error?.Message
+                            ?? string.Empty,
+                        NewCandidateCount =
+                            outcome.Candidates.Count,
+                        BestCandidates =
+                            best,
+                        Elapsed =
+                            stopwatch.Elapsed
+                    };
+            }
+
+        }
+        finally
+        {
+            // An async-enumerator consumer may stop without cancelling its
+            // token. Drain workers before their shared semaphore is disposed.
+            workerCancellation.Cancel();
+            try { await Task.WhenAll(pending).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (workerCancellation.IsCancellationRequested) { }
         }
 
         yield return

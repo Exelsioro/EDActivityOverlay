@@ -152,10 +152,9 @@ public sealed class ExperimentalEffectModuleLabelsTests
                 BlueprintCatalogService.Parse(
                         "{}",
                         experimentals,
-                        engineeringRecipes)
-                    .Where(
-                        recipe =>
-                            recipe.IsExperimental));
+                        engineeringRecipes),
+                recipe =>
+                    recipe.IsExperimental);
 
         Assert.Contains(
             "Beam Laser",

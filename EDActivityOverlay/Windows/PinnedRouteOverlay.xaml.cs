@@ -222,9 +222,30 @@ public partial class PinnedRouteOverlay : Window
             : Loc.Get("Loc_DESTINATION");
 
         long plannedProfit = currentRoute?.TotalProfitPerTrip ?? 0;
-        ProfitText.Text = progress.Stage == TradeRouteStage.Completed
-            ? Loc.Format("Loc_Actual_Profit_Format", progress.ActualProfit)
-            : Loc.Format("Loc_Planned_Profit_Format", plannedProfit);
+
+        if (currentRoute?.IsCargoSaleOnly == true)
+        {
+            ProfitText.Text =
+                progress.Stage == TradeRouteStage.Completed
+                    ? Loc.Format(
+                        "Loc_TRADE_CARGO_PIN_SOLD_VALUE",
+                        progress.SaleRevenue)
+                    : Loc.Format(
+                        "Loc_TRADE_CARGO_PIN_PLANNED_VALUE",
+                        currentRoute.PlannedSaleValue);
+        }
+        else
+        {
+            ProfitText.Text =
+                progress.Stage == TradeRouteStage.Completed
+                    ? Loc.Format(
+                        "Loc_Actual_Profit_Format",
+                        progress.ActualProfit)
+                    : Loc.Format(
+                        "Loc_Planned_Profit_Format",
+                        plannedProfit);
+        }
+
         NoteText.Text = progress.Note;
         NoteText.Foreground = progress.IsInDanger
             ? (System.Windows.Media.Brush)FindResource("FailureColorBrush")

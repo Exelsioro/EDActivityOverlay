@@ -119,6 +119,65 @@ public sealed class TradeV9bActiveHudTests
     }
 
     [Fact]
+    public void DockedJournalIdentityWinsOverStaleMarketSnapshot()
+    {
+        GameStateSnapshot state =
+            Snapshot() with
+            {
+                Docked = true,
+                StarSystem = "Source System",
+                Station = "Source",
+                MarketId = 10,
+                MarketSnapshotId = 20
+            };
+
+        Assert.True(
+            TradeLocationMatcher.IsAtMarket(
+                state,
+                10,
+                "Source System",
+                "Source"));
+
+        Assert.False(
+            TradeLocationMatcher.IsAtMarket(
+                state,
+                20,
+                "Target System",
+                "Target"));
+
+        var session =
+            new TradeActiveRouteSession(
+                Route(),
+                Constraints(),
+                state);
+
+        Assert.Equal(
+            TradeActiveStage.AtSource,
+            session.Stage);
+    }
+
+    [Fact]
+    public void ExactDockedNamesRecoverFromProviderMarketIdDrift()
+    {
+        GameStateSnapshot state =
+            Snapshot() with
+            {
+                Docked = true,
+                StarSystem = "Source System",
+                Station = "Source",
+                MarketId = 999,
+                MarketSnapshotId = 20
+            };
+
+        Assert.True(
+            TradeLocationMatcher.IsAtMarket(
+                state,
+                10,
+                "Source System",
+                "Source"));
+    }
+
+    [Fact]
     public void TargetPriceDropOffersReroute()
     {
         TradeRouteCandidate route =

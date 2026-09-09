@@ -2,6 +2,11 @@
 
 This document records third-party code/data sources that are either adapted into the repository, used as interoperability references, or queried at runtime.
 
+Bundled runtime dependency notices are provided under
+`ThirdPartyLicenses`. The self-contained Windows distribution includes the
+.NET runtime, Microsoft.Data.Sqlite, SQLitePCLRaw, SQLite and
+Hardcodet.NotifyIcon.Wpf.
+
 ## EDDiscovery / EliteDangerousCore
 
 Fallback Russian names for Elite Dangerous engineering materials in `EngineeringLocalization.cs` are adapted from the Russian translation table in `EDDiscovery/EliteDangerousCore`.
@@ -15,6 +20,9 @@ EliteDangerousCore is distributed under the Apache License 2.0:
 - https://github.com/EDDiscovery/EliteDangerousCore
 - https://github.com/EDDiscovery/EliteDangerousCore/blob/master/LICENSE
 
+A copy of the license is distributed as
+`ThirdPartyLicenses/Apache-2.0.txt`.
+
 The application does not require or load an EDDiscovery installation.
 
 ## EDCD / Coriolis
@@ -24,6 +32,9 @@ Russian names for Coriolis engineering blueprints, experimental effects, modules
 - https://github.com/EDCD/coriolis
 - MIT License: https://github.com/EDCD/coriolis/blob/master/LICENSE
 
+The required Coriolis copyright and MIT notice are distributed as
+`ThirdPartyLicenses/Coriolis-MIT.txt`.
+
 The engineering catalog also consumes public `EDCD/coriolis-data` data at runtime/cache time.
 
 ## Logitech X52 / EDDX52 interoperability reference
@@ -32,6 +43,9 @@ The optional X52 Pro integration uses a clean C# dynamic binding based on Direct
 
 - https://github.com/Theaninova/EDDX52
 - Apache License 2.0
+
+A copy of the license is distributed as
+`ThirdPartyLicenses/Apache-2.0.txt`.
 
 The implementation in this repository was rewritten for the application's own lifetime/state model. EDDX52 binaries are not loaded.
 
@@ -53,6 +67,9 @@ Current source repository:
 - https://bioforge.canonn.tech/
 
 Elite Dangerous Warboard is distributed under the MIT License.
+
+The required copyright and MIT notice are also distributed as
+`ThirdPartyLicenses/EliteDangerousWarboard-MIT.txt`.
 
 Required MIT notice for the distributed source data:
 

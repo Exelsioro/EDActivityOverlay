@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release infrastructure
+
+- Added branch and pull-request CI with dependency auditing, warning-free
+  Release builds, the full automated suite, self-contained publish validation
+  and downloadable installer/portable candidate artifacts.
+- Added tag-driven GitHub releases with SemVer-derived assembly and installer
+  versions, an Inno Setup executable, portable ZIP and SHA-256 checksums.
+- Added the MIT license and included both project and third-party notices in
+  every published distribution.
+- Moved production logs to `%LOCALAPPDATA%\EDActivityOverlay\logs` and bounded
+  retention by age, count and total size.
+- Aligned the declared minimum Windows version with the .NET target framework.
+
 ### Activities and notifications
 
 - Added a full in-game exploration system catalog opened from the compact

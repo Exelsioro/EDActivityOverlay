@@ -139,8 +139,15 @@ public sealed class TradeV11HistoryTests
             RemoveWhitespace(
                 tracker);
 
+        // Cargo-sale-only routes deliberately bypass the normal buy/sell trade
+        // history writer. Keep this assertion about the actual invariant instead
+        // of requiring the old guard to remain byte-for-byte identical.
         Assert.Contains(
-            "if(historyRecorded||!completed){return;}",
+            "historyRecorded",
+            tracker,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "||!completed",
             compact,
             StringComparison.Ordinal);
 

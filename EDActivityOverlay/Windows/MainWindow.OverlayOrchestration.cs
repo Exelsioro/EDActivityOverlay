@@ -140,8 +140,6 @@ namespace EDActivityOverlay
         {
             if (!overlaysSuppressedByHotkey)
             {
-                restoreTradeVisible = false;
-                restoreResultsVisible = false;
                 restorePinnedVisible = pinnedRouteOverlay?.IsVisible == true;
                 restoreEngineeringVisible = engineeringOverlayWindow?.IsVisible == true;
                 restoreActivityWorkspaceVisible = activityWorkspaceWindow?.IsVisible == true;
@@ -254,7 +252,6 @@ namespace EDActivityOverlay
 
         public void OnTradeRouteWindowClosed()
         {
-            isToggleActive = false;
             UpdateToggleButtonState();
         }
 
@@ -362,7 +359,6 @@ namespace EDActivityOverlay
                 Logger.Logger.Info("Closing TradeRouteWindow");
                 tradeRouteWindow.Close();
                 tradeRouteWindow = null;
-                isToggleActive = false;
                 UpdateToggleButtonState();
             }
 
@@ -404,7 +400,6 @@ namespace EDActivityOverlay
         private void ShutdownApplication(string reason)
         {
             Logger.Logger.Info($"Initiating application shutdown: {reason}");
-            isToggleActive = false;
             UpdateToggleButtonState();
             CloseAllOverlayWindows();
             Dispatcher.BeginInvoke(new Action(() =>
@@ -499,7 +494,6 @@ namespace EDActivityOverlay
                     shipStatusOverlayWindow = null;
                 }
 
-                isToggleActive = false;
                 isResultsActive = false;
                 isPinnedRouteActive = false;
                 Logger.Logger.Info("All overlay windows closed successfully");

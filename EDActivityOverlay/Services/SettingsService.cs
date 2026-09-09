@@ -60,6 +60,18 @@ namespace EDActivityOverlay.Services
                         {
                             settings.MiningHotkeyKey = oldKey.GetString() ?? settings.MiningHotkeyKey;
                         }
+                        settings.MiningTargetCommodities ??= new List<string>();
+                        if (settings.MiningTargetCommodities.Count == 0
+                            && !string.IsNullOrWhiteSpace(settings.MiningTargetCommodity))
+                        {
+                            settings.MiningTargetCommodities.Add(settings.MiningTargetCommodity.Trim());
+                        }
+                        if (!root.TryGetProperty(nameof(AppSettings.MiningAutoSelectTargets), out _))
+                        {
+                            // Preserve legacy explicit target behavior. Fresh/default settings use AUTO.
+                            settings.MiningAutoSelectTargets =
+                                string.IsNullOrWhiteSpace(settings.MiningTargetCommodity);
+                        }
                         settings.OverlayChromeStyle = OverlayChromeStyles.Normalize(settings.OverlayChromeStyle);
                         settings.ExplorationSpoilerMode = ExplorationSpoilerModes.Normalize(settings.ExplorationSpoilerMode);
                         Logger.Logger.Info($"Settings loaded from {_settingsFilePath}");
@@ -89,7 +101,7 @@ namespace EDActivityOverlay.Services
                     WriteIndented = true
                 };
                 var json = JsonSerializer.Serialize(_settings, options);
-                File.WriteAllText(_settingsFilePath, json);
+                AtomicFileStorage.WriteAllText(_settingsFilePath, json);
                 
                 Logger.Logger.Info($"Settings saved to {_settingsFilePath}");
                 SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(_settings));
@@ -313,6 +325,47 @@ namespace EDActivityOverlay.Services
                 $"Trade history directory updated: customDirectory={!string.IsNullOrWhiteSpace(directory)}");
         }
 
+        public void SetMiningCopilotSettings(string targetCommodity, double minimumProportion)
+        {
+            SetMiningCopilotSettings(
+                string.IsNullOrWhiteSpace(targetCommodity)
+                    ? Array.Empty<string>()
+                    : new[] { targetCommodity },
+                false,
+                minimumProportion);
+        }
+
+        public void SetMiningCopilotSettings(
+            IEnumerable<string> targetCommodities,
+            bool autoSelectTargets,
+            double minimumProportion)
+        {
+            string[] targets = (targetCommodities ?? Array.Empty<string>())
+                .Select(item => item?.Trim() ?? string.Empty)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToArray();
+            minimumProportion = Math.Clamp(minimumProportion, 0, 100);
+
+            bool sameTargets = _settings.MiningTargetCommodities
+                .SequenceEqual(targets, StringComparer.OrdinalIgnoreCase);
+            if (sameTargets
+                && _settings.MiningAutoSelectTargets == autoSelectTargets
+                && Math.Abs(_settings.MiningMinimumProportion - minimumProportion) < 0.0001)
+            {
+                return;
+            }
+
+            _settings.MiningTargetCommodities = targets.ToList();
+            _settings.MiningTargetCommodity = targets.FirstOrDefault() ?? string.Empty;
+            _settings.MiningAutoSelectTargets = autoSelectTargets;
+            _settings.MiningMinimumProportion = minimumProportion;
+            SaveSettings();
+            Logger.Logger.Info(
+                $"Mining copilot targets updated: auto={autoSelectTargets}, targets={string.Join(',', targets)}, minimum={minimumProportion:0.#}%");
+        }
+
         public void SetJournalSettings(bool enabled, string directory)
         {
             directory = directory?.Trim() ?? string.Empty;
@@ -461,6 +514,36 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"X52 settings updated: enabled={enabled}, mfd={mfd}, leds={leds}, controls={mfdControls}");
         }
 
+        public void SetX52StartupProfilePath(string profilePath)
+        {
+            profilePath = profilePath?.Trim() ?? string.Empty;
+            if (string.Equals(
+                    _settings.X52StartupProfilePath,
+                    profilePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.X52StartupProfilePath = profilePath;
+            SaveSettings();
+            Logger.Logger.Info(
+                $"X52 startup profile preference updated: configured={!string.IsNullOrWhiteSpace(profilePath)}");
+        }
+
+        public void SetExperimentalX52MiningCopilot(bool enabled)
+        {
+            if (_settings.EnableExperimentalX52MiningCopilot == enabled)
+            {
+                return;
+            }
+
+            _settings.EnableExperimentalX52MiningCopilot = enabled;
+            SaveSettings();
+            Logger.Logger.Info(
+                $"Experimental X52 Mining Copilot updated: enabled={enabled}");
+        }
+
         public void SetLanguage(string language)
         {
             string normalized = LocalizationService.Normalize(language);
@@ -557,6 +640,20 @@ namespace EDActivityOverlay.Services
         public string ExplorationHotkeyKey { get; set; } = "D3";
         public string MiningHotkeyModifiers { get; set; } = "Ctrl";
         public string MiningHotkeyKey { get; set; } = "D4";
+
+        /// <summary>
+        /// Legacy primary Mining target. Kept for settings/X52 compatibility; the compact HUD uses MiningTargetCommodities.
+        /// </summary>
+        public string MiningTargetCommodity { get; set; } = string.Empty;
+
+        /// <summary>Manual Mining targets. Up to five commodities are evaluated independently against the same percentage threshold.</summary>
+        public List<string> MiningTargetCommodities { get; set; } = new();
+
+        /// <summary>Automatically selects up to five ring-compatible targets from current Ardent sell prices.</summary>
+        public bool MiningAutoSelectTargets { get; set; } = true;
+
+        /// <summary>Minimum asteroid composition accepted by the Mining prospector advisor. Market price never changes this percentage.</summary>
+        public double MiningMinimumProportion { get; set; } = 25;
 
         /// <summary>Displays non-interactive journal notifications over the game.</summary>
         public bool EnableOverlayNotifications { get; set; } = true;
@@ -673,6 +770,15 @@ namespace EDActivityOverlay.Services
 
         /// <summary>Uses the MFD wheel to switch and toggle activity widgets.</summary>
         public bool EnableX52MfdControls { get; set; } = true;
+
+        /// <summary>
+        /// User-selected Logitech .pr0 profile. Empty means follow the currently
+        /// active Logitech startup profile and use EDAO overlay discovery only as fallback.
+        /// </summary>
+        public string X52StartupProfilePath { get; set; } = string.Empty;
+
+        /// <summary>Shows Mining-specific MFD and LED copilot cues. Experimental and opt-in.</summary>
+        public bool EnableExperimentalX52MiningCopilot { get; set; }
     }
 
     /// <summary>

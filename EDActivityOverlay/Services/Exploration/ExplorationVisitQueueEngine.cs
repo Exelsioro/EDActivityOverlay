@@ -83,12 +83,12 @@ internal static class ExplorationVisitPolicy
             0,
             30_000);
 
-        if (!body.WasMapped)
+        if (body.MappingStatusKnown && !body.WasMapped)
         {
             score += 5_000;
         }
 
-        if (!body.WasDiscovered)
+        if (body.DiscoveryStatusKnown && !body.WasDiscovered)
         {
             score += 3_000;
         }

@@ -15,6 +15,7 @@ This directory contains the maintained documentation for ED Activity Overlay.
 - [Player Journal integration](JOURNAL_INTEGRATION.md)
 - [Testing](TESTING.md)
 - [Build guide](BUILD_GUIDE.md)
+- [Release checklist](RELEASE_CHECKLIST.md)
 - [Contributing](CONTRIBUTING.md)
 - [Third-party attribution and data](THIRD_PARTY.md)
 

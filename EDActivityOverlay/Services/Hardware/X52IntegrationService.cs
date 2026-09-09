@@ -1,5 +1,6 @@
 ﻿using EDActivityOverlay.Models;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Services.Mining;
 
 namespace EDActivityOverlay.Services.Hardware;
 
@@ -16,6 +17,7 @@ public sealed class X52IntegrationService : IDisposable
     private Timer? animationTimer;
     private Timer? inputTimer;
     private long animationStep;
+    private bool scoCooldownAnimationActive;
     private bool started;
     private bool disposed;
 
@@ -37,6 +39,8 @@ public sealed class X52IntegrationService : IDisposable
         started = true;
         SettingsService.Instance.SettingsChanged += OnSettingsChanged;
         JournalMonitorService.Instance.StateChanged += OnJournalStateChanged;
+        MiningSessionService.Instance.Changed += OnMiningSessionChanged;
+        MiningCollectorTrackerService.Instance.Changed += OnMiningCollectorChanged;
         animationTimer = new Timer(_ => OnAnimationTick(), null, TimeSpan.FromMilliseconds(250), TimeSpan.FromMilliseconds(250));
         inputTimer = new Timer(_ => OnInputTick(), null, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
         ApplySettings(forceReconnect: true);
@@ -107,6 +111,16 @@ public sealed class X52IntegrationService : IDisposable
 
     private void OnJournalStateChanged(object? sender, GameStateChangedEventArgs e) => RefreshOutput(e.State);
 
+    private void OnMiningSessionChanged(
+        object? sender,
+        MiningSessionChangedEventArgs e) =>
+        RefreshOutput(force: true);
+
+    private void OnMiningCollectorChanged(
+        object? sender,
+        MiningCollectorActivityChangedEventArgs e) =>
+        RefreshOutput(force: true);
+
     private void OnInputTick()
     {
         if (SettingsService.Instance.Settings.EnableX52MfdControls
@@ -118,8 +132,32 @@ public sealed class X52IntegrationService : IDisposable
 
     private void OnAnimationTick()
     {
-        GameStateSnapshot game = JournalMonitorService.Instance.Current;
-        if (!game.FsdCharging && !game.IsInDanger && !game.LowFuel && !game.OverHeating)
+        GameStateSnapshot game =
+            JournalMonitorService.Instance.Current;
+
+        DateTimeOffset now =
+            DateTimeOffset.UtcNow;
+
+        bool scoCooldownActive =
+            game.GetScoCooldownRemainingSeconds(now) > 0;
+
+        bool clearExpiredScoCooldown =
+            scoCooldownAnimationActive
+            && !scoCooldownActive;
+
+        scoCooldownAnimationActive =
+            scoCooldownActive;
+
+        if (!game.FsdCharging
+            && !game.IsInDanger
+            && !game.LowFuel
+            && !game.OverHeating
+            && !scoCooldownActive
+            && !clearExpiredScoCooldown
+            && !RequiresMiningAnimation(
+                activity,
+                SettingsService.Instance.Settings.EnableExperimentalX52MiningCopilot,
+                MiningSessionService.Instance.Current))
         {
             return;
         }
@@ -127,6 +165,13 @@ public sealed class X52IntegrationService : IDisposable
         Interlocked.Increment(ref animationStep);
         RefreshOutput(game);
     }
+
+    internal static bool RequiresMiningAnimation(
+        ActivityType activity,
+        bool enabled,
+        MiningSessionSnapshot session) =>
+        enabled && activity == ActivityType.Mining
+        && MiningIntelligenceCalculator.CalculateLimpets(session).Critical;
 
     private void OnDeviceAvailabilityChanged(bool available)
     {
@@ -170,7 +215,36 @@ public sealed class X52IntegrationService : IDisposable
             GameStateSnapshot game = suppliedState ?? JournalMonitorService.Instance.Current;
             if (settings.EnableX52Mfd)
             {
-                string[] lines = X52DisplayFormatter.BuildLines(game, activity);
+                bool miningCopilot =
+                    activity == ActivityType.Mining
+                    && settings.EnableExperimentalX52MiningCopilot;
+
+                string[] lines =
+                    miningCopilot
+                        ? X52MiningCopilotFormatter.BuildLines(
+                            MiningSessionService.Instance.Current,
+                            MiningCollectorTrackerService.Instance.Current,
+                            settings.MiningTargetCommodity,
+                            settings.MiningMinimumProportion)
+                        : X52DisplayFormatter.BuildLines(
+                            game,
+                            activity);
+
+                if (miningCopilot)
+                {
+                    string driveStatus =
+                        FsdScoStatusPresentation.BuildCompact(
+                            game);
+
+                    if (!string.IsNullOrWhiteSpace(
+                            driveStatus))
+                    {
+                        lines[2] =
+                            X52DisplayFormatter.NormalizeLine(
+                                driveStatus);
+                    }
+                }
+
                 if (force || !lines.SequenceEqual(lastLines, StringComparer.Ordinal))
                 {
                     output.WriteLines(lines);
@@ -184,11 +258,24 @@ public sealed class X52IntegrationService : IDisposable
             }
             if (settings.EnableX52LedState)
             {
-                Dictionary<int, bool> leds = X52DisplayFormatter.BuildLedComponents(
-                        game,
-                        activity,
-                        Interlocked.Read(ref animationStep))
-                    .ToDictionary(item => item.Key, item => item.Value);
+                IReadOnlyDictionary<int, bool> components =
+                    activity == ActivityType.Mining
+                    && settings.EnableExperimentalX52MiningCopilot
+                        ? X52MiningCopilotFormatter.BuildLedComponents(
+                            game,
+                            MiningSessionService.Instance.Current,
+                            MiningCollectorTrackerService.Instance.Current,
+                            settings.MiningTargetCommodity,
+                            settings.MiningMinimumProportion,
+                            Interlocked.Read(ref animationStep))
+                        : X52DisplayFormatter.BuildLedComponents(
+                            game,
+                            activity,
+                            Interlocked.Read(ref animationStep));
+
+                Dictionary<int, bool> leds =
+                    components.ToDictionary(item => item.Key, item => item.Value);
+
                 if (force || !leds.OrderBy(item => item.Key).SequenceEqual(lastLeds.OrderBy(item => item.Key)))
                 {
                     output.WriteLedComponents(leds);
@@ -240,6 +327,8 @@ public sealed class X52IntegrationService : IDisposable
         {
             SettingsService.Instance.SettingsChanged -= OnSettingsChanged;
             JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
+            MiningSessionService.Instance.Changed -= OnMiningSessionChanged;
+            MiningCollectorTrackerService.Instance.Changed -= OnMiningCollectorChanged;
             started = false;
         }
         Disconnect();

@@ -51,6 +51,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         new("Deferred", "Loc_FILTER_DEFERRED"),
         new("Completed", "Loc_FILTER_COMPLETED"),
         new("Unmapped", "Loc_FILTER_UNMAPPED"),
+        new("FirstDiscovery", "Loc_FILTER_FIRST_DISCOVERY"),
+        new("FirstMapping", "Loc_FILTER_FIRST_MAPPING"),
         new("Landable", "Loc_FILTER_LANDABLE")
     ];
 
@@ -64,6 +66,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         activity = initialActivity;
         InitializeComponent();
         InitializeTradeWorkspace();
+        InitializeMiningWorkspace();
         DssTargetComboBox.ItemsSource = Enumerable.Range(
             DssProbePatternCatalog.MinimumTarget,
             DssProbePatternCatalog.MaximumTarget - DssProbePatternCatalog.MinimumTarget + 1);
@@ -103,6 +106,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             LeaveTradeWorkspace();
         }
 
+        if (activity == ActivityType.Mining
+            && value != ActivityType.Mining)
+        {
+            LeaveMiningWorkspace();
+        }
+
         activity = value;
         RefreshContent(JournalMonitorService.Instance.Current);
     }
@@ -134,6 +143,9 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             chromeStyle);
 
         tradeWorkspaceControl?.SetChromeStyle(
+            chromeStyle);
+
+        miningWorkspaceControl?.SetChromeStyle(
             chromeStyle);
     }
 
@@ -193,9 +205,21 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
     private void RefreshContent(GameStateSnapshot state)
     {
+        if (DestinationVisitStatusText is not null)
+        {
+            DestinationVisitStatusText.Text = string.Empty;
+            DestinationVisitStatusText.Visibility = Visibility.Collapsed;
+        }
+
         if (activity == ActivityType.Trade)
         {
             RefreshTradeWorkspace(state);
+            return;
+        }
+
+        if (activity == ActivityType.Mining)
+        {
+            RefreshMiningWorkspace(state);
             return;
         }
 
@@ -206,6 +230,16 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             : Loc.Format("Loc_System_Format", state.StarSystem.ToUpperInvariant());
 
         FlightStateText.Text = BuildFlightState(state);
+        string destinationVisitStatus = exploration
+            ? BuildDestinationVisitStatus(state)
+            : string.Empty;
+        if (DestinationVisitStatusText is not null)
+        {
+            DestinationVisitStatusText.Text = destinationVisitStatus;
+            DestinationVisitStatusText.Visibility = string.IsNullOrWhiteSpace(destinationVisitStatus)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
 
         ExplorationDataState externalData =
             ExplorationDataService.Instance.Current;
@@ -454,6 +488,10 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                     "Unmapped" =>
                         !body.MappedThisVisit
                         && !body.MappedPreviously,
+                    "FirstDiscovery" =>
+                        ExplorationDiscoveryStatus.IsFirstDiscoveryCandidate(body),
+                    "FirstMapping" =>
+                        ExplorationDiscoveryStatus.IsFirstMappingCandidate(body),
                     "Landable" => body.Landable,
                     _ => true
                 };
@@ -577,24 +615,9 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         };
     private static CatalogRow ToCatalogRow(
         ExplorationCatalogBody body,
-        ExplorationVisitDisposition? disposition) => new(
-        body,
-        body.Name,
-        BuildVisitMarker(disposition),
-        string.IsNullOrWhiteSpace(body.Subtype)
-            ? body.Type
-            : body.Subtype,
-        BuildCompactHighlightText(body),
-        BuildHighlightText(body),
-        Loc.Format(
-            "Loc_Distance_Ls_Value",
-            body.DistanceFromArrivalLs),
-        body.EstimatedMappingValue > 0
-            ? Loc.Format(
-                "Loc_Credits_Short_Format",
-                body.EstimatedMappingValue)
-            : Loc.Get("Loc_VALUE_UNKNOWN"),
-        body.MappedThisVisit
+        ExplorationVisitDisposition? disposition)
+    {
+        string progress = body.MappedThisVisit
             ? Loc.Get(
                 body.EfficientlyMappedThisVisit
                     ? "Loc_DSS_EFFICIENT"
@@ -608,9 +631,51 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                     ? Loc.Get("Loc_FSS_SCANNED")
                     : body.ScannedPreviously
                         ? Loc.Get("Loc_HISTORY_SCANNED")
-                        : Loc.Get("Loc_COMMUNITY_DATA_ONLY"),
-        disposition,
-        BuildVisitStateLabel(disposition));
+                        : Loc.Get("Loc_COMMUNITY_DATA_ONLY");
+
+        string[] discoveryBadges = BuildDiscoveryBadges(body);
+        if (discoveryBadges.Length > 0)
+        {
+            progress += "  •  " + string.Join(" / ", discoveryBadges);
+        }
+
+        return new CatalogRow(
+            body,
+            body.Name,
+            BuildVisitMarker(disposition),
+            string.IsNullOrWhiteSpace(body.Subtype)
+                ? body.Type
+                : body.Subtype,
+            BuildCompactHighlightText(body),
+            BuildHighlightText(body),
+            Loc.Format(
+                "Loc_Distance_Ls_Value",
+                body.DistanceFromArrivalLs),
+            body.EstimatedMappingValue > 0
+                ? Loc.Format(
+                    "Loc_Credits_Short_Format",
+                    body.EstimatedMappingValue)
+                : Loc.Get("Loc_VALUE_UNKNOWN"),
+            progress,
+            disposition,
+            BuildVisitStateLabel(disposition));
+    }
+
+    private static string[] BuildDiscoveryBadges(ExplorationCatalogBody body)
+    {
+        var badges = new List<string>(2);
+        if (ExplorationDiscoveryStatus.IsFirstDiscoveryCandidate(body))
+        {
+            badges.Add(Loc.Get("Loc_EXPLORATION_FIRST_DISCOVERY_SHORT"));
+        }
+
+        if (ExplorationDiscoveryStatus.IsFirstMappingCandidate(body))
+        {
+            badges.Add(Loc.Get("Loc_EXPLORATION_FIRST_MAPPING_SHORT"));
+        }
+
+        return badges.ToArray();
+    }
 
     private static string BuildVisitMarker(
         ExplorationVisitDisposition? disposition) =>
@@ -736,12 +801,23 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             BuildSelectedBodyVisitDetails(
                 visit);
 
+        string discoveryDetails =
+            BuildDiscoveryStatusDetails(body);
+
         if (!string.IsNullOrWhiteSpace(visitDetails))
         {
             detailParts.Add(visitDetails);
         }
 
-        SelectedBodyProgressText.Text = visitDetails;
+        if (!string.IsNullOrWhiteSpace(discoveryDetails))
+        {
+            detailParts.Add(discoveryDetails);
+        }
+
+        SelectedBodyProgressText.Text = string.Join(
+            Environment.NewLine,
+            new[] { visitDetails, discoveryDetails }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
         SelectedBodyPhysicalText.Text = string.Join(
             Environment.NewLine,
             Loc.Format("Loc_BODY_TYPE_DETAIL", row.Type),
@@ -925,6 +1001,30 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 fss,
                 dss,
                 bio));
+    }
+
+    private static string BuildDiscoveryStatusDetails(
+        ExplorationCatalogBody body)
+    {
+        var parts = new List<string>();
+
+        if (body.DiscoveryStatusKnown)
+        {
+            parts.Add(Loc.Get(
+                body.WasDiscovered
+                    ? "Loc_EXPLORATION_DISCOVERY_CONFIRMED"
+                    : "Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE"));
+        }
+
+        if (body.MappingStatusKnown)
+        {
+            parts.Add(Loc.Get(
+                body.WasMapped
+                    ? "Loc_EXPLORATION_MAPPING_CONFIRMED"
+                    : "Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE"));
+        }
+
+        return string.Join("  •  ", parts);
     }
 
     private static string BuildSelectedBodyBioGuidance(
@@ -1843,6 +1943,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                     item.Body.DistanceFromArrivalLs));
         }
 
+        string[] discoveryBadges = BuildDiscoveryBadges(item.Body);
+        if (discoveryBadges.Length > 0)
+        {
+            parts.Add(string.Join(" / ", discoveryBadges));
+        }
+
         long value = item.Body.EstimatedMappingValue;
         if (value > 0)
         {
@@ -2068,6 +2174,33 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         return string.Empty;
     }
 
+    private static string BuildDestinationVisitStatus(GameStateSnapshot state)
+    {
+        string target = state.DestinationName;
+        if (string.IsNullOrWhiteSpace(target)
+            || !state.DestinationIsSystemTarget
+            || string.Equals(target, state.StarSystem, StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        ExplorationSystemHistorySnapshot history =
+            ExplorationHistoryService.Instance.LoadSystem(
+                state.Commander,
+                state.DestinationSystemAddress,
+                target);
+
+        if (!history.WasVisited)
+        {
+            return Loc.Format("Loc_EXPLORATION_FIRST_VISIT_FORMAT", target);
+        }
+
+        string lastVisit = history.LastVisitedUtc is { } timestamp
+            ? timestamp.ToLocalTime().ToString("g")
+            : Loc.Get("Loc_VALUE_UNKNOWN");
+        return Loc.Format("Loc_EXPLORATION_VISITED_BEFORE_FORMAT", target, lastVisit);
+    }
+
     private static string BuildAdaptiveExplorationFooter(
         GameStateSnapshot state,
         ExplorationVisitQueueSnapshot queue)
@@ -2145,6 +2278,12 @@ public partial class ActivityWorkspaceOverlayWindow : Window
                 queue.RemainingCount,
                 queue.DeferredCount,
                 queue.CompletedCount));
+        }
+
+        string destinationStatus = BuildDestinationVisitStatus(state);
+        if (!string.IsNullOrWhiteSpace(destinationStatus))
+        {
+            parts.Add(destinationStatus);
         }
 
         string alert = BuildCompactRouteOrAlert(
@@ -2498,6 +2637,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
 
         ApplyRoutePanelState();
         tradeWorkspaceControl?.RefreshLocalization();
+        miningWorkspaceControl?.RefreshLocalization();
+        miningLocationWorkspaceControl?.RefreshLocalization();
         RefreshContent(
             JournalMonitorService.Instance.Current);
     }
@@ -2548,7 +2689,8 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         double targetWidth = rect.Right - rect.Left;
         double targetHeight = rect.Bottom - rect.Top;
         if (fullExplorationVisible
-            || IsTradeFullWorkspace)
+            || IsTradeFullWorkspace
+            || IsMiningFullWorkspace)
         {
             Width = Math.Min(1180, Math.Max(MinWidth, targetWidth - 64));
             Height = Math.Min(760, Math.Max(MinHeight, targetHeight - 64));
@@ -2598,6 +2740,7 @@ public partial class ActivityWorkspaceOverlayWindow : Window
         disposed = true;
         if (fullExplorationVisible) parentWindow?.EndExclusiveOverlayInteraction();
         DisposeTradeWorkspace();
+        DisposeMiningWorkspace();
         updateTimer.Stop();
         updateTimer.Tick -= UpdateTimer_Tick;
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;

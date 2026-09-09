@@ -68,6 +68,10 @@ public sealed record ExplorationBodySnapshot(
     IReadOnlyList<string> Genuses,
     ExplorationInterest Interest)
 {
+    /// <summary>True when the journal supplied WasDiscovered for this body.</summary>
+    public bool DiscoveryStatusKnown { get; init; }
+    /// <summary>True when the journal supplied WasMapped for this body.</summary>
+    public bool MappingStatusKnown { get; init; }
     public bool IsScanned { get; init; }
     public bool IsNotable => Interest != ExplorationInterest.None;
     public bool Landable { get; init; }
@@ -155,6 +159,23 @@ public sealed partial record GameStateSnapshot
     public bool FsdCharging { get; init; }
     public bool FsdMassLocked { get; init; }
     public bool FsdCooldown { get; init; }
+    public bool ScoActive { get; init; }
+    public DateTimeOffset? ScoEstimatedCooldownUntilUtc { get; init; }
+
+    internal double GetScoCooldownRemainingSeconds(
+        DateTimeOffset now)
+    {
+        if (ScoActive
+            || ScoEstimatedCooldownUntilUtc is not { } until)
+        {
+            return 0;
+        }
+
+        return Math.Max(
+            0,
+            (until - now).TotalSeconds);
+    }
+
     public bool HardpointsDeployed { get; init; }
     public bool LightsOn { get; init; }
     public bool CargoScoopDeployed { get; init; }
@@ -189,6 +210,8 @@ public sealed partial record GameStateSnapshot
     public long DestinationSystemAddress { get; init; }
     public int DestinationBodyId { get; init; } = -1;
     public string DestinationName { get; init; } = string.Empty;
+    /// <summary>True when the target represents a system, not a body/station.</summary>
+    public bool DestinationIsSystemTarget { get; init; }
     public IReadOnlyDictionary<string, int> Cargo { get; init; } =
         new ReadOnlyDictionary<string, int>(new Dictionary<string, int>());
     public IReadOnlyDictionary<string, CargoCommoditySnapshot> CargoByCommodityId { get; init; } =
@@ -210,6 +233,7 @@ public sealed partial record GameStateSnapshot
     public double FuelPerLightYearEstimate { get; init; }
     public double MaxJumpRangeLy { get; init; }
     public IReadOnlyList<NavRouteStar> NavRoute { get; init; } = Array.Empty<NavRouteStar>();
+    public long NavRouteRevision { get; init; }
     public int SystemBodyCount { get; init; }
     public double FssProgress { get; init; }
     public int NonBodySignals { get; init; }

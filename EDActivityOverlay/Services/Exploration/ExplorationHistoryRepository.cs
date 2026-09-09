@@ -6,7 +6,7 @@ namespace EDActivityOverlay.Services.Exploration;
 
 internal sealed class ExplorationHistoryRepository
 {
-    internal const int CanonicalBiologyHistorySchemaVersion = 2;
+    internal const int CanonicalBiologyHistorySchemaVersion = 3;
 
     private readonly object sync = new();
     private readonly string connectionString;
@@ -481,11 +481,14 @@ internal sealed class ExplorationHistoryRepository
             connection.CreateCommand();
 
         migrate.Transaction = transaction;
-        migrate.CommandText = """
+        migrate.CommandText = (version < 2 ? """
             DELETE FROM exploration_body_genus_history;
             DELETE FROM exploration_organic_history;
+            UPDATE exploration_body_history SET completed_organics = 0;
+            """ : string.Empty) + """
             UPDATE exploration_body_history
-            SET completed_organics = 0;
+            SET first_discovered = 0,
+                first_mapped = 0;
             DELETE FROM exploration_import_file;
 
             INSERT INTO exploration_meta(key, value)
@@ -504,7 +507,9 @@ internal sealed class ExplorationHistoryRepository
 
         Logger.Logger.Info(
             $"Exploration history schema upgraded to {CanonicalBiologyHistorySchemaVersion}; "
-            + "biology history and import markers were invalidated for canonical re-import.");
+            + (version < 2
+                ? "biology history, discovery bonuses and import markers were invalidated for canonical re-import."
+                : "discovery bonuses and import markers were invalidated for safe journal re-indexing."));
     }
 
     private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)

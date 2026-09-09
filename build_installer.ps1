@@ -6,6 +6,8 @@
 param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
+    [string]$Version = "1.3.0-beta.1",
+    [string]$InnoCompiler = "",
     [switch]$SkipBuild = $false,
     [switch]$SkipInstaller = $false
 )
@@ -16,6 +18,18 @@ $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Project = Join-Path $RepoRoot "EDActivityOverlay\EDActivityOverlay.csproj"
 $ReleaseDir = Join-Path $RepoRoot "Release"
 $InstallerScript = Join-Path $RepoRoot "installer.iss"
+$VersionCore = ($Version -split '[-+]')[0]
+$ParsedVersion = $null
+
+if (-not [System.Version]::TryParse($VersionCore, [ref]$ParsedVersion) -or
+    $ParsedVersion.Build -lt 0) {
+    throw "Version must start with major.minor.patch: $Version"
+}
+
+$FileVersion = "{0}.{1}.{2}.0" -f `
+    $ParsedVersion.Major, `
+    $ParsedVersion.Minor, `
+    $ParsedVersion.Build
 
 Write-Host "ED Activity Overlay - Build & Installer" -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Green
@@ -25,8 +39,26 @@ if (-not (Test-Path -LiteralPath $Project)) {
 }
 
 if (-not $SkipInstaller) {
-    if (-not (Get-Command ISCC -ErrorAction SilentlyContinue)) {
-        Write-Host "ERROR: ISCC (Inno Setup) not found in PATH." -ForegroundColor Red
+    if ([string]::IsNullOrWhiteSpace($InnoCompiler)) {
+        $command = Get-Command ISCC -ErrorAction SilentlyContinue
+        if ($command) {
+            $InnoCompiler = $command.Source
+        }
+        else {
+            $candidates = @(
+                "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+                "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+            )
+
+            $InnoCompiler = $candidates |
+                Where-Object { Test-Path -LiteralPath $_ } |
+                Select-Object -First 1
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($InnoCompiler) -or
+        -not (Test-Path -LiteralPath $InnoCompiler)) {
+        Write-Host "ERROR: Inno Setup compiler was not found. Install Inno Setup 6 or pass -InnoCompiler." -ForegroundColor Red
         exit 1
     }
 
@@ -49,6 +81,9 @@ if (-not $SkipBuild) {
         -c $Configuration `
         -r $Runtime `
         --self-contained true `
+        -p:Version=$Version `
+        -p:AssemblyVersion=$FileVersion `
+        -p:FileVersion=$FileVersion `
         -o $ReleaseDir
 
     if ($LASTEXITCODE -ne 0) {
@@ -73,7 +108,10 @@ if (-not $SkipInstaller) {
     Write-Host ""
     Write-Host "Creating installer..." -ForegroundColor Cyan
 
-    & ISCC $InstallerScript
+    & $InnoCompiler `
+        "/DMyAppVersion=$Version" `
+        "/DMyAppFileVersion=$FileVersion" `
+        $InstallerScript
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Installer creation failed." -ForegroundColor Red

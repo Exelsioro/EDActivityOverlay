@@ -188,14 +188,18 @@ public sealed class TradeActiveRouteSession
                 CommodityId);
 
         bool atSource =
-            IsCurrentMarket(
+            TradeLocationMatcher.IsAtMarket(
                 state,
-                activeLeg.Source.MarketId);
+                activeLeg.Source.MarketId,
+                activeLeg.Source.SystemName,
+                activeLeg.Source.StationName);
 
         bool atTarget =
-            IsCurrentMarket(
+            TradeLocationMatcher.IsAtMarket(
                 state,
-                activeLeg.Target.MarketId);
+                activeLeg.Target.MarketId,
+                activeLeg.Target.SystemName,
+                activeLeg.Target.StationName);
 
         ReadLiveMarket(
             state,
@@ -530,13 +534,6 @@ public sealed class TradeActiveRouteSession
             out CargoCommoditySnapshot? cargo)
                 ? cargo.Count
                 : 0;
-
-    private static bool IsCurrentMarket(
-        GameStateSnapshot state,
-        long marketId) =>
-        state.Docked
-        && state.MarketSnapshotId
-           == marketId;
 
     private static double Distance(
         double ax,

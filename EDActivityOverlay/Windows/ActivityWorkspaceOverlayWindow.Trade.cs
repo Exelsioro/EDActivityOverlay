@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using EDActivityOverlay.Models;
+using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Services.Navigation;
 using EDActivityOverlay.Services.Trading;
 using EDActivityOverlay.UserControls;
 using EDActivityOverlay.Utils;
@@ -56,6 +58,12 @@ public partial class ActivityWorkspaceOverlayWindow
         tradeWorkspaceControl.PinRequested +=
             PinTradeRouteRequested;
 
+        tradeWorkspaceControl.CargoSalePinRequested +=
+            PinCargoSaleRouteRequested;
+
+        tradeWorkspaceControl.NavigateSystemRequested +=
+            NavigateTradeSystemRequested;
+
         tradeWorkspaceControl.RoundTripPinRequested +=
             PinRoundTripRouteRequested;
 
@@ -101,6 +109,40 @@ public partial class ActivityWorkspaceOverlayWindow
 
         ApplyTradeWorkspaceMode(
             tradeWorkspaceControl.IsFullMode);
+    }
+
+    public async Task BeginCargoSaleFromMiningAsync()
+    {
+        if (tradeWorkspaceControl is null)
+        {
+            InitializeTradeWorkspace();
+        }
+
+        tradeWorkspaceControl?.UpdateJournalState(
+            JournalMonitorService.Instance.Current);
+
+        if (tradeWorkspaceControl is not null)
+        {
+            await tradeWorkspaceControl.BeginCargoSaleFromMiningAsync();
+        }
+    }
+
+    private async void NavigateTradeSystemRequested(string targetSystem)
+    {
+        if (string.IsNullOrWhiteSpace(targetSystem) || targetWindow == IntPtr.Zero)
+            return;
+
+        bool automatic = SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
+        EliteNavigationResult result = await EliteRouteNavigationService.Instance.PrepareAsync(
+            targetSystem,
+            targetWindow,
+            automatic);
+
+        if (result.Status == EliteNavigationStatus.Failed)
+        {
+            Logger.Logger.Warning(
+                $"Trade commodity navigation failed for {targetSystem}: {result.MessageKey} {result.Detail}");
+        }
     }
 
     private void ApplyTradeWorkspaceMode(
@@ -325,6 +367,26 @@ public partial class ActivityWorkspaceOverlayWindow
             candidate,
             tracker);
     }
+    private void PinCargoSaleRouteRequested(
+        CargoSaleCandidate candidate)
+    {
+        if (parentWindow is null)
+        {
+            return;
+        }
+
+        TradeRouteProgressTracker? tracker =
+            parentWindow.OnPinRouteRequested(
+                TradeRoutePresentationAdapter.ToPresentation(
+                    candidate,
+                    JournalMonitorService.Instance.Current),
+                keepTradeWorkspace:
+                    true);
+
+        tradeWorkspaceControl?.ActivatePinnedCargoSale(
+            tracker);
+    }
+
     private void PinRoundTripRouteRequested(
         TradeRoundTripCandidate candidate)
     {
@@ -407,6 +469,9 @@ public partial class ActivityWorkspaceOverlayWindow
 
         tradeWorkspaceControl.PinRequested -=
             PinTradeRouteRequested;
+
+        tradeWorkspaceControl.CargoSalePinRequested -=
+            PinCargoSaleRouteRequested;
 
         tradeWorkspaceControl.RoundTripPinRequested -=
             PinRoundTripRouteRequested;

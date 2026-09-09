@@ -152,6 +152,9 @@ internal sealed class JournalStateReducer
         JsonElement root = document.RootElement;
         ulong flags = TryGetUInt64(root, "Flags");
         ulong flags2 = TryGetUInt64(root, "Flags2");
+        bool inSupercruise = HasFlag(flags, 4);
+        bool scoActive = HasFlag(flags2, 20);
+        DateTimeOffset observedUtc = DateTimeOffset.UtcNow;
         bool hasSurfacePosition = HasFlag(flags, 21)
                                   && root.TryGetProperty("Latitude", out _)
                                   && root.TryGetProperty("Longitude", out _);
@@ -175,51 +178,77 @@ internal sealed class JournalStateReducer
             fuelReservoir = TryGetDouble(fuel, "FuelReservoir", fuelReservoir);
         }
 
-        Update(current => current with
+        Update(current =>
         {
-            LastEventUtc = MaxTimestamp(current.LastEventUtc, GetTimestamp(root)),
-            GuiFocus = TryGetInt32(root, "GuiFocus", current.GuiFocus),
-            CargoUsed = cargoUsed,
-            Balance = balance,
-            Docked = HasFlag(flags, 0),
-            LandingGearDown = HasFlag(flags, 2),
-            ShieldsUp = HasFlag(flags, 3),
-            InSupercruise = HasFlag(flags, 4),
-            HardpointsDeployed = HasFlag(flags, 6),
-            LightsOn = HasFlag(flags, 8),
-            CargoScoopDeployed = HasFlag(flags, 9),
-            SilentRunning = HasFlag(flags, 10),
-            FuelScooping = HasFlag(flags, 11),
-            FsdMassLocked = HasFlag(flags, 16),
-            FsdCharging = HasFlag(flags, 17) || HasFlag(flags, 30),
-            FsdCooldown = HasFlag(flags, 18),
-            LowFuel = HasFlag(flags, 19),
-            OverHeating = HasFlag(flags, 20),
-            IsInDanger = HasFlag(flags, 22) || HasFlag(flags, 23),
-            NightVision = HasFlag(flags, 28),
-            Landed = HasFlag(flags, 1),
-            InSrv = HasFlag(flags, 26),
-            OnFoot = HasFlag(flags2, 0),
-            OnFootOnPlanet = HasFlag(flags2, 4),
-            GlideMode = HasFlag(flags2, 12),
-            HasSurfacePosition = hasSurfacePosition,
-            Latitude = hasSurfacePosition ? TryGetNullableDouble(root, "Latitude") : null,
-            Longitude = hasSurfacePosition ? TryGetNullableDouble(root, "Longitude") : null,
-            AltitudeMeters = TryGetNullableDouble(root, "Altitude"),
-            HeadingDegrees = TryGetNullableDouble(root, "Heading"),
-            PlanetRadiusMeters = TryGetNullableDouble(root, "PlanetRadius") ?? current.PlanetRadiusMeters,
-            SurfaceGravityG = TryGetNullableDouble(root, "Gravity") ?? current.SurfaceGravityG,
-            Oxygen = TryGetNullableDouble(root, "Oxygen"),
-            Health = TryGetNullableDouble(root, "Health"),
-            TemperatureKelvin = TryGetNullableDouble(root, "Temperature"),
-            CurrentBody = GetString(root, "BodyName", current.CurrentBody),
-            LegalState = GetString(root, "LegalState", current.LegalState),
-            Destination = destinationName,
-            DestinationName = destinationName,
-            DestinationSystemAddress = destinationSystemAddress,
-            DestinationBodyId = destinationBodyId,
-            FuelMain = fuelMain,
-            FuelReservoir = fuelReservoir
+            DateTimeOffset? scoCooldownUntil =
+                current.ScoEstimatedCooldownUntilUtc;
+
+            if (!inSupercruise
+                || scoActive)
+            {
+                scoCooldownUntil = null;
+            }
+            else if (current.ScoActive
+                     && !scoActive)
+            {
+                // Status.json exposes SCO active but no ready/cooldown flag.
+                // Current-game measurements show a tight ~5 s reactivation
+                // threshold in ordinary supercruise. Keep this explicitly as
+                // an estimate because Elite does not expose the exact ready time.
+                scoCooldownUntil =
+                    observedUtc.AddSeconds(5);
+            }
+
+            return current with
+            {
+                LastEventUtc = MaxTimestamp(current.LastEventUtc, GetTimestamp(root)),
+                GuiFocus = TryGetInt32(root, "GuiFocus", current.GuiFocus),
+                CargoUsed = cargoUsed,
+                Balance = balance,
+                Docked = HasFlag(flags, 0),
+                LandingGearDown = HasFlag(flags, 2),
+                ShieldsUp = HasFlag(flags, 3),
+                InSupercruise = inSupercruise,
+                HardpointsDeployed = HasFlag(flags, 6),
+                LightsOn = HasFlag(flags, 8),
+                CargoScoopDeployed = HasFlag(flags, 9),
+                SilentRunning = HasFlag(flags, 10),
+                FuelScooping = HasFlag(flags, 11),
+                FsdMassLocked = HasFlag(flags, 16),
+                FsdCharging = HasFlag(flags, 17) || HasFlag(flags, 30),
+                FsdCooldown = HasFlag(flags, 18),
+                ScoActive = scoActive,
+                ScoEstimatedCooldownUntilUtc = scoCooldownUntil,
+                LowFuel = HasFlag(flags, 19),
+                OverHeating = HasFlag(flags, 20),
+                IsInDanger = HasFlag(flags, 22) || HasFlag(flags, 23),
+                NightVision = HasFlag(flags, 28),
+                Landed = HasFlag(flags, 1),
+                InSrv = HasFlag(flags, 26),
+                OnFoot = HasFlag(flags2, 0),
+                OnFootOnPlanet = HasFlag(flags2, 4),
+                GlideMode = HasFlag(flags2, 12),
+                HasSurfacePosition = hasSurfacePosition,
+                Latitude = hasSurfacePosition ? TryGetNullableDouble(root, "Latitude") : null,
+                Longitude = hasSurfacePosition ? TryGetNullableDouble(root, "Longitude") : null,
+                AltitudeMeters = TryGetNullableDouble(root, "Altitude"),
+                HeadingDegrees = TryGetNullableDouble(root, "Heading"),
+                PlanetRadiusMeters = TryGetNullableDouble(root, "PlanetRadius") ?? current.PlanetRadiusMeters,
+                SurfaceGravityG = TryGetNullableDouble(root, "Gravity") ?? current.SurfaceGravityG,
+                Oxygen = TryGetNullableDouble(root, "Oxygen"),
+                Health = TryGetNullableDouble(root, "Health"),
+                TemperatureKelvin = TryGetNullableDouble(root, "Temperature"),
+                CurrentBody = GetString(root, "BodyName", current.CurrentBody),
+                LegalState = GetString(root, "LegalState", current.LegalState),
+                Destination = destinationName,
+                DestinationName = destinationName,
+                DestinationSystemAddress = destinationSystemAddress,
+                DestinationBodyId = destinationBodyId,
+                DestinationIsSystemTarget = destinationBodyId < 0
+                    && destinationSystemAddress > 0,
+                FuelMain = fuelMain,
+                FuelReservoir = fuelReservoir
+            };
         });
     }
 
@@ -268,6 +297,7 @@ internal sealed class JournalStateReducer
 
             state = CopyCollections(state with
             {
+                NavRouteRevision = state.NavRouteRevision + 1,
                 LastEventUtc =
                     MaxTimestamp(
                         state.LastEventUtc,
@@ -453,6 +483,7 @@ internal sealed class JournalStateReducer
                     DestinationName = string.Empty,
                     DestinationSystemAddress = 0,
                     DestinationBodyId = -1,
+                    DestinationIsSystemTarget = false,
                     SystemBodyCount = 0,
                     FssProgress = 0,
                     NonBodySignals = 0,
@@ -473,7 +504,8 @@ internal sealed class JournalStateReducer
                     LastJumpFuelUsed = jumpFuelUsed > 0 ? jumpFuelUsed : current.LastJumpFuelUsed,
                     LastJumpDistanceLy = jumpDistance > 0 ? jumpDistance : current.LastJumpDistanceLy,
                     FuelPerLightYearEstimate = fuelRate
-                };            case "docked":
+                };
+            case "docked":
                 return current with
                 {
                     StarSystem = GetString(root, "StarSystem", current.StarSystem),
@@ -489,8 +521,12 @@ internal sealed class JournalStateReducer
                 {
                     Destination = fsdTargetName,
                     DestinationName = fsdTargetName,
-                    DestinationSystemAddress = TryGetInt64(root, "SystemAddress", current.DestinationSystemAddress),
-                    DestinationBodyId = -1
+                    // FSDTarget may omit SystemAddress. Keep zero in that
+                    // case so history lookup intentionally falls back to the
+                    // target name instead of reusing a stale address.
+                    DestinationSystemAddress = TryGetInt64(root, "SystemAddress"),
+                    DestinationBodyId = -1,
+                    DestinationIsSystemTarget = !string.IsNullOrWhiteSpace(fsdTargetName)
                 };
             case "navrouteclear":
                 navRoute.Clear();
@@ -499,7 +535,8 @@ internal sealed class JournalStateReducer
                     Destination = string.Empty,
                     DestinationName = string.Empty,
                     DestinationSystemAddress = 0,
-                    DestinationBodyId = -1
+                    DestinationBodyId = -1,
+                    DestinationIsSystemTarget = false
                 };
             case "fuelscoop":
                 return current with { FuelMain = TryGetDouble(root, "Total", current.FuelMain) };
@@ -855,8 +892,10 @@ internal sealed class JournalStateReducer
         bool terraformable = terraformState.Contains("Terraform", StringComparison.OrdinalIgnoreCase);
         double earthMasses = TryGetDouble(root, "MassEM", previous.EarthMasses);
         double solarMasses = TryGetDouble(root, "StellarMass", previous.SolarMasses);
-        bool wasDiscovered = GetBoolean(root, "WasDiscovered", previous.WasDiscovered);
-        bool wasMapped = GetBoolean(root, "WasMapped", previous.WasMapped);
+        bool? discoveredFlag = TryGetBoolean(root, "WasDiscovered");
+        bool? mappedFlag = TryGetBoolean(root, "WasMapped");
+        bool wasDiscovered = discoveredFlag ?? previous.WasDiscovered;
+        bool wasMapped = mappedFlag ?? previous.WasMapped;
         ExplorationValueEstimate values = ExplorationValueCalculator.Estimate(
             bodyType, bodyClass, terraformable, earthMasses, solarMasses);
         ExplorationInterest interest = DetermineInterest(
@@ -869,6 +908,8 @@ internal sealed class JournalStateReducer
             DistanceFromArrivalLs = TryGetDouble(root, "DistanceFromArrivalLS", previous.DistanceFromArrivalLs),
             WasDiscovered = wasDiscovered,
             WasMapped = wasMapped,
+            DiscoveryStatusKnown = discoveredFlag.HasValue || previous.DiscoveryStatusKnown,
+            MappingStatusKnown = mappedFlag.HasValue || previous.MappingStatusKnown,
             Interest = interest == ExplorationInterest.None ? previous.Interest : interest,
             Landable = GetBoolean(root, "Landable", previous.Landable),
             GravityG = TryGetDouble(root, "SurfaceGravity", previous.GravityG * 9.80665) / 9.80665,
@@ -882,9 +923,9 @@ internal sealed class JournalStateReducer
             Terraformable = terraformable,
             EarthMasses = earthMasses,
             SolarMasses = solarMasses,
-            EstimatedScanValue = ExplorationValueCalculator.SelectScanValue(values, wasDiscovered),
-            EstimatedMappingValue = ExplorationValueCalculator.SelectMappingValue(values, wasDiscovered, wasMapped, false),
-            EstimatedEfficientMappingValue = ExplorationValueCalculator.SelectMappingValue(values, wasDiscovered, wasMapped, true)
+            EstimatedScanValue = ExplorationValueCalculator.SelectScanValue(values, discoveredFlag ?? (previous.DiscoveryStatusKnown ? previous.WasDiscovered : null)),
+            EstimatedMappingValue = ExplorationValueCalculator.SelectMappingValue(values, discoveredFlag ?? (previous.DiscoveryStatusKnown ? previous.WasDiscovered : null), mappedFlag ?? (previous.MappingStatusKnown ? previous.WasMapped : null), false),
+            EstimatedEfficientMappingValue = ExplorationValueCalculator.SelectMappingValue(values, discoveredFlag ?? (previous.DiscoveryStatusKnown ? previous.WasDiscovered : null), mappedFlag ?? (previous.MappingStatusKnown ? previous.WasMapped : null), true)
         };
     }
 
@@ -1135,6 +1176,12 @@ internal sealed class JournalStateReducer
         element.TryGetProperty(property, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
             ? value.GetBoolean()
             : fallback;
+
+    private static bool? TryGetBoolean(JsonElement element, string property) =>
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
 
     private static int TryGetInt32(JsonElement element, string property, int fallback = 0)
     {

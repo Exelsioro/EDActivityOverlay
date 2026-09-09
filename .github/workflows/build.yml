@@ -3,29 +3,150 @@
 on:
   push:
     branches:
-      - master
+      - "**"
+    tags-ignore:
+      - "v*"
   pull_request:
     branches:
       - master
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  NUGET_XMLDOC_MODE: skip
+
 jobs:
   build:
+    name: Build, test and publish
     runs-on: windows-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore
-        run: dotnet restore .\EDActivityOverlay\EDActivityOverlay.sln
+      - name: Restore and audit dependencies
+        run: >-
+          dotnet restore .\EDActivityOverlay\EDActivityOverlay.sln
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -warnaserror
+
+      - name: Restore publish runtime
+        run: >-
+          dotnet restore .\EDActivityOverlay\EDActivityOverlay.csproj
+          --runtime win-x64
+          -p:NuGetAudit=true
+          -p:NuGetAuditMode=all
+          -warnaserror
 
       - name: Build
-        run: dotnet build .\EDActivityOverlay\EDActivityOverlay.sln --configuration Release --no-restore
+        run: >-
+          dotnet build .\EDActivityOverlay\EDActivityOverlay.sln
+          --configuration Release
+          --no-restore
+          -warnaserror
 
       - name: Test
-        run: dotnet test .\Testing\EDActivityOverlay.Tests\EDActivityOverlay.Tests.csproj --configuration Release --no-build
+        run: >-
+          dotnet test .\Testing\EDActivityOverlay.Tests\EDActivityOverlay.Tests.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory .\artifacts\test-results
+
+      - name: Publish smoke test
+        run: >-
+          dotnet publish .\EDActivityOverlay\EDActivityOverlay.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --no-restore
+          --output .\Release
+
+      - name: Validate publish contents
+        shell: pwsh
+        run: |
+          $required = @(
+            '.\Release\EDActivityOverlay.exe',
+            '.\Release\LICENSE',
+            '.\Release\THIRD_PARTY.md',
+            '.\Release\ThirdPartyLicenses\Apache-2.0.txt',
+            '.\Release\Themes'
+          )
+
+          foreach ($path in $required) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "Published output is missing: $path"
+            }
+          }
+
+      - name: Install Inno Setup for package gate
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
+        shell: pwsh
+        run: choco install innosetup --version=6.7.1 --yes --no-progress
+
+      - name: Build candidate packages
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
+        shell: pwsh
+        run: |
+          $version = (dotnet msbuild .\EDActivityOverlay\EDActivityOverlay.csproj `
+            -getProperty:Version `
+            -nologo).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
+            throw "Project version is not valid for packaging: $version"
+          }
+
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          .\build_installer.ps1 `
+            -SkipBuild `
+            -Version $version `
+            -InnoCompiler $iscc
+
+          New-Item -ItemType Directory -Path '.\artifacts\candidate' -Force | Out-Null
+          $installer = ".\Installer\EDActivityOverlay_Setup_$version.exe"
+          Copy-Item -LiteralPath $installer -Destination '.\artifacts\candidate'
+
+          Get-ChildItem -LiteralPath '.\Release' -Filter '*.pdb' -Recurse |
+            Remove-Item -Force
+          $zip = ".\artifacts\candidate\EDActivityOverlay_$version`_portable_win-x64.zip"
+          Compress-Archive -Path '.\Release\*' -DestinationPath $zip -CompressionLevel Optimal
+
+          $lines = Get-ChildItem -LiteralPath '.\artifacts\candidate' -File |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+              "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+            }
+          $lines | Set-Content -LiteralPath '.\artifacts\candidate\SHA256SUMS.txt' -Encoding utf8
+
+      - name: Upload candidate packages
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: EDActivityOverlay-candidate-${{ github.sha }}
+          path: artifacts/candidate
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ github.run_id }}
+          path: artifacts/test-results
+          if-no-files-found: error
+          retention-days: 14

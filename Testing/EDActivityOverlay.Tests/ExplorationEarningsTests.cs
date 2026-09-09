@@ -40,4 +40,81 @@ public sealed class ExplorationEarningsTests
         Assert.Equal(0, afterSale.ExobiologyMinimumEstimate);
         Assert.Equal(0, afterSale.ExobiologyMaximumEstimate);
     }
+
+    [Fact]
+    public void MultiSellRemovesOnlyListedSystems()
+    {
+        var lines = new[]
+        {
+            "{\"event\":\"LoadGame\",\"Commander\":\"Cmdr\"}",
+            "{\"event\":\"Location\",\"StarSystem\":\"Alpha\",\"SystemAddress\":1}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"PlanetClass\":\"Water world\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+            "{\"event\":\"Location\",\"StarSystem\":\"Beta\",\"SystemAddress\":2}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Beta 1\",\"PlanetClass\":\"Water world\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+            "{\"event\":\"MultiSellExplorationData\",\"Discovered\":[{\"SystemName\":\"Alpha\",\"NumBodies\":1}]}",
+        };
+
+        var state = ExplorationEarningsService.CalculateForJournalLines(lines);
+        var betaOnly = ExplorationEarningsService.CalculateForJournalLines(lines.Skip(4).Take(1));
+        Assert.Equal(betaOnly.UniversalCartographicsEstimate, state.UniversalCartographicsEstimate);
+    }
+
+    [Fact]
+    public void OrganicSaleRemovesOnlyMatchingCodexEntries()
+    {
+        var state = ExplorationEarningsService.CalculateForJournalLines(new[]
+        {
+            "{\"event\":\"Location\",\"StarSystem\":\"Alpha\",\"SystemAddress\":1}",
+            "{\"event\":\"ScanOrganic\",\"ScanType\":\"Analyse\",\"Body\":1,\"Genus\":\"$Codex_Ent_Stratum_Genus_Name;\",\"Species\":\"$Codex_Ent_Stratum_01_Name;\",\"Variant\":\"$Codex_Ent_Stratum_01_A_Name;\"}",
+            "{\"event\":\"ScanOrganic\",\"ScanType\":\"Analyse\",\"Body\":2,\"Genus\":\"$Codex_Ent_Bacterial_Genus_Name;\",\"Species\":\"$Codex_Ent_Bacterial_01_Name;\",\"Variant\":\"$Codex_Ent_Bacterial_01_A_Name;\"}",
+            "{\"event\":\"SellOrganicData\",\"BioData\":[{\"Genus\":\"$Codex_Ent_Stratum_Genus_Name;\",\"Species\":\"$Codex_Ent_Stratum_01_Name;\",\"Variant\":\"$Codex_Ent_Stratum_01_A_Name;\"}]}",
+        });
+
+        var bacterialOnly = ExplorationEarningsService.CalculateForJournalLines(new[]
+        {
+            "{\"event\":\"Location\",\"StarSystem\":\"Alpha\",\"SystemAddress\":1}",
+            "{\"event\":\"ScanOrganic\",\"ScanType\":\"Analyse\",\"Body\":2,\"Genus\":\"$Codex_Ent_Bacterial_Genus_Name;\",\"Species\":\"$Codex_Ent_Bacterial_01_Name;\",\"Variant\":\"$Codex_Ent_Bacterial_01_A_Name;\"}",
+        });
+        Assert.Equal(bacterialOnly.ExobiologyMinimumEstimate, state.ExobiologyMinimumEstimate);
+    }
+
+    [Fact]
+    public void ScanAfterMappingDoesNotLowerEstimatedValue()
+    {
+        var state = ExplorationEarningsService.CalculateForJournalLines(new[]
+        {
+            "{\"event\":\"Location\",\"StarSystem\":\"Alpha\",\"SystemAddress\":1}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"PlanetClass\":\"Water world\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+            "{\"event\":\"SAAScanComplete\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"ProbesUsed\":5,\"EfficiencyTarget\":6}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"PlanetClass\":\"Water world\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+        });
+        var mapped = ExplorationEarningsService.CalculateForJournalLines(new[]
+        {
+            "{\"event\":\"Location\",\"StarSystem\":\"Alpha\",\"SystemAddress\":1}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"PlanetClass\":\"Water world\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+            "{\"event\":\"SAAScanComplete\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"ProbesUsed\":5,\"EfficiencyTarget\":6}",
+        });
+        Assert.Equal(mapped.UniversalCartographicsEstimate, state.UniversalCartographicsEstimate);
+    }
+
+    [Fact]
+    public void EarningsLedgerResetsWhenCommanderChanges()
+    {
+        var state = ExplorationEarningsService.CalculateForJournalLines(new[]
+        {
+            "{\"event\":\"LoadGame\",\"Commander\":\"First\"}",
+            "{\"event\":\"Location\",\"StarSystem\":\"Alpha\",\"SystemAddress\":1}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Alpha 1\",\"PlanetClass\":\"Water world\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+            "{\"event\":\"LoadGame\",\"Commander\":\"Second\"}",
+            "{\"event\":\"Location\",\"StarSystem\":\"Beta\",\"SystemAddress\":2}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Beta 1\",\"PlanetClass\":\"Rocky body\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+        });
+        var secondOnly = ExplorationEarningsService.CalculateForJournalLines(new[]
+        {
+            "{\"event\":\"LoadGame\",\"Commander\":\"Second\"}",
+            "{\"event\":\"Location\",\"StarSystem\":\"Beta\",\"SystemAddress\":2}",
+            "{\"event\":\"Scan\",\"BodyID\":1,\"BodyName\":\"Beta 1\",\"PlanetClass\":\"Rocky body\",\"WasDiscovered\":false,\"WasMapped\":false,\"MassEM\":1}",
+        });
+        Assert.Equal(secondOnly.UniversalCartographicsEstimate, state.UniversalCartographicsEstimate);
+    }
 }

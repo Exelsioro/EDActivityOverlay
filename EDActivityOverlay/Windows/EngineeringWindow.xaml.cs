@@ -91,6 +91,13 @@ public partial class EngineeringWindow : Window
         engineerNavigationCancellation?.Dispose();
         engineerNavigationCancellation = null;
 
+        materialTraderSearchCancellation?.Cancel();
+        materialTraderSearchCancellation?.Dispose();
+        materialTraderSearchCancellation = null;
+        materialTraderRouteCancellation?.Cancel();
+        materialTraderRouteCancellation?.Dispose();
+        materialTraderRouteCancellation = null;
+
         parentWindow?.OnEngineeringOverlayClosed();
     }
 
