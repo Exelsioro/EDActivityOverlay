@@ -98,9 +98,10 @@ public sealed class TradeV10ContinuousTests
 
         TradeContinuousPlan returning =
             Assert.Single(
-                plans.Where(plan =>
+                plans,
+                plan =>
                     plan.First.Target.MarketId
-                    == 2));
+                    == 2);
 
         Assert.True(
             returning.FirstBacktracks);
@@ -142,9 +143,10 @@ public sealed class TradeV10ContinuousTests
 
         TradeContinuousPlan viaC =
             Assert.Single(
-                plans.Where(plan =>
+                plans,
+                plan =>
                     plan.First.Target.MarketId
-                    == 2));
+                    == 2);
 
         Assert.Equal(
             2_200L,
@@ -231,9 +233,10 @@ public sealed class TradeV10ContinuousTests
 
         TradeContinuousPlan x =
             Assert.Single(
-                plans.Where(plan =>
+                plans,
+                plan =>
                     plan.First.Source.CommodityName
-                    == "x"));
+                    == "x");
 
         Assert.Equal(
             150,

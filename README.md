@@ -6,7 +6,7 @@ The application combines local Player Journal data, Frontier companion JSON file
 
 ## Requirements
 
-- Windows 10 (1607+) or Windows 11
+- Windows 10 version 2004 (build 19041+) or Windows 11
 - Elite Dangerous (`EliteDangerous64.exe`)
 
 ## Current Features
@@ -33,9 +33,10 @@ The application combines local Player Journal data, Frontier companion JSON file
 
 ## Trade Route Search
 
-Remote trade-route discovery is temporarily disabled while the market-data provider and route-search architecture are being redesigned.
-
-The local trading workflow remains available, including Journal integration, cargo state, market validation, route progress and pinned-route presentation.
+Trade route discovery uses the Ardent Insight market-data API and supports
+one-way, round-trip, continuous and cargo-sale searches. The trading workflow
+also combines Journal events and the current `Market.json` snapshot for cargo,
+market validation, route progress, history and pinned-route presentation.
 
 ## Repository Layout
 
@@ -106,6 +107,12 @@ Additional test harnesses and regression scripts are available under `Testing/`.
 .\build_installer.ps1
 ```
 
+Build a specific version:
+
+```powershell
+.\build_installer.ps1 -Version 1.3.0-beta.1
+```
+
 Build app only:
 
 ```powershell
@@ -113,6 +120,10 @@ Build app only:
 ```
 
 Installer output is written to `Installer/`.
+
+Tagged releases are built by GitHub Actions. A tag such as
+`v1.3.0-beta.1` creates a prerelease with a self-contained portable ZIP,
+an Inno Setup installer and SHA-256 checksums.
 
 ## Data Migration
 
@@ -123,4 +134,6 @@ Existing application data from the pre-rebrand installation is migrated automati
 See the [Documentation index](Documentation/README.md) for maintained feature, architecture, testing, hardware and attribution documentation.
 ## License
 
-MIT
+[MIT](LICENSE). Third-party code and data notices are recorded in
+[Documentation/THIRD_PARTY.md](Documentation/THIRD_PARTY.md) and are included
+in published distributions.

@@ -2,6 +2,9 @@
 {
     public static class Logger
     {
+        private const int MaximumLogFiles = 30;
+        private const long MaximumLogBytes = 64L * 1024L * 1024L;
+        private static readonly TimeSpan MaximumLogAge = TimeSpan.FromDays(30);
         private static string? logFilePath;
         private static StreamWriter? logWriter;
         private static readonly object lockObject = new object();
@@ -15,16 +18,16 @@
         {
             try
             {
-                // Create logs directory if it doesn't exist
-                string logsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
-                if (!Directory.Exists(logsDirectory))
-                {
-                    Directory.CreateDirectory(logsDirectory);
-                }
+                string logsDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "EDActivityOverlay",
+                    "logs");
+                Directory.CreateDirectory(logsDirectory);
+                PruneLogs(logsDirectory);
 
                 // Create unique log file with timestamp for each startup
                 string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-                string logFileName = $"overlay_log_{timestamp}.txt";
+                string logFileName = $"overlay_log_{timestamp}_{Environment.ProcessId}.txt";
                 logFilePath = Path.Combine(logsDirectory, logFileName);
 
                 logWriter = new StreamWriter(logFilePath, append: true);
@@ -37,6 +40,47 @@
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to initialize logger: {ex.Message}");
+            }
+        }
+
+        private static void PruneLogs(string logsDirectory)
+        {
+            try
+            {
+                DateTime oldestAllowed = DateTime.UtcNow - MaximumLogAge;
+                FileInfo[] files = new DirectoryInfo(logsDirectory)
+                    .EnumerateFiles("overlay_log_*.txt", SearchOption.TopDirectoryOnly)
+                    .OrderByDescending(file => file.LastWriteTimeUtc)
+                    .ToArray();
+
+                long retainedBytes = 0;
+                for (int index = 0; index < files.Length; index++)
+                {
+                    FileInfo file = files[index];
+                    bool exceedsAge = file.LastWriteTimeUtc < oldestAllowed;
+                    bool exceedsCount = index >= MaximumLogFiles;
+                    bool exceedsSize = retainedBytes + file.Length > MaximumLogBytes;
+
+                    if (exceedsAge || exceedsCount || exceedsSize)
+                    {
+                        try
+                        {
+                            file.Delete();
+                        }
+                        catch
+                        {
+                            // A locked log must not prevent application startup.
+                        }
+
+                        continue;
+                    }
+
+                    retainedBytes += file.Length;
+                }
+            }
+            catch
+            {
+                // Retention is best-effort and must never disable logging.
             }
         }
 

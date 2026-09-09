@@ -347,14 +347,15 @@ public static class TradeRouteEngine
         PriorityQueue<TradeRouteCandidate, TPriority> queue,
         TPriority priority,
         int maxResults)
-        where TPriority : IComparable<TPriority>
+        where TPriority : notnull, IComparable<TPriority>
     {
         if (queue.Count < maxResults)
         {
             return true;
         }
 
-        return queue.TryPeek(out _, out TPriority worst)
+        return queue.TryPeek(out _, out TPriority? worst)
+               && worst is not null
                && priority.CompareTo(worst) > 0;
     }
 
@@ -363,7 +364,7 @@ public static class TradeRouteEngine
         TradeRouteCandidate candidate,
         TPriority priority,
         int maxResults)
-        where TPriority : IComparable<TPriority>
+        where TPriority : notnull, IComparable<TPriority>
     {
         queue.Enqueue(candidate, priority);
 

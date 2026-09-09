@@ -1,7 +1,12 @@
 ﻿; Inno Setup Script for ED Activity Overlay
 
 #define MyAppName "ED Activity Overlay"
-#define MyAppVersion "1.2.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.3.0-beta.1"
+#endif
+#ifndef MyAppFileVersion
+  #define MyAppFileVersion "1.3.0.0"
+#endif
 #define MyAppPublisher "ED Activity Overlay"
 #define MyAppURL "https://github.com/Exelsioro/EDActivityOverlay"
 #define MyAppExeName "EDActivityOverlay.exe"
@@ -15,6 +20,7 @@ AppId={{A3E8B5C7-1F4A-4B9D-8E2C-6F5A9B3D7E8F}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
+VersionInfoVersion={#MyAppFileVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -30,11 +36,12 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 
-MinVersion=10.0.14393
+MinVersion=10.0.19041
 ArchitecturesInstallIn64BitMode=x64
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

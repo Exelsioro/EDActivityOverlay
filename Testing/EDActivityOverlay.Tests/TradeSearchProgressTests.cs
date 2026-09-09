@@ -49,10 +49,10 @@ public sealed class TradeSearchProgressTests
 
         TradeSearchProgress completed =
             Assert.Single(
-                events.Where(
-                    item =>
-                        item.Stage
-                        == TradeSearchStage.Completed));
+                events,
+                item =>
+                    item.Stage
+                    == TradeSearchStage.Completed);
 
         Assert.Equal(
             2,
