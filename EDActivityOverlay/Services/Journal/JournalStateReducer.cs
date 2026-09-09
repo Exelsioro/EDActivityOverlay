@@ -154,7 +154,6 @@ internal sealed class JournalStateReducer
         ulong flags2 = TryGetUInt64(root, "Flags2");
         bool inSupercruise = HasFlag(flags, 4);
         bool scoActive = HasFlag(flags2, 20);
-        DateTimeOffset observedUtc = DateTimeOffset.UtcNow;
         bool hasSurfacePosition = HasFlag(flags, 21)
                                   && root.TryGetProperty("Latitude", out _)
                                   && root.TryGetProperty("Longitude", out _);
@@ -180,25 +179,6 @@ internal sealed class JournalStateReducer
 
         Update(current =>
         {
-            DateTimeOffset? scoCooldownUntil =
-                current.ScoEstimatedCooldownUntilUtc;
-
-            if (!inSupercruise
-                || scoActive)
-            {
-                scoCooldownUntil = null;
-            }
-            else if (current.ScoActive
-                     && !scoActive)
-            {
-                // Status.json exposes SCO active but no ready/cooldown flag.
-                // Current-game measurements show a tight ~5 s reactivation
-                // threshold in ordinary supercruise. Keep this explicitly as
-                // an estimate because Elite does not expose the exact ready time.
-                scoCooldownUntil =
-                    observedUtc.AddSeconds(5);
-            }
-
             return current with
             {
                 LastEventUtc = MaxTimestamp(current.LastEventUtc, GetTimestamp(root)),
@@ -218,7 +198,9 @@ internal sealed class JournalStateReducer
                 FsdCharging = HasFlag(flags, 17) || HasFlag(flags, 30),
                 FsdCooldown = HasFlag(flags, 18),
                 ScoActive = scoActive,
-                ScoEstimatedCooldownUntilUtc = scoCooldownUntil,
+                // Disabled until the cooldown can be derived from ship-specific
+                // telemetry rather than a misleading fixed duration.
+                ScoEstimatedCooldownUntilUtc = null,
                 LowFuel = HasFlag(flags, 19),
                 OverHeating = HasFlag(flags, 20),
                 IsInDanger = HasFlag(flags, 22) || HasFlag(flags, 23),

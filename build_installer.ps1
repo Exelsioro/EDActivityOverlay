@@ -6,7 +6,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
-    [string]$Version = "1.3.0-beta.1",
+    [string]$Version = "1.3.0-beta.2",
     [string]$InnoCompiler = "",
     [switch]$SkipBuild = $false,
     [switch]$SkipInstaller = $false

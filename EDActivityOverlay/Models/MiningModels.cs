@@ -43,7 +43,21 @@ public sealed record MiningProspectAdvice(
     string MatchedDisplayName,
     double? TargetProportion,
     bool TargetFound,
-    bool MotherlodeMatches);
+    bool MotherlodeMatches)
+{
+    /// <summary>
+    /// A core commodity found in the asteroid that is not one of the active
+    /// targets. This is kept separate from Decision so target hit-rate and
+    /// acceptance analytics continue to describe the configured targets only.
+    /// </summary>
+    public string OpportunityCommodityId { get; init; } = string.Empty;
+
+    public string OpportunityDisplayName { get; init; } = string.Empty;
+
+    public bool HasCoreOpportunity =>
+        !string.IsNullOrWhiteSpace(OpportunityCommodityId)
+        || !string.IsNullOrWhiteSpace(OpportunityDisplayName);
+}
 
 public sealed record MiningTargetStatistics(
     int Prospected,

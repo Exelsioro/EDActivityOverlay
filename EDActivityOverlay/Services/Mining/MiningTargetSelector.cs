@@ -1,3 +1,4 @@
+using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
 
 namespace EDActivityOverlay.Services.Mining;
@@ -146,6 +147,68 @@ public static class MiningTargetSelector
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    internal static IReadOnlyList<string> GetMarketCandidates(
+        AppSettings settings,
+        MiningRingContextSnapshot ring,
+        MiningProspectSnapshot? prospect,
+        IEnumerable<CargoCommoditySnapshot> cargo)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(ring);
+        ArgumentNullException.ThrowIfNull(cargo);
+
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // DSS signals are useful independently of whether the body Scan event
+        // that carries ring class and reserve level was observed this session.
+        candidates.UnionWith(ring.HotspotCommodityIds);
+
+        if (HasResolvedRingClass(ring.RingClass))
+        {
+            candidates.UnionWith(GetCompatibleCommodityIds(ring.RingClass));
+        }
+        else if (!settings.MiningAutoSelectTargets)
+        {
+            candidates.UnionWith(NormalizeManualTargets(settings));
+        }
+
+        if (prospect is not null)
+        {
+            foreach (MiningProspectMaterialSnapshot material in prospect.Materials)
+            {
+                AddKnownCommodity(candidates, material.CommodityId, material.DisplayName);
+            }
+
+            AddKnownCommodity(
+                candidates,
+                prospect.MotherlodeCommodityId,
+                prospect.MotherlodeDisplayName);
+        }
+
+        foreach (CargoCommoditySnapshot item in cargo.Where(item => item.Count > 0))
+        {
+            AddKnownCommodity(candidates, item.CommodityId, item.DisplayName);
+        }
+
+        return candidates
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static void AddKnownCommodity(
+        ISet<string> candidates,
+        string? commodityId,
+        string? displayName)
+    {
+        MiningTargetOption? option = MiningTargetCatalog.Find(commodityId)
+            ?? MiningTargetCatalog.Find(displayName);
+        if (option is not null && !string.IsNullOrWhiteSpace(option.CommodityId))
+        {
+            candidates.Add(option.CommodityId);
+        }
     }
 
     public static IReadOnlyList<string> NormalizeManualTargets(AppSettings settings)

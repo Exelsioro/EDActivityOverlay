@@ -94,6 +94,7 @@ public static class MiningCollectorEstimator
 
 public static class MiningIntelligenceCalculator
 {
+    internal const int FieldQualityMinimumProspects = 8;
     private const int AdaptiveWindow = 16;
     private const int MinimumAdaptiveProspects = 12;
     private const int MinimumAdaptiveTargetSamples = 6;
@@ -328,7 +329,7 @@ public static class MiningIntelligenceCalculator
     {
         if (!session.IsActive
             || string.IsNullOrWhiteSpace(targetCommodity)
-            || session.ProspectedAsteroids < 8)
+            || session.ProspectedAsteroids < FieldQualityMinimumProspects)
         {
             return MiningFieldQuality.Unknown;
         }

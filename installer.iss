@@ -2,7 +2,7 @@
 
 #define MyAppName "ED Activity Overlay"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.3.0-beta.1"
+  #define MyAppVersion "1.3.0-beta.2"
 #endif
 #ifndef MyAppFileVersion
   #define MyAppFileVersion "1.3.0.0"

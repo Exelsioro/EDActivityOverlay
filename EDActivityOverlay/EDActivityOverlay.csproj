@@ -11,7 +11,7 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <Version>1.3.0-beta.1</Version>
+    <Version>1.3.0-beta.2</Version>
     <AssemblyVersion>1.3.0.0</AssemblyVersion>
     <FileVersion>1.3.0.0</FileVersion>
     <Product>ED Activity Overlay</Product>

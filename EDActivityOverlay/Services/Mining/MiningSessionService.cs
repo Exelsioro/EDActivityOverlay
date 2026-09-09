@@ -177,6 +177,10 @@ public sealed class MiningSessionService : IJournalDataConsumer, IDisposable
                 session.SystemAddress,
                 session.SystemName);
 
+        ring = MiningRingContextService.EnrichFromDestination(
+            ring,
+            MiningDestinationService.Instance.Current);
+
         return EnrichRingContext(session, ring);
     }
 
