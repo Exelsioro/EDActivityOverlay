@@ -194,11 +194,19 @@
 
 
 
+                        <TextBlock Text="{DynamicResource Loc_OVERLAY_RENDERER}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
+
+                        <TextBlock Text="{DynamicResource Loc_OVERLAY_RENDERER_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <ComboBox x:Name="OverlayRenderModeComboBox" Height="32" Margin="0,0,0,18" Style="{DynamicResource ComboBoxStyle}" SelectionChanged="OverlayRenderModeComboBox_SelectionChanged" />
+
                         <TextBlock Text="{DynamicResource Loc_VR_SUPPORT}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
 
                         <CheckBox x:Name="EnableVrOverlaySupportCheckBox" Content="{DynamicResource Loc_ENABLE_VR_OVERLAY_SUPPORT}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,6" />
 
-                        <TextBlock Text="{DynamicResource Loc_VR_OVERLAY_SUPPORT_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,20" />
+                        <TextBlock Text="{DynamicResource Loc_VR_OVERLAY_SUPPORT_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                        <TextBlock x:Name="VrCompositeRequirementText" Text="{DynamicResource Loc_VR_REQUIRES_COMPOSITE}" Foreground="{DynamicResource AccentColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,20" />
 
 
 

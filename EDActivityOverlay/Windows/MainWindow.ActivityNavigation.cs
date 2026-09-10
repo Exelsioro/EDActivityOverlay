@@ -60,6 +60,18 @@ public partial class MainWindow
         OverlayVisibilityState.SuppressActivity = false;
         currentActivity = activity;
         X52IntegrationService.Instance.SetActivity(activity);
+
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            CloseOverlayWindows();
+            CloseEngineeringOverlay();
+            CloseActivityWorkspace();
+            UpdateActivityNavigationUi();
+            UpdateOverlayInteractionModes();
+            Logger.Logger.Info($"Composite activity selected: {activity}");
+            return;
+        }
+
         switch (activity)
         {
             case ActivityType.Trade:
@@ -124,6 +136,20 @@ public partial class MainWindow
 
     private void ToggleActivityFromHotkey(ActivityType activity)
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            if (OverlayVisibilityState.SuppressAll || activity != currentActivity)
+            {
+                SelectActivity(activity);
+                return;
+            }
+
+            activityHiddenByHotkey = !activityHiddenByHotkey;
+            OverlayVisibilityState.SuppressActivity = activityHiddenByHotkey;
+            UpdateInteractionStatusUi();
+            return;
+        }
+
         bool isVisible = activity == currentActivity && activity switch
         {
             ActivityType.Trade => activityWorkspaceWindow?.IsVisible == true
@@ -169,6 +195,12 @@ public partial class MainWindow
 
     private void RestoreCurrentActivityWindows()
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            OverlayVisibilityState.SuppressActivity = false;
+            return;
+        }
+
         if (currentActivity == ActivityType.Trade)
         {
             if (activityWorkspaceWindow is { IsLoaded: true })
@@ -208,6 +240,11 @@ public partial class MainWindow
 
     private void EnsureEngineeringWorkspaceVisible()
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            return;
+        }
+
         if (engineeringOverlayWindow is not { IsLoaded: true })
         {
             engineeringOverlayWindow = new EngineeringWindow(this);
@@ -224,6 +261,11 @@ public partial class MainWindow
 
     private void EnsureJournalWorkspaceVisible(ActivityType activity)
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            return;
+        }
+
         if (activityWorkspaceWindow is not { IsLoaded: true })
         {
             activityWorkspaceWindow = new ActivityWorkspaceOverlayWindow(this, activity);
@@ -268,5 +310,6 @@ public partial class MainWindow
         engineeringOverlayWindow?.RefreshLocalization();
         notificationOverlayWindow?.RefreshLocalization();
         shipStatusOverlayWindow?.RefreshLocalization();
+        OverlayRenderCoordinator.RefreshLocalization();
     }
 }

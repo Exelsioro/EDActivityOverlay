@@ -96,6 +96,12 @@ namespace EDActivityOverlay.Windows
             new HotkeyOption { Label = Loc.Get("Loc_Minimal"), Value = Utils.OverlayChromeStyles.Minimal }
         };
 
+        private static readonly List<HotkeyOption> OverlayRenderModeOptions = new()
+        {
+            new HotkeyOption { Label = Loc.Get("Loc_RENDERER_INDIVIDUAL"), Value = OverlayRenderModes.Individual },
+            new HotkeyOption { Label = Loc.Get("Loc_RENDERER_COMPOSITE"), Value = OverlayRenderModes.Composite }
+        };
+
         private static readonly List<HotkeyOption> ExplorationCacheOptions = new()
         {
             new HotkeyOption { Label = Loc.Format("Loc_Hours_Format", 24), Value = "24" },
@@ -294,9 +300,12 @@ namespace EDActivityOverlay.Windows
             PinnedPositionOptions[3].Label = Text("Loc_Top_center");
             OverlayChromeStyleOptions[0].Label = Text("Loc_Compact");
             OverlayChromeStyleOptions[1].Label = Text("Loc_Minimal");
+            OverlayRenderModeOptions[0].Label = Text("Loc_RENDERER_INDIVIDUAL");
+            OverlayRenderModeOptions[1].Label = Text("Loc_RENDERER_COMPOSITE");
             TimeoutComboBox?.Items.Refresh();
             PinnedPositionComboBox?.Items.Refresh();
             OverlayChromeStyleComboBox?.Items.Refresh();
+            OverlayRenderModeComboBox?.Items.Refresh();
             ExplorationCacheOptions[0].Label = LocalizationService.Instance.Format("Loc_Hours_Format", 24);
             ExplorationCacheOptions[1].Label = LocalizationService.Instance.Format("Loc_Days_Format", 3);
             ExplorationCacheOptions[2].Label = LocalizationService.Instance.Format("Loc_Days_Format", 7);
@@ -1446,6 +1455,9 @@ namespace EDActivityOverlay.Windows
             OverlayChromeStyleComboBox.ItemsSource = OverlayChromeStyleOptions;
             OverlayChromeStyleComboBox.DisplayMemberPath = nameof(HotkeyOption.Label);
 
+            OverlayRenderModeComboBox.ItemsSource = OverlayRenderModeOptions;
+            OverlayRenderModeComboBox.DisplayMemberPath = nameof(HotkeyOption.Label);
+
             var settings = SettingsService.Instance.Settings;
             var (modifiers, key) = SettingsService.Instance.GetToggleHotkey();
             var (interactiveModifiers, interactiveKey) = SettingsService.Instance.GetInteractiveHotkey();
@@ -1463,6 +1475,11 @@ namespace EDActivityOverlay.Windows
             ReturnOnFocusLossCheckBox.IsChecked = settings.ReturnOnFocusLoss;
             ShowCursorWhenInteractiveCheckBox.IsChecked = settings.ShowCursorWhenInteractive;
             EnableVrOverlaySupportCheckBox.IsChecked = settings.EnableVrOverlaySupport;
+            OverlayRenderModeComboBox.SelectedItem = OverlayRenderModeOptions.FirstOrDefault(
+                option => option.Value.Equals(
+                    OverlayRenderModes.Normalize(settings.OverlayRenderMode),
+                    StringComparison.Ordinal))
+                ?? OverlayRenderModeOptions[0];
             EnableNotificationsCheckBox.IsChecked = settings.EnableOverlayNotifications;
             EnableShipStatusWidgetCheckBox.IsChecked = settings.EnableShipStatusWidget;
             NotificationDurationComboBox.SelectedItem = NotificationDurationComboBox.Items
@@ -1477,6 +1494,28 @@ namespace EDActivityOverlay.Windows
             OverlayChromeStyleComboBox.SelectedItem = OverlayChromeStyleOptions.FirstOrDefault(
                 o => o.Value.Equals(Utils.OverlayChromeStyles.Normalize(settings.OverlayChromeStyle), StringComparison.Ordinal))
                 ?? OverlayChromeStyleOptions[0];
+            UpdateVrSupportAvailability();
+        }
+
+        private void OverlayRenderModeComboBox_SelectionChanged(
+            object sender,
+            SelectionChangedEventArgs e) =>
+            UpdateVrSupportAvailability();
+
+        private void UpdateVrSupportAvailability()
+        {
+            bool composite =
+                OverlayRenderModeComboBox.SelectedItem is HotkeyOption option
+                && OverlayRenderModes.IsComposite(option.Value);
+
+            EnableVrOverlaySupportCheckBox.IsEnabled = composite;
+            VrCompositeRequirementText.Visibility =
+                composite ? Visibility.Collapsed : Visibility.Visible;
+
+            if (!composite)
+            {
+                EnableVrOverlaySupportCheckBox.IsChecked = false;
+            }
         }
 
         private static void ConfigureHotkeyPair(ComboBox modifier, ComboBox key)
@@ -1548,6 +1587,10 @@ namespace EDActivityOverlay.Windows
                 EnableShipStatusWidgetCheckBox.IsChecked == true,
                 ShipStatusPositionComboBox.SelectedItem is HotkeyOption shipStatusPosition
                     ? shipStatusPosition.Value : "TopCenter");
+            if (OverlayRenderModeComboBox.SelectedItem is HotkeyOption renderMode)
+            {
+                SettingsService.Instance.SetOverlayRenderMode(renderMode.Value);
+            }
             SettingsService.Instance.SetVrOverlaySupport(
                 EnableVrOverlaySupportCheckBox.IsChecked == true);
             if (PinnedPositionComboBox.SelectedItem is HotkeyOption pinnedPosition)

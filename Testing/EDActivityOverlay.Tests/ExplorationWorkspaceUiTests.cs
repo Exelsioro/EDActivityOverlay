@@ -82,7 +82,7 @@ public sealed class ExplorationWorkspaceUiTests
     [Fact]
     public void ShipStatusWidgetRemainsIndependentWhileTradeWorkspaceIsVisible()
     {
-        string main = File.ReadAllText(FindProjectFile("Windows", "MainWindow.xaml.cs"));
+        string main = File.ReadAllText(FindProjectFile("Windows", "MainWindow.CompositeRendering.cs"));
         string orchestration = File.ReadAllText(FindProjectFile("Windows", "MainWindow.OverlayOrchestration.cs"));
         string status = File.ReadAllText(FindProjectFile("Windows", "ShipStatusOverlayWindow.xaml.cs"));
 

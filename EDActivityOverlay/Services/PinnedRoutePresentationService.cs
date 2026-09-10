@@ -14,10 +14,9 @@ internal sealed record PinnedRoutePresentationSnapshot(
 }
 
 /// <summary>
-/// Small presentation bridge between the existing pinned-route execution shell
-/// and alternative hosts such as the single-HWND VR composite. The legacy
-/// PinnedRouteOverlay remains the execution owner during migration; this service
-/// only exposes its current presentation state.
+/// Renderer-independent owner of pinned-route execution and presentation state.
+/// Both Individual and Composite renderers consume the same tracker/snapshot, so
+/// switching renderer never requires a hidden legacy window or a second tracker.
 /// </summary>
 internal sealed class PinnedRoutePresentationService
 {
@@ -26,6 +25,8 @@ internal sealed class PinnedRoutePresentationService
     private readonly object sync = new();
     private PinnedRoutePresentationSnapshot current =
         PinnedRoutePresentationSnapshot.Empty;
+    private TradeRouteProgressTracker? tracker;
+    private TradeRoute? route;
 
     private PinnedRoutePresentationService()
     {
@@ -44,29 +45,39 @@ internal sealed class PinnedRoutePresentationService
         }
     }
 
-    public void Update(
-        TradeRoute? route,
-        TradeRouteProgress progress,
-        bool suppressedByTradeWorkspace)
+    public TradeRouteProgressTracker PinRoute(
+        TradeRoute tradeRoute,
+        bool preserveExecution)
     {
-        ArgumentNullException.ThrowIfNull(progress);
+        ArgumentNullException.ThrowIfNull(tradeRoute);
 
-        lock (sync)
+        bool suppressed = Current.SuppressedByTradeWorkspace;
+
+        if (tracker is null || !preserveExecution)
         {
-            current = new PinnedRoutePresentationSnapshot(
-                route,
-                progress,
-                route is not null,
-                suppressedByTradeWorkspace);
+            ReleaseTracker();
+            route = tradeRoute;
+            tracker = new TradeRouteProgressTracker(tradeRoute);
+            tracker.ProgressChanged += OnProgressChanged;
+        }
+        else
+        {
+            route = tradeRoute;
+            tracker.UpdateRoute(
+                tradeRoute,
+                preserveExecution: true);
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        Publish(
+            route,
+            tracker.Current,
+            suppressed);
+
+        return tracker;
     }
 
     public void SetSuppressed(bool value)
     {
-        bool changed;
-
         lock (sync)
         {
             if (current.SuppressedByTradeWorkspace == value)
@@ -78,7 +89,20 @@ internal sealed class PinnedRoutePresentationService
             {
                 SuppressedByTradeWorkspace = value
             };
-            changed = true;
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Clear()
+    {
+        ReleaseTracker();
+
+        bool changed;
+        lock (sync)
+        {
+            changed = current != PinnedRoutePresentationSnapshot.Empty;
+            current = PinnedRoutePresentationSnapshot.Empty;
         }
 
         if (changed)
@@ -87,18 +111,64 @@ internal sealed class PinnedRoutePresentationService
         }
     }
 
-    public void Clear()
+    /// <summary>
+    /// Compatibility hook for any still-running legacy presentation during a
+    /// renderer transition. It does not create or own an additional tracker.
+    /// </summary>
+    public void Update(
+        TradeRoute? tradeRoute,
+        TradeRouteProgress progress,
+        bool suppressedByTradeWorkspace)
+    {
+        ArgumentNullException.ThrowIfNull(progress);
+        Publish(
+            tradeRoute,
+            progress,
+            suppressedByTradeWorkspace);
+    }
+
+    private void OnProgressChanged(
+        object? sender,
+        TradeRouteProgressChangedEventArgs e)
+    {
+        TradeRoute? currentRoute = route;
+        if (currentRoute is null)
+        {
+            return;
+        }
+
+        Publish(
+            currentRoute,
+            e.Progress,
+            Current.SuppressedByTradeWorkspace);
+    }
+
+    private void Publish(
+        TradeRoute? tradeRoute,
+        TradeRouteProgress progress,
+        bool suppressedByTradeWorkspace)
     {
         lock (sync)
         {
-            if (current == PinnedRoutePresentationSnapshot.Empty)
-            {
-                return;
-            }
-
-            current = PinnedRoutePresentationSnapshot.Empty;
+            current = new PinnedRoutePresentationSnapshot(
+                tradeRoute,
+                progress,
+                tradeRoute is not null,
+                suppressedByTradeWorkspace);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ReleaseTracker()
+    {
+        if (tracker is not null)
+        {
+            tracker.ProgressChanged -= OnProgressChanged;
+            tracker.Dispose();
+            tracker = null;
+        }
+
+        route = null;
     }
 }

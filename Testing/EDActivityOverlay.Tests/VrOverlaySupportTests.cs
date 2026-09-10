@@ -49,47 +49,34 @@ public class VrOverlaySupportTests
     }
 
     [Fact]
-    public void VrSupportIsOptInByDefault()
+    public void RenderAndVrSupportAreOptInByDefault()
     {
-        Assert.False(new AppSettings().EnableVrOverlaySupport);
+        var settings = new AppSettings();
+        Assert.Equal(OverlayRenderModes.Individual, settings.OverlayRenderMode);
+        Assert.False(settings.EnableVrOverlaySupport);
     }
 
     [Theory]
-    [InlineData("MainWindow", "Main")]
-    [InlineData("ActivityWorkspaceOverlayWindow", "ActivityWorkspace")]
-    [InlineData("ShipStatusOverlayWindow", "ShipStatus")]
-    [InlineData("NotificationOverlayWindow", "Notifications")]
-    [InlineData("PinnedRouteOverlay", "PinnedRoute")]
-    [InlineData("ResultsOverlayWindow", "Results")]
-    [InlineData("TradeRouteWindow", "TradeRoute")]
-    [InlineData("EngineeringWindow", "Engineering")]
-    [InlineData("SettingsWindow", "Settings")]
-    [InlineData("DssPrototypeOverlayWindow", "Dss")]
-    [InlineData("WaitingWindow", "Waiting")]
-    [InlineData("X52ControlHelpWindow", "X52Help")]
-    [InlineData("VrCompositeOverlayWindow", "Composite")]
-    public void KnownTopLevelWindowsHaveStableVrRoles(
-        string typeName,
-        string expectedRole)
-    {
-        Assert.Equal(
-            expectedRole,
-            VrOverlaySupport.DescribeWindow(typeName).Role.ToString());
-    }
+    [InlineData(null, "Individual")]
+    [InlineData("", "Individual")]
+    [InlineData("individual", "Individual")]
+    [InlineData("COMPOSITE", "Composite")]
+    [InlineData("unknown", "Individual")]
+    public void RendererModeNormalizationIsStable(
+        string? value,
+        string expected) =>
+        Assert.Equal(expected, OverlayRenderModes.Normalize(value));
     [Theory]
-    [InlineData("ShipStatusOverlayWindow", true)]
-    [InlineData("NotificationOverlayWindow", true)]
-    [InlineData("PinnedRouteOverlay", true)]
-    [InlineData("ActivityWorkspaceOverlayWindow", false)]
-    public void CompositeMigrationOwnsOnlyExtractedPanels(
-        string typeName,
-        bool expected)
-    {
-        VrOverlayWindowRole role =
-            VrOverlaySupport.DescribeWindow(typeName).Role;
-
+    [InlineData("Individual", false, false)]
+    [InlineData("Individual", true, false)]
+    [InlineData("Composite", false, false)]
+    [InlineData("Composite", true, true)]
+    public void VrCompatibilityRequiresCompositeRenderer(
+        string renderMode,
+        bool requested,
+        bool expected) =>
         Assert.Equal(
             expected,
-            VrOverlaySupport.IsCompositeOwnedRole(role));
-    }
+            VrOverlaySupport.ResolveEnabled(renderMode, requested));
+
 }

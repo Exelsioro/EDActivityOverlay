@@ -85,9 +85,14 @@
     <sys:String x:Key="Loc_Return_to_passive_mode_when_overlay_loses_focus">Return to passive mode when overlay loses focus</sys:String>
     <sys:String x:Key="Loc_Show_cursor_in_interactive_mode">Show cursor in interactive mode</sys:String>
     <sys:String x:Key="Loc_Automatic_return_to_passive_mode">Automatic return to passive mode</sys:String>
+    <sys:String x:Key="Loc_OVERLAY_RENDERER">OVERLAY RENDERER</sys:String>
+    <sys:String x:Key="Loc_OVERLAY_RENDERER_DESCRIPTION">Individual preserves separate overlay windows. Composite renders migrated overlay surfaces inside one stable window.</sys:String>
+    <sys:String x:Key="Loc_RENDERER_INDIVIDUAL">Individual windows</sys:String>
+    <sys:String x:Key="Loc_RENDERER_COMPOSITE">Composite window</sys:String>
     <sys:String x:Key="Loc_VR_SUPPORT">VR / META QUEST</sys:String>
     <sys:String x:Key="Loc_ENABLE_VR_OVERLAY_SUPPORT">Enable VR overlay compatibility mode</sys:String>
-    <sys:String x:Key="Loc_VR_OVERLAY_SUPPORT_DESCRIPTION">Keeps application windows rendered and discoverable for VR desktop capture. Spatial placement remains controlled by the VR runtime.</sys:String>
+    <sys:String x:Key="Loc_VR_OVERLAY_SUPPORT_DESCRIPTION">Keeps the composite capture surface rendered and discoverable while the VR runtime owns desktop focus.</sys:String>
+    <sys:String x:Key="Loc_VR_REQUIRES_COMPOSITE">VR compatibility is available only with the Composite renderer.</sys:String>
     <sys:String x:Key="Loc_LAYOUT">LAYOUT</sys:String>
     <sys:String x:Key="Loc_Pinned_route_position">Pinned route position</sys:String>
     <sys:String x:Key="Loc_Engineering_Exploration_and_Exobiology_use_the_opposite_side_when_possible">Engineering, Exploration and Exobiology use the opposite side when possible.</sys:String>

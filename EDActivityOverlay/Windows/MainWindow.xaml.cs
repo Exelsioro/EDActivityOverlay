@@ -16,6 +16,7 @@ using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Notifications;
 using EDActivityOverlay.Services.Hardware;
 using EDActivityOverlay.Services.Dss;
+using EDActivityOverlay.Windows.Renderers;
 
 namespace EDActivityOverlay
 {
@@ -34,10 +35,10 @@ namespace EDActivityOverlay
         private bool disposed;
         private TradeRouteWindow? tradeRouteWindow;
         private ResultsOverlayWindow? resultsOverlayWindow;
-        private PinnedRouteOverlay? pinnedRouteOverlay;
+        private PinnedRouteIndividualWindow? pinnedRouteOverlay;
         private EngineeringWindow? engineeringOverlayWindow;
-        private NotificationOverlayWindow? notificationOverlayWindow;
-        private ShipStatusOverlayWindow? shipStatusOverlayWindow;
+        private NotificationIndividualWindow? notificationOverlayWindow;
+        private ShipStatusIndividualWindow? shipStatusOverlayWindow;
         private DssPrototypeController? dssPrototypeController;
         private readonly X52OverlayPointerController x52OverlayPointerController;
         private bool isResultsActive = false;
@@ -108,9 +109,7 @@ namespace EDActivityOverlay
                 FindTargetProcessWithRetry(processName);
             }
             SetupOverlay();
-            notificationOverlayWindow = new NotificationOverlayWindow(targetWindow);
-            shipStatusOverlayWindow = new ShipStatusOverlayWindow(targetWindow);
-            shipStatusOverlayWindow.SetContextSuppression(null);
+            InitializeRenderModeSurfaces();
             SetupUpdateTimer();
             LoadConfiguredSettings();
             RestoreMainOverlayCollapsedState();
@@ -402,6 +401,13 @@ namespace EDActivityOverlay
                     "Using forceVisible flag for initial display");
             }
 
+            if (OverlayRenderCoordinator.IsCompositeMode)
+            {
+                shouldBeVisible = false;
+                shouldBeTopmost = false;
+                forceVisible = false;
+            }
+
             if (shouldBeVisible
                 && !IsVisible)
             {
@@ -568,6 +574,11 @@ namespace EDActivityOverlay
         private void RefreshExperimentalDssLifecycle(
             bool enabled)
         {
+            if (OverlayRenderCoordinator.IsCompositeMode)
+            {
+                enabled = false;
+            }
+
             if (!Dispatcher.CheckAccess())
             {
                 Dispatcher.BeginInvoke(
@@ -645,6 +656,7 @@ namespace EDActivityOverlay
             autoReturnTimeoutSeconds = NormalizeAutoReturnTimeout(e.Settings.AutoReturnTimeoutSeconds);
             returnOnFocusLoss = e.Settings.ReturnOnFocusLoss;
             showCursorWhenInteractive = e.Settings.ShowCursorWhenInteractive;
+            ApplyOverlayRenderModeFromSettings();
             pinnedRouteOverlay?.SetPlacement(e.Settings.PinnedRoutePosition);
             engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
             activityWorkspaceWindow?.SetPlacement(GetEngineeringOverlayPlacement());
@@ -746,6 +758,7 @@ namespace EDActivityOverlay
             engineeringOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
             activityWorkspaceWindow?.ApplyInteractionMode(canInteract, showCursor);
             shipStatusOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
+            OverlayRenderCoordinator.ApplyInteractionMode(canInteract, showCursor);
             WindowsAPI.SetClickThrough(this, !canInteract);
             if (!canInteract || !showCursor)
             {
@@ -857,6 +870,7 @@ namespace EDActivityOverlay
             }
 
             bool focusIsOnInteractiveOverlay = IsWindowFocused(this, foregroundWindow)
+                || OverlayRenderCoordinator.IsCompositeWindow(foregroundWindow)
                 || IsWindowFocused(tradeRouteWindow, foregroundWindow)
                 || IsWindowFocused(resultsOverlayWindow, foregroundWindow)
                 || IsWindowFocused(pinnedRouteOverlay, foregroundWindow)
@@ -892,7 +906,11 @@ namespace EDActivityOverlay
             interactiveModeActive = true;
             interactiveModeEnteredAtUtc = DateTime.UtcNow;
             interactiveFocusLossGraceUntilUtc = DateTime.MaxValue;
-            if (activityWorkspaceWindow?.IsVisible == true)
+            if (OverlayRenderCoordinator.IsCompositeMode)
+            {
+                OverlayRenderCoordinator.ActivateComposite();
+            }
+            else if (activityWorkspaceWindow?.IsVisible == true)
             {
                 activityWorkspaceWindow.Activate();
             }
@@ -980,6 +998,12 @@ namespace EDActivityOverlay
         {
             try
             {
+                if (OverlayRenderCoordinator.IsCompositeMode)
+                {
+                    OverlayRenderCoordinator.ActivateComposite();
+                    return;
+                }
+
                 if (IsVisible)
                 {
                     Activate();

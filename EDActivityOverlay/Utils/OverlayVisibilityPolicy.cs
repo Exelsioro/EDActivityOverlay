@@ -9,7 +9,7 @@ namespace EDActivityOverlay.Utils;
 internal static class OverlayVisibilityPolicy
 {
     public static bool VrModeEnabled =>
-        SettingsService.Instance.Settings.EnableVrOverlaySupport;
+        VrOverlaySupport.IsEnabled;
 
     public static bool TargetReady(
         bool windowExists,
