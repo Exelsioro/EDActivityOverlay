@@ -85,6 +85,9 @@
     <sys:String x:Key="Loc_Return_to_passive_mode_when_overlay_loses_focus">Возвращаться в пассивный режим при потере фокуса</sys:String>
     <sys:String x:Key="Loc_Show_cursor_in_interactive_mode">Показывать курсор в интерактивном режиме</sys:String>
     <sys:String x:Key="Loc_Automatic_return_to_passive_mode">Автоматический возврат в пассивный режим</sys:String>
+    <sys:String x:Key="Loc_VR_SUPPORT">VR / META QUEST</sys:String>
+    <sys:String x:Key="Loc_ENABLE_VR_OVERLAY_SUPPORT">Режим совместимости VR-оверлея</sys:String>
+    <sys:String x:Key="Loc_VR_OVERLAY_SUPPORT_DESCRIPTION">Оставляет окна приложения отрисованными и доступными для захвата рабочего стола в VR. Положение окон в пространстве задаёт VR-среда.</sys:String>
     <sys:String x:Key="Loc_LAYOUT">РАСПОЛОЖЕНИЕ</sys:String>
     <sys:String x:Key="Loc_Pinned_route_position">Положение закреплённого маршрута</sys:String>
     <sys:String x:Key="Loc_Engineering_Exploration_and_Exobiology_use_the_opposite_side_when_possible">Инженерия, исследования и экзобиология по возможности используют противоположную сторону экрана.</sys:String>

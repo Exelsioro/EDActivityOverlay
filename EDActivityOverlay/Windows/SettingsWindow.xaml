@@ -194,6 +194,14 @@
 
 
 
+                        <TextBlock Text="{DynamicResource Loc_VR_SUPPORT}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+
+                        <CheckBox x:Name="EnableVrOverlaySupportCheckBox" Content="{DynamicResource Loc_ENABLE_VR_OVERLAY_SUPPORT}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,6" />
+
+                        <TextBlock Text="{DynamicResource Loc_VR_OVERLAY_SUPPORT_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,20" />
+
+
+
                         <TextBlock Text="{DynamicResource Loc_NOTIFICATIONS}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
 
                         <CheckBox x:Name="EnableNotificationsCheckBox" Content="{DynamicResource Loc_Enable_overlay_notifications}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />

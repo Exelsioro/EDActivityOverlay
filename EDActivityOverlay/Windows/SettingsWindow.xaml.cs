@@ -1462,6 +1462,7 @@ namespace EDActivityOverlay.Windows
             EnableInteractionModeCheckBox.IsChecked = settings.EnableInteractionMode;
             ReturnOnFocusLossCheckBox.IsChecked = settings.ReturnOnFocusLoss;
             ShowCursorWhenInteractiveCheckBox.IsChecked = settings.ShowCursorWhenInteractive;
+            EnableVrOverlaySupportCheckBox.IsChecked = settings.EnableVrOverlaySupport;
             EnableNotificationsCheckBox.IsChecked = settings.EnableOverlayNotifications;
             EnableShipStatusWidgetCheckBox.IsChecked = settings.EnableShipStatusWidget;
             NotificationDurationComboBox.SelectedItem = NotificationDurationComboBox.Items
@@ -1547,6 +1548,8 @@ namespace EDActivityOverlay.Windows
                 EnableShipStatusWidgetCheckBox.IsChecked == true,
                 ShipStatusPositionComboBox.SelectedItem is HotkeyOption shipStatusPosition
                     ? shipStatusPosition.Value : "TopCenter");
+            SettingsService.Instance.SetVrOverlaySupport(
+                EnableVrOverlaySupportCheckBox.IsChecked == true);
             if (PinnedPositionComboBox.SelectedItem is HotkeyOption pinnedPosition)
             {
                 SettingsService.Instance.SetPinnedRoutePosition(pinnedPosition.Value);

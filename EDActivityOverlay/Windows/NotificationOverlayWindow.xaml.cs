@@ -108,12 +108,14 @@ public partial class NotificationOverlayWindow : Window
 
     private void UpdatePresentation()
     {
-        bool targetReady = targetWindow != IntPtr.Zero
-            && WindowsAPI.IsWindow(targetWindow)
-            && WindowsAPI.IsWindowVisible(targetWindow)
-            && !WindowsAPI.IsIconic(targetWindow);
+        bool targetReady = OverlayVisibilityPolicy.TargetReady(
+            targetWindow != IntPtr.Zero && WindowsAPI.IsWindow(targetWindow),
+            WindowsAPI.IsWindowVisible(targetWindow),
+            WindowsAPI.IsIconic(targetWindow));
         IntPtr foreground = WindowsAPI.GetForegroundWindow();
-        bool focused = foreground == targetWindow || WindowsAPI.IsOverlayWindow(foreground);
+        bool focused = OverlayVisibilityPolicy.FocusAllowsPresentation(
+            foreground == targetWindow,
+            WindowsAPI.IsOverlayWindow(foreground));
         if (notifications.Count == 0 || OverlayVisibilityState.SuppressAll || !targetReady || !focused)
         {
             if (IsVisible) Hide();

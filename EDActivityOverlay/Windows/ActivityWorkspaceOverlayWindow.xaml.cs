@@ -2687,11 +2687,15 @@ public partial class ActivityWorkspaceOverlayWindow : Window
             out uint targetProcessId);
 
         bool focused =
-            WindowsAPI.IsWindowOwnedByProcess(
-                foreground,
-                targetProcessId)
-            || WindowsAPI.IsOverlayWindow(foreground);
-        bool visible = WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow) && focused;
+            OverlayVisibilityPolicy.FocusAllowsPresentation(
+                WindowsAPI.IsWindowOwnedByProcess(
+                    foreground,
+                    targetProcessId),
+                WindowsAPI.IsOverlayWindow(foreground));
+        bool visible = OverlayVisibilityPolicy.TargetReady(
+            true,
+            WindowsAPI.IsWindowVisible(targetWindow),
+            WindowsAPI.IsIconic(targetWindow)) && focused;
         if (visible && !IsVisible) Show();
         else if (!visible && IsVisible) Hide();
         if (IsVisible && IsLoaded) WindowsAPI.SetTopmost(this, focused);

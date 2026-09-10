@@ -335,6 +335,11 @@ namespace EDActivityOverlay
                 WindowsAPI.IsOverlayWindow(
                     foregroundWindow);
 
+            bool presentationFocus =
+                OverlayVisibilityPolicy.FocusAllowsPresentation(
+                    targetHasFocus,
+                    overlayHasFocus);
+
             IntPtr visibilityWindow =
                 targetHasFocus
                 && foregroundWindow != IntPtr.Zero
@@ -349,12 +354,17 @@ namespace EDActivityOverlay
                 WindowsAPI.IsWindowVisible(
                     visibilityWindow);
 
+            bool targetReadyForPresentation =
+                OverlayVisibilityPolicy.TargetReady(
+                    true,
+                    targetVisible,
+                    targetMinimized);
+
             EvaluateInteractiveAutoReturn(
                 foregroundWindow);
 
             bool shouldBeVisible =
-                targetVisible
-                && !targetMinimized;
+                targetReadyForPresentation;
 
             bool shouldBeTopmost =
                 false;
@@ -362,19 +372,16 @@ namespace EDActivityOverlay
             if (currentState == OverlayState.ForceShow)
             {
                 shouldBeTopmost =
-                    targetHasFocus
-                    || overlayHasFocus;
+                    presentationFocus;
             }
             else if (currentState == OverlayState.Auto)
             {
                 shouldBeVisible =
                     shouldBeVisible
-                    && (targetHasFocus
-                        || overlayHasFocus);
+                    && presentationFocus;
 
                 shouldBeTopmost =
-                    targetHasFocus
-                    || overlayHasFocus;
+                    presentationFocus;
             }
 
             if (IsVisible
@@ -386,8 +393,7 @@ namespace EDActivityOverlay
             }
 
             if (forceVisible
-                && targetVisible
-                && !targetMinimized)
+                && targetReadyForPresentation)
             {
                 shouldBeVisible =
                     true;

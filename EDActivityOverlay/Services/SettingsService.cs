@@ -258,6 +258,18 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"Ship status widget settings updated: enabled={enabled}, position={position}");
         }
 
+        public void SetVrOverlaySupport(bool enabled)
+        {
+            if (_settings.EnableVrOverlaySupport == enabled)
+            {
+                return;
+            }
+
+            _settings.EnableVrOverlaySupport = enabled;
+            SaveSettings();
+            Logger.Logger.Info($"VR overlay capture compatibility updated: enabled={enabled}");
+        }
+
         public void SetMainOverlayCollapsed(
             bool collapsed)
         {
@@ -669,6 +681,12 @@ namespace EDActivityOverlay.Services
 
         /// <summary>Placement of the shared ship status widget.</summary>
         public string ShipStatusWidgetPosition { get; set; } = "TopCenter";
+
+        /// <summary>
+        /// Keeps WPF windows discoverable and rendered for VR desktop capture even
+        /// when the normal Windows foreground/minimized state would hide them.
+        /// </summary>
+        public bool EnableVrOverlaySupport { get; set; }
 
         /// <summary>
         /// Placement of the compact pinned route relative to the game window.

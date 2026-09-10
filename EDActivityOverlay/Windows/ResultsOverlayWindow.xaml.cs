@@ -123,16 +123,20 @@ namespace EDActivityOverlay.Windows
                 bool targetHasFocus = (foregroundWindow == targetWindow);
                 bool overlayHasFocus = WindowsAPI.IsOverlayWindow(foregroundWindow);
 
-                // Check if target window is minimized or not visible
+                // VR capture mode keeps the HWND rendered even while Dash/Link owns
+                // ordinary desktop focus or the Elite mirror is minimized.
                 bool targetMinimized = WindowsAPI.IsIconic(targetWindow);
                 bool targetVisible = WindowsAPI.IsWindowVisible(targetWindow);
+                bool presentationFocus = OverlayVisibilityPolicy.FocusAllowsPresentation(
+                    targetHasFocus,
+                    overlayHasFocus);
+                bool targetReady = OverlayVisibilityPolicy.TargetReady(
+                    true,
+                    targetVisible,
+                    targetMinimized);
 
-                // Determine if overlay should be visible based on target window state and focus
-                // Should be visible if target has focus OR any overlay window has focus
-                bool shouldBeVisible = targetVisible && !targetMinimized && (targetHasFocus || overlayHasFocus);
-                
-                // Set topmost only when target or overlay has focus
-                bool shouldBeTopmost = targetHasFocus || overlayHasFocus;
+                bool shouldBeVisible = targetReady && presentationFocus;
+                bool shouldBeTopmost = presentationFocus;
 
                 if (shouldBeVisible && !this.IsVisible)
                 {

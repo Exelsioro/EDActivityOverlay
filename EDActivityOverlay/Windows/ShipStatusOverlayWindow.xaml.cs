@@ -161,8 +161,10 @@ public partial class ShipStatusOverlayWindow : Window
 
         bool contextSuppressed = contextSuppression?.Invoke() == true;
         bool targetReady = enabled && !contextSuppressed && !OverlayVisibilityState.SuppressAll
-            && targetWindow != IntPtr.Zero && WindowsAPI.IsWindow(targetWindow)
-            && WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow);
+            && OverlayVisibilityPolicy.TargetReady(
+                targetWindow != IntPtr.Zero && WindowsAPI.IsWindow(targetWindow),
+                WindowsAPI.IsWindowVisible(targetWindow),
+                WindowsAPI.IsIconic(targetWindow));
         IntPtr foreground =
             WindowsAPI.GetForegroundWindow();
 
@@ -171,11 +173,13 @@ public partial class ShipStatusOverlayWindow : Window
             out uint targetProcessId);
 
         bool focused =
-            WindowsAPI.IsWindowOwnedByProcess(
-                foreground,
-                targetProcessId)
-            || WindowsAPI.IsOverlayWindow(
-                foreground);        if (!targetReady || !focused) { if (IsVisible) Hide(); return; }
+            OverlayVisibilityPolicy.FocusAllowsPresentation(
+                WindowsAPI.IsWindowOwnedByProcess(
+                    foreground,
+                    targetProcessId),
+                WindowsAPI.IsOverlayWindow(
+                    foreground));
+        if (!targetReady || !focused) { if (IsVisible) Hide(); return; }
         PositionOverlay();
         if (!IsVisible) Show();
         WindowsAPI.SetTopmost(this, true);

@@ -42,6 +42,7 @@ namespace EDActivityOverlay
 
             Logger.Logger.Info($"Application starting with target process: {targetProcessName}");
             LocalizationService.Instance.Initialize(SettingsService.Instance.Settings.Language);
+            VrOverlaySupport.Initialize();
             InitializeTrayIcon();
 
             var settings = SettingsService.Instance.Settings;

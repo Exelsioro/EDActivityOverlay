@@ -15,7 +15,8 @@ namespace EDActivityOverlay.Services.Dss;
 
 /// <summary>
 /// Live research prototype for DSS HUD geometry. Frontier GuiFocus=10 owns the
-/// DSS session, while foreground/minimized state owns overlay visibility.
+/// DSS session. Desktop mode follows foreground/minimized state; VR capture mode
+/// keeps the presentation HWND alive while the VR runtime owns desktop focus.
 /// Capture/CV run off the WPF dispatcher so live rendering is not gated by
 /// diagnostic disk I/O.
 /// </summary>
@@ -1308,16 +1309,19 @@ internal sealed class DssPrototypeController : IDisposable
     private bool ShouldShowForTarget(
         IntPtr targetWindow)
     {
-        if (targetWindow == IntPtr.Zero
-            || !WindowsAPI.IsWindow(targetWindow)
-            || !WindowsAPI.IsWindowVisible(targetWindow)
-            || WindowsAPI.IsIconic(targetWindow))
+        bool targetReady = OverlayVisibilityPolicy.TargetReady(
+            targetWindow != IntPtr.Zero && WindowsAPI.IsWindow(targetWindow),
+            WindowsAPI.IsWindowVisible(targetWindow),
+            WindowsAPI.IsIconic(targetWindow));
+        if (!targetReady)
         {
             return false;
         }
 
-        return WindowsAPI.GetForegroundWindow()
-               == targetWindow;
+        IntPtr foreground = WindowsAPI.GetForegroundWindow();
+        return OverlayVisibilityPolicy.FocusAllowsPresentation(
+            foreground == targetWindow,
+            WindowsAPI.IsOverlayWindow(foreground));
     }
 
     private void RequestOverlayVisibility(

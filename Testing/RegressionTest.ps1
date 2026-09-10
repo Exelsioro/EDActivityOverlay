@@ -3,10 +3,9 @@ $ErrorActionPreference = 'Stop'
 
 $scriptRoot = $PSScriptRoot
 $repoRoot = Split-Path -Parent $scriptRoot
-$appExe = Join-Path $repoRoot 'EDActivityOverlay\bin\Debug\net8.0-windows\EDActivityOverlay.exe'
-$mockExe = Join-Path $repoRoot 'Testing\MockTargetApp\bin\Debug\net8.0-windows\MockTargetApp.exe'
-$solution = Join-Path $repoRoot 'EDActivityOverlay\EDActivityOverlay.sln'
-$mockProj = Join-Path $repoRoot 'Testing\MockTargetApp\MockTargetApp.csproj'
+$appExe = Join-Path $repoRoot 'EDActivityOverlay\bin\Debug\net8.0-windows10.0.19041.0\EDActivityOverlay.exe'
+$mockExe = Join-Path $repoRoot 'Testing\MockTargetApp\bin\MockTargetApp\Debug\net8.0-windows\MockTargetApp.exe'
+$buildScript = Join-Path $repoRoot 'build.ps1'
 
 function Stop-TestProcesses {
     foreach ($name in @('EDActivityOverlay','MockTargetApp','notepad')) {
@@ -14,14 +13,11 @@ function Stop-TestProcesses {
     }
 }
 
-function Ensure-Binaries {
-    if (-not (Test-Path $appExe)) {
-        Write-Host 'Building solution...' -ForegroundColor Yellow
-        dotnet build $solution --configuration Debug | Out-Host
-    }
-    if (-not (Test-Path $mockExe)) {
-        Write-Host 'Building MockTargetApp...' -ForegroundColor Yellow
-        dotnet build $mockProj --configuration Debug | Out-Host
+function Build-Binaries {
+    Write-Host 'Building current checkout (Debug)...' -ForegroundColor Yellow
+    & $buildScript -Configuration Debug
+    if ($LASTEXITCODE -ne 0) {
+        throw "Debug build failed with exit code $LASTEXITCODE"
     }
     if (-not (Test-Path $appExe)) { throw "Missing app executable: $appExe" }
     if (-not (Test-Path $mockExe)) { throw "Missing mock executable: $mockExe" }
@@ -43,7 +39,7 @@ Write-Host 'ED Activity Overlay - Manual Regression Test' -ForegroundColor Green
 Write-Host '==========================================' -ForegroundColor Green
 
 Stop-TestProcesses
-Ensure-Binaries
+Build-Binaries
 
 $overlay = Start-Process -FilePath $appExe -ArgumentList 'MockTargetApp' -PassThru
 Start-Sleep -Seconds 2

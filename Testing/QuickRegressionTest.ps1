@@ -3,8 +3,8 @@ $ErrorActionPreference = 'Stop'
 
 $scriptRoot = $PSScriptRoot
 $repoRoot = Split-Path -Parent $scriptRoot
-$appExe = Join-Path $repoRoot 'EDActivityOverlay\bin\Debug\net8.0-windows\EDActivityOverlay.exe'
-$solution = Join-Path $repoRoot 'EDActivityOverlay\EDActivityOverlay.sln'
+$appExe = Join-Path $repoRoot 'EDActivityOverlay\bin\Debug\net8.0-windows10.0.19041.0\EDActivityOverlay.exe'
+$buildScript = Join-Path $repoRoot 'build.ps1'
 
 function Stop-TestProcesses {
     foreach ($name in @('EDActivityOverlay','MockTargetApp','notepad')) {
@@ -12,10 +12,12 @@ function Stop-TestProcesses {
     }
 }
 
-function Ensure-AppBuilt {
-    if (Test-Path $appExe) { return }
-    Write-Host 'Application binary not found. Building solution...' -ForegroundColor Yellow
-    dotnet build $solution --configuration Debug | Out-Host
+function Build-App {
+    Write-Host 'Building current checkout (Debug)...' -ForegroundColor Yellow
+    & $buildScript -Configuration Debug
+    if ($LASTEXITCODE -ne 0) {
+        throw "Debug build failed with exit code $LASTEXITCODE"
+    }
     if (-not (Test-Path $appExe)) {
         throw "Build finished but executable not found: $appExe"
     }
@@ -28,7 +30,7 @@ $passed = 0
 $total = 0
 
 Stop-TestProcesses
-Ensure-AppBuilt
+Build-App
 
 $total++
 if (Test-Path $appExe) {

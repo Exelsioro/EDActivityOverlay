@@ -64,6 +64,8 @@ public partial class PinnedRouteOverlay : Window
         suppressedByTradeWorkspace =
             value;
 
+        PinnedRoutePresentationService.Instance.SetSuppressed(value);
+
         if (value)
         {
             if (IsVisible)
@@ -81,9 +83,10 @@ public partial class PinnedRouteOverlay : Window
             || currentRoute is null
             || OverlayVisibilityState.SuppressAll
             || OverlayVisibilityState.SuppressActivity
-            || !WindowsAPI.IsWindow(targetWindow)
-            || !WindowsAPI.IsWindowVisible(targetWindow)
-            || WindowsAPI.IsIconic(targetWindow))
+            || !OverlayVisibilityPolicy.TargetReady(
+                WindowsAPI.IsWindow(targetWindow),
+                WindowsAPI.IsWindowVisible(targetWindow),
+                WindowsAPI.IsIconic(targetWindow)))
         {
             return;
         }
@@ -92,9 +95,10 @@ public partial class PinnedRouteOverlay : Window
             WindowsAPI.GetForegroundWindow();
 
         bool focused =
-            foreground == targetWindow
-            || WindowsAPI.IsOverlayWindow(
-                foreground);
+            OverlayVisibilityPolicy.FocusAllowsPresentation(
+                foreground == targetWindow,
+                WindowsAPI.IsOverlayWindow(
+                    foreground));
 
         if (focused
             && !IsVisible)
@@ -251,6 +255,10 @@ public partial class PinnedRouteOverlay : Window
             ? (System.Windows.Media.Brush)FindResource("FailureColorBrush")
             : (System.Windows.Media.Brush)FindResource("MutedTextColorBrush");
         UpdateNavigationControls();
+        PinnedRoutePresentationService.Instance.Update(
+            currentRoute,
+            progress,
+            suppressedByTradeWorkspace);
     }
 
     private void UpdateNavigationControls()
@@ -305,8 +313,13 @@ public partial class PinnedRouteOverlay : Window
 
         PositionOverlay();
         IntPtr foreground = WindowsAPI.GetForegroundWindow();
-        bool focused = foreground == targetWindow || WindowsAPI.IsOverlayWindow(foreground);
-        bool visible = WindowsAPI.IsWindowVisible(targetWindow) && !WindowsAPI.IsIconic(targetWindow) && focused;
+        bool focused = OverlayVisibilityPolicy.FocusAllowsPresentation(
+            foreground == targetWindow,
+            WindowsAPI.IsOverlayWindow(foreground));
+        bool visible = OverlayVisibilityPolicy.TargetReady(
+            true,
+            WindowsAPI.IsWindowVisible(targetWindow),
+            WindowsAPI.IsIconic(targetWindow)) && focused;
         if (visible && !IsVisible) Show();
         else if (!visible && IsVisible) Hide();
         if (IsVisible && IsLoaded) WindowsAPI.SetTopmost(this, focused);
@@ -468,6 +481,7 @@ public partial class PinnedRouteOverlay : Window
             navigationCancellation?.Cancel();
             navigationCancellation?.Dispose();
             navigationCancellation = null;
+            PinnedRoutePresentationService.Instance.Clear();
         }
         base.Close();
     }
