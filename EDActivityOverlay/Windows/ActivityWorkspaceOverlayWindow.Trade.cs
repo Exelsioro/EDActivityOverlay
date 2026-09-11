@@ -32,12 +32,8 @@ public partial class ActivityWorkspaceOverlayWindow
             return;
         }
 
-        if (CompactPanel.Parent
-            is not Grid root)
-        {
-            throw new InvalidOperationException(
-                "Activity workspace root Grid was not found.");
-        }
+        Grid root =
+            WorkspaceRoot;
 
         tradeWorkspaceControl =
             new TradeWorkspaceControl
@@ -95,10 +91,7 @@ public partial class ActivityWorkspaceOverlayWindow
             CloseFullExplorationView();
         }
 
-        CompactPanel.Visibility =
-            Visibility.Collapsed;
-
-        FullExplorationPanel.Visibility =
+        explorationWorkspaceControl.Visibility =
             Visibility.Collapsed;
 
         tradeWorkspaceControl.Visibility =
@@ -274,8 +267,6 @@ public partial class ActivityWorkspaceOverlayWindow
         Height =
             CompactHeight;
 
-        CompactPanel.Visibility =
-            Visibility.Visible;
 
         PositionOverlay();
     }

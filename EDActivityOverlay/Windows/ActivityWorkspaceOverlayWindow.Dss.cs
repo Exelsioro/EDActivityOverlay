@@ -24,7 +24,6 @@ public partial class ActivityWorkspaceOverlayWindow
 
     private bool dssHudInitialized;
     private bool dssHudActive;
-    private bool dssStandaloneLayer;
     private DispatcherTimer? dssHudTimer;
 
     private Border? dssContextPanel;
@@ -72,39 +71,10 @@ public partial class ActivityWorkspaceOverlayWindow
         dssContextPanel =
             BuildDssContextPanel();
 
-        // Product presentation is a sibling layer of the normal adaptive
-        // Exploration HUD. This is deliberately not another child of
-        // AdaptiveExplorationPanel: ordinary Exploration refreshes are allowed
-        // to continue in the background, but they can no longer replace the
-        // DSS structure for one rendered frame.
-        if (AdaptiveExplorationPanel.Parent
-            is Panel host)
-        {
-            host.Children.Add(
-                dssContextPanel);
+        explorationWorkspaceControl.SetExternalOverlayContent(
+            dssContextPanel);
 
-            Panel.SetZIndex(
-                dssContextPanel,
-                20);
-
-            dssStandaloneLayer = true;
-        }
-        else
-        {
-            // Defensive fallback for an unexpected layout host.
-            int insertIndex =
-                Math.Min(
-                    1,
-                    AdaptiveExplorationPanel.Children.Count);
-
-            AdaptiveExplorationPanel.Children.Insert(
-                insertIndex,
-                dssContextPanel);
-
-            dssStandaloneLayer = false;
-        }
-
-        dssHudTimer =
+        dssHudTimer =        dssHudTimer =
             new DispatcherTimer
             {
                 Interval =
@@ -572,55 +542,11 @@ public partial class ActivityWorkspaceOverlayWindow
         dssHudActive =
             true;
 
-        // Opacity is the ownership backstop. Ordinary Exploration refreshes
-        // may still assign Visibility.Visible to AdaptiveExplorationPanel, but
-        // while GuiFocus=10 they cannot become visible for one composed frame.
-        if (dssStandaloneLayer)
-        {
-            AdaptiveExplorationPanel.Opacity =
-                0;
+        explorationWorkspaceControl.SetExternalOverlayActive(
+            true);
 
-            AdaptiveExplorationPanel.Visibility =
-                Visibility.Collapsed;
-
-            LegacyCompactScrollViewer.Opacity =
-                0;
-
-            LegacyCompactScrollViewer.Visibility =
-                Visibility.Collapsed;
-        }
-        else
-        {
-            SystemContextPanel.Visibility =
-                Visibility.Collapsed;
-
-            BodyContextPanel.Visibility =
-                Visibility.Collapsed;
-
-            ExobioContextPanel.Visibility =
-                Visibility.Collapsed;
-
-            CompactRouteAlertPanel.Visibility =
-                Visibility.Collapsed;
-        }
-
-        dssContextPanel.Visibility =
+        dssContextPanel.Visibility =        dssContextPanel.Visibility =
             Visibility.Visible;
-
-        ModuleStatusText.Visibility =
-            Visibility.Collapsed;
-
-        FooterHintText.Visibility =
-            Visibility.Collapsed;
-
-        OpenExplorationAssistantButton.Opacity =
-            0;
-
-        OpenExplorationAssistantButton.IsHitTestVisible =
-            false;
-
-        OpenExplorationAssistantButton.Visibility =
-            Visibility.Collapsed;
 
         string resolvedBodyName =
             !string.IsNullOrWhiteSpace(
@@ -1525,6 +1451,9 @@ public partial class ActivityWorkspaceOverlayWindow
                 Visibility.Collapsed;
         }
 
+        explorationWorkspaceControl.SetExternalOverlayActive(
+            false);
+
         if (!dssHudActive)
         {
             return;
@@ -1533,72 +1462,23 @@ public partial class ActivityWorkspaceOverlayWindow
         dssHudActive =
             false;
 
-        if (dssStandaloneLayer)
+        if (activity == ActivityType.Exploration)
         {
-            AdaptiveExplorationPanel.Opacity =
-                1;
-
-            LegacyCompactScrollViewer.Opacity =
-                1;
+            explorationWorkspaceControl.UpdateJournalState(
+                JournalMonitorService.Instance.Current);
         }
-
-        ModuleStatusText.Visibility =
-            Visibility.Visible;
-
-        FooterHintText.Visibility =
-            Visibility.Visible;
-
-        if (activity
-            != ActivityType.Exploration)
-        {
-            return;
-        }
-
-        AdaptiveExplorationPanel.Visibility =
-            Visibility.Visible;
-
-        LegacyCompactScrollViewer.Visibility =
-            Visibility.Collapsed;
-
-        OpenExplorationAssistantButton.Opacity =
-            1;
-
-        OpenExplorationAssistantButton.IsHitTestVisible =
-            true;
-
-        OpenExplorationAssistantButton.Visibility =
-            Visibility.Visible;
-
-        GameStateSnapshot state =
-            JournalMonitorService.Instance.Current;
-
-        ExplorationDataState externalData =
-            ExplorationDataService.Instance.Current;
-
-        ExplorationVisitQueueSnapshot queue =
-            ExplorationVisitStateService.Instance.Current;
-
-        ModuleStatusText.Text =
-            BuildAdaptiveExplorationHeader(
-                state,
-                externalData,
-                queue);
-
-        RefreshAdaptiveExploration(
-            state,
-            externalData,
-            queue);
-
-        FooterHintText.Text =
-            BuildAdaptiveExplorationFooter(
-                state,
-                queue);
     }
 
     private void DssHudWindow_Closed(
         object? sender,
         EventArgs e)
     {
+        explorationWorkspaceControl.SetExternalOverlayActive(
+            false);
+
+        explorationWorkspaceControl.SetExternalOverlayContent(
+            null);
+
         if (dssHudTimer is not null)
         {
             dssHudTimer.Stop();

@@ -24,6 +24,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
     public ExplorationWorkspaceControl()
     {
         InitializeComponent();
+        InitializeFullWorkspace();
 
         ExplorationDataService.Instance.DataChanged += OnExplorationDataChanged;
         ExplorationHistoryService.Instance.HistoryChanged += OnExplorationHistoryChanged;
@@ -39,9 +40,16 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
 
     public void SetChromeStyle(string? style)
     {
+        string normalized =
+            OverlayChromeStyles.Normalize(style);
+
         OverlayChromeHelper.Apply(
             CompactExplorationPanel,
-            OverlayChromeStyles.Normalize(style));
+            normalized);
+
+        OverlayChromeHelper.Apply(
+            FullExplorationPanel,
+            normalized);
     }
 
     public void UpdateJournalState(GameStateSnapshot state)
@@ -50,7 +58,11 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         RefreshPresentation();
     }
 
-    public void RefreshLocalization() => RefreshPresentation();
+    public void RefreshLocalization()
+    {
+        RefreshFullLocalization();
+        RefreshPresentation();
+    }
 
     private void RefreshPresentation()
     {
@@ -62,6 +74,14 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         GameStateSnapshot state = currentJournal;
         ExplorationDataState externalData = ExplorationDataService.Instance.Current;
         ExplorationVisitQueueSnapshot queue = ExplorationVisitStateService.Instance.Current;
+
+        ApplySurfaceVisibility();
+
+        if (fullExplorationVisible)
+        {
+            RefreshFullWorkspace(state);
+            return;
+        }
 
         TitleText.Text = string.IsNullOrWhiteSpace(state.StarSystem)
             ? Loc.Get("Loc_EXPLORATION")
@@ -974,6 +994,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         }
 
         SetChromeStyle(e.Settings.OverlayChromeStyle);
+        ApplyFullWorkspaceSettings(e.Settings);
         RefreshPresentation();
     }
 
@@ -985,6 +1006,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         }
 
         disposed = true;
+        DisposeFullWorkspace();
         ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
         ExplorationHistoryService.Instance.HistoryChanged -= OnExplorationHistoryChanged;
         ExplorationVisitStateService.Instance.Changed -= OnExplorationVisitStateChanged;
