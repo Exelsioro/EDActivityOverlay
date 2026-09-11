@@ -110,6 +110,7 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
             .First(definition => definition.Activity == current)
             .LabelKey;
         string visibleState = controller.CompositeOverlaysSuppressed
+                              || controller.CompositeActivitySuppressed
             ? Loc.Get("Loc_HIDDEN")
             : Loc.Get(activityLabel);
         AppSettings settings = SettingsService.Instance.Settings;

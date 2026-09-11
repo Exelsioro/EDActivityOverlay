@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
@@ -17,9 +18,14 @@ public partial class CompositeOverlayWindow : Window
     private readonly EDActivityOverlay.MainWindow controller;
     private readonly DispatcherTimer layoutTimer;
     private readonly MainOverlayPanelControl mainPanel;
+    private readonly CompositeActivityHostControl activityHost;
+    private readonly Dictionary<ActivityType, Point> compactActivityPositions = new();
     private bool interactive;
     private bool showCursor;
     private bool navigationBusy;
+    private bool activityDragActive;
+    private Point activityDragStart;
+    private Point activityDragOrigin;
     private bool disposed;
 
     public CompositeOverlayWindow(EDActivityOverlay.MainWindow controller)
@@ -29,6 +35,9 @@ public partial class CompositeOverlayWindow : Window
 
         mainPanel = new MainOverlayPanelControl(controller);
         MainPanelHost.Content = mainPanel;
+
+        activityHost = new CompositeActivityHostControl(controller);
+        ActivityHost.Content = activityHost;
 
         PinnedRoutePanel.ConfigureHost(
             () => controller.TargetWindowHandle,
@@ -42,6 +51,10 @@ public partial class CompositeOverlayWindow : Window
         PinnedRoutePanel.PreferredHeightChanged += OnPinnedRouteHeightChanged;
         PinnedRoutePanel.NavigationBusyChanged += OnPinnedRouteNavigationBusyChanged;
         ShipStatusPanel.PreferredHeightChanged += OnShipStatusHeightChanged;
+        activityHost.PresentationChanged += OnActivityPresentationChanged;
+        activityHost.CompactDragRequested += OnActivityCompactDragRequested;
+        PreviewMouseMove += OnPreviewMouseMove;
+        PreviewMouseLeftButtonUp += OnPreviewMouseLeftButtonUp;
         SettingsService.Instance.SettingsChanged += OnSettingsChanged;
 
         layoutTimer = new DispatcherTimer
@@ -57,8 +70,11 @@ public partial class CompositeOverlayWindow : Window
         ShipStatusPanel.RefreshLocalization();
         NotificationPanel.RefreshLocalization();
         PinnedRoutePanel.RefreshLocalization();
+        activityHost.RefreshLocalization();
         RefreshLayout();
     }
+
+    public Task BeginCargoSaleFromMiningAsync() => activityHost.BeginCargoSaleFromMiningAsync();
 
     public void RefreshWindowMode()
     {
@@ -99,6 +115,7 @@ public partial class CompositeOverlayWindow : Window
         VrOverlaySupport.ApplyCompositeWindowIdentity(this);
         ShipStatusPanel.ApplySettings(e.Settings);
         PinnedRoutePanel.ApplySettings(e.Settings);
+        activityHost.ApplySettings(e.Settings);
         RefreshLayout();
     }
 
@@ -106,6 +123,72 @@ public partial class CompositeOverlayWindow : Window
     private void OnPinnedRouteContentChanged(object? sender, EventArgs e) => RefreshLayout();
     private void OnPinnedRouteHeightChanged(object? sender, EventArgs e) => RefreshLayout();
     private void OnShipStatusHeightChanged(object? sender, EventArgs e) => RefreshLayout();
+
+    private void OnActivityPresentationChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(new Action(RefreshLayout));
+
+    private void OnActivityCompactDragRequested(object? sender, EventArgs e)
+    {
+        if (!interactive
+            || activityHost.IsFullMode
+            || activityHost.RenderedActivity is not ActivityType activity)
+        {
+            return;
+        }
+
+        Point current = Mouse.GetPosition(OverlayCanvas);
+        double left = Canvas.GetLeft(ActivityHost);
+        double top = Canvas.GetTop(ActivityHost);
+        activityDragStart = current;
+        activityDragOrigin = new Point(
+            double.IsNaN(left) ? 0 : left,
+            double.IsNaN(top) ? 0 : top);
+        activityDragActive = true;
+        Mouse.Capture(ActivityHost);
+    }
+
+    private void OnPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!activityDragActive
+            || e.LeftButton != MouseButtonState.Pressed
+            || activityHost.RenderedActivity is not ActivityType activity)
+        {
+            return;
+        }
+
+        Point current = e.GetPosition(OverlayCanvas);
+        double maxLeft = Math.Max(0, OverlayCanvas.Width - ActivityHost.Width);
+        double maxTop = Math.Max(0, OverlayCanvas.Height - ActivityHost.Height);
+        double left = Math.Clamp(
+            activityDragOrigin.X + current.X - activityDragStart.X,
+            0,
+            maxLeft);
+        double top = Math.Clamp(
+            activityDragOrigin.Y + current.Y - activityDragStart.Y,
+            0,
+            maxTop);
+
+        Canvas.SetLeft(ActivityHost, left);
+        Canvas.SetTop(ActivityHost, top);
+        compactActivityPositions[activity] = new Point(
+            maxLeft > 0 ? left / maxLeft : 0,
+            maxTop > 0 ? top / maxTop : 0);
+        e.Handled = true;
+    }
+
+    private void OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!activityDragActive)
+        {
+            return;
+        }
+
+        activityDragActive = false;
+        if (Mouse.Captured == ActivityHost)
+        {
+            Mouse.Capture(null);
+        }
+    }
 
     private void OnPinnedRouteNavigationBusyChanged(
         object? sender,
@@ -157,6 +240,12 @@ public partial class CompositeOverlayWindow : Window
         bool suppressAll = OverlayVisibilityState.SuppressAll;
         bool suppressActivity = OverlayVisibilityState.SuppressActivity;
 
+        activityHost.SetActivity(controller.CompositeCurrentActivity);
+        activityHost.SetPresentationEnabled(!suppressAll && !suppressActivity);
+        ActivityHost.Visibility =
+            !suppressAll && !suppressActivity && activityHost.HasContent
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         MainPanelHost.Visibility = !suppressAll ? Visibility.Visible : Visibility.Collapsed;
         ShipStatusPanel.Visibility =
             !suppressAll && settings.EnableShipStatusWidget
@@ -180,6 +269,11 @@ public partial class CompositeOverlayWindow : Window
             Canvas.SetLeft(MainPanelHost, 18);
             Canvas.SetTop(MainPanelHost, mainTop);
             Panel.SetZIndex(MainPanelHost, 60);
+        }
+
+        if (ActivityHost.Visibility == Visibility.Visible)
+        {
+            PositionActivity(targetWidth, targetHeight, settings);
         }
 
         if (ShipStatusPanel.Visibility == Visibility.Visible)
@@ -217,6 +311,64 @@ public partial class CompositeOverlayWindow : Window
 
         OverlayCanvas.Width = targetWidth;
         OverlayCanvas.Height = targetHeight;
+    }
+
+    private void PositionActivity(
+        double targetWidth,
+        double targetHeight,
+        AppSettings settings)
+    {
+        (double width, double height) = activityHost.GetPreferredSize(
+            targetWidth,
+            targetHeight);
+        ActivityHost.Width = width;
+        ActivityHost.Height = height;
+
+        double left;
+        double top;
+        if (activityHost.IsFullMode)
+        {
+            left = Math.Max(0, (targetWidth - width) / 2d);
+            top = Math.Max(0, (targetHeight - height) / 2d);
+            Panel.SetZIndex(ActivityHost, 70);
+        }
+        else if (activityHost.RenderedActivity is ActivityType activity
+                 && compactActivityPositions.TryGetValue(activity, out Point ratio))
+        {
+            left = Math.Clamp(
+                ratio.X * Math.Max(0, targetWidth - width),
+                0,
+                Math.Max(0, targetWidth - width));
+            top = Math.Clamp(
+                ratio.Y * Math.Max(0, targetHeight - height),
+                0,
+                Math.Max(0, targetHeight - height));
+            Panel.SetZIndex(ActivityHost, 50);
+        }
+        else
+        {
+            var localRect = new WindowsAPI.RECT
+            {
+                Left = 0,
+                Top = 0,
+                Right = (int)Math.Round(targetWidth),
+                Bottom = (int)Math.Round(targetHeight)
+            };
+            string placement = OverlayLayoutHelper.GetOppositeSidePlacement(
+                settings.PinnedRoutePosition);
+            (left, top) = OverlayLayoutHelper.GetPinnedPosition(
+                localRect,
+                width,
+                height,
+                placement,
+                18);
+            left = Math.Clamp(left, 0, Math.Max(0, targetWidth - width));
+            top = Math.Clamp(top, 0, Math.Max(0, targetHeight - height));
+            Panel.SetZIndex(ActivityHost, 50);
+        }
+
+        Canvas.SetLeft(ActivityHost, left);
+        Canvas.SetTop(ActivityHost, top);
     }
 
     private void ApplyInteractionState()
@@ -338,7 +490,16 @@ public partial class CompositeOverlayWindow : Window
         PinnedRoutePanel.PreferredHeightChanged -= OnPinnedRouteHeightChanged;
         PinnedRoutePanel.NavigationBusyChanged -= OnPinnedRouteNavigationBusyChanged;
         ShipStatusPanel.PreferredHeightChanged -= OnShipStatusHeightChanged;
+        activityHost.PresentationChanged -= OnActivityPresentationChanged;
+        activityHost.CompactDragRequested -= OnActivityCompactDragRequested;
+        PreviewMouseMove -= OnPreviewMouseMove;
+        PreviewMouseLeftButtonUp -= OnPreviewMouseLeftButtonUp;
+        if (Mouse.Captured == ActivityHost)
+        {
+            Mouse.Capture(null);
+        }
         mainPanel.Dispose();
+        activityHost.Dispose();
         NotificationPanel.Dispose();
         PinnedRoutePanel.Dispose();
         ShipStatusPanel.Dispose();

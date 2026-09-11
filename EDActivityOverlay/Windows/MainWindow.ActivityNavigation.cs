@@ -102,6 +102,12 @@ public partial class MainWindow
         SelectActivity(
             ActivityType.Trade);
 
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            await OverlayRenderCoordinator.BeginCargoSaleFromMiningAsync();
+            return;
+        }
+
         if (activityWorkspaceWindow is null)
         {
             return;

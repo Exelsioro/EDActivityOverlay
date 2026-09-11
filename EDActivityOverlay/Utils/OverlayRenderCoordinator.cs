@@ -63,6 +63,10 @@ internal static class OverlayRenderCoordinator
             interactive,
             showCursor);
 
+    internal static Task BeginCargoSaleFromMiningAsync() =>
+        compositeWindow?.BeginCargoSaleFromMiningAsync()
+        ?? Task.CompletedTask;
+
     internal static void ActivateComposite()
     {
         if (compositeWindow is { IsLoaded: true, IsVisible: true })
@@ -113,6 +117,12 @@ internal static class OverlayRenderCoordinator
         {
             return;
         }
+
+        // Composite can keep MainWindow permanently hidden, but MainWindow owns
+        // the WM_HOTKEY registrations. Load it once after the current dispatcher
+        // turn so startup settings are resolved before Loaded registers hotkeys.
+        controller.Dispatcher.BeginInvoke(
+            new Action(controller.EnsureControllerLoadedForComposite));
 
         if (compositeWindow is { IsLoaded: true })
         {

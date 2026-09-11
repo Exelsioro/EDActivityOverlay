@@ -17,6 +17,7 @@ public partial class MainWindow
         exclusiveOverlayInteraction
         || (interactionModeEnabled && interactiveModeActive);
     internal bool CompositeOverlaysSuppressed => overlaysSuppressedByHotkey;
+    internal bool CompositeActivitySuppressed => OverlayVisibilityState.SuppressActivity;
 
     private void InitializeRenderModeSurfaces()
     {
@@ -153,6 +154,13 @@ public partial class MainWindow
         {
             app.ShowOverlaySettingsWindow();
         }
+    }
+
+    internal void HideCompositeActivity()
+    {
+        activityHiddenByHotkey = true;
+        OverlayVisibilityState.SuppressActivity = true;
+        UpdateInteractionStatusUi();
     }
 
     internal void ToggleCompositeInteraction()

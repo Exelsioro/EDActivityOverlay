@@ -18,6 +18,10 @@
             Background="Transparent"
             ClipToBounds="True">
         <ContentControl x:Name="MainPanelHost" />
+        <ContentControl x:Name="ActivityHost"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"
+                        Visibility="Collapsed" />
         <controls:ShipStatusPanelControl x:Name="ShipStatusPanel" />
         <controls:NotificationPanelControl x:Name="NotificationPanel" />
         <controls:PinnedRoutePanelControl x:Name="PinnedRoutePanel" />
