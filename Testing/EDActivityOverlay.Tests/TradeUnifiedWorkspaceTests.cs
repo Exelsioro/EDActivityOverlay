@@ -190,7 +190,7 @@ public sealed class TradeUnifiedWorkspaceTests
             ReadProjectFile(
                 "EDActivityOverlay",
                 "Windows",
-                "MainWindow.xaml.cs");
+                "MainWindow.CompositeRendering.cs");
 
         Assert.Contains(
             "shipStatusOverlayWindow.SetContextSuppression(null);",
