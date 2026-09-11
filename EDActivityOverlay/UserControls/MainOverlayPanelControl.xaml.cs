@@ -8,27 +8,12 @@ using EDActivityOverlay.Utils;
 namespace EDActivityOverlay.UserControls;
 
 /// <summary>
-/// Composite-renderer counterpart of MainWindow's visible controller surface.
-/// MainWindow remains the hidden application/controller HWND and owns hotkeys
-/// and orchestration; this control forwards user intent to it.
+/// Renderer-neutral main controller surface. Individual mode hosts this control
+/// in MainWindow, while Composite mode hosts another instance in the single-HWND
+/// composite surface. MainWindow remains the controller for both renderers.
 /// </summary>
 public partial class MainOverlayPanelControl : UserControl, IDisposable
 {
-    private sealed record ActivityOption(
-        ActivityType Activity,
-        string LabelKey)
-    {
-        public string Label => Loc.Get(LabelKey);
-    }
-
-    private static readonly (ActivityType Activity, string LabelKey)[] ActivityDefinitions =
-    [
-        (ActivityType.Trade, "Loc_Trade"),
-        (ActivityType.Engineering, "Loc_Engineering"),
-        (ActivityType.Exploration, "Loc_Exploration"),
-        (ActivityType.Mining, "Loc_Mining")
-    ];
-
     private readonly EDActivityOverlay.MainWindow controller;
     private readonly DispatcherTimer refreshTimer;
     private bool updatingSelection;
@@ -39,10 +24,14 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
     public double PreferredWidth => collapsed ? 170 : 235;
     public double PreferredHeight => collapsed ? 32 : 166;
 
-    public MainOverlayPanelControl(EDActivityOverlay.MainWindow controller)
+    public MainOverlayPanelControl(
+        EDActivityOverlay.MainWindow controller,
+        bool showInteractionButton = true)
     {
         this.controller = controller;
         InitializeComponent();
+        InteractionButton.Visibility =
+            showInteractionButton ? Visibility.Visible : Visibility.Collapsed;
 
         SettingsService.Instance.SettingsChanged += OnSettingsChanged;
         refreshTimer = new DispatcherTimer
@@ -61,14 +50,10 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
     {
         ActivityType selected = controller.CompositeCurrentActivity;
         updatingSelection = true;
-        ActivitySelector.ItemsSource = ActivityDefinitions
-            .Select(definition =>
-                new ActivityOption(
-                    definition.Activity,
-                    definition.LabelKey))
-            .ToArray();
+        ActivitySelector.ItemsSource = null;
+        ActivitySelector.ItemsSource = ActivityUiCatalog.All;
         ActivitySelector.SelectedItem = ActivitySelector.Items
-            .OfType<ActivityOption>()
+            .OfType<ActivityUiOption>()
             .FirstOrDefault(option => option.Activity == selected);
         updatingSelection = false;
         renderedActivity = selected;
@@ -77,7 +62,7 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
 
     private void RefreshTimer_Tick(object? sender, EventArgs e) => RefreshState();
 
-    private void RefreshState()
+    public void RefreshState()
     {
         if (disposed)
         {
@@ -89,7 +74,7 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
         {
             updatingSelection = true;
             ActivitySelector.SelectedItem = ActivitySelector.Items
-                .OfType<ActivityOption>()
+                .OfType<ActivityUiOption>()
                 .FirstOrDefault(option => option.Activity == current);
             updatingSelection = false;
             renderedActivity = current;
@@ -106,8 +91,8 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
             SettingsService.Instance.Settings.InteractiveHotkeyModifiers,
             SettingsService.Instance.Settings.InteractiveHotkeyKey);
 
-        string activityLabel = ActivityDefinitions
-            .First(definition => definition.Activity == current)
+        string activityLabel = ActivityUiCatalog.All
+            .First(option => option.Activity == current)
             .LabelKey;
         string visibleState = controller.CompositeOverlaysSuppressed
                               || controller.CompositeActivitySuppressed
@@ -135,7 +120,7 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
         RefreshState();
     }
 
-    private void ApplySettings(AppSettings settings)
+    public void ApplySettings(AppSettings settings)
     {
         OverlayChromeHelper.Apply(OverlayFrame, settings.OverlayChromeStyle);
         collapsed = settings.MainOverlayCollapsed;
@@ -157,7 +142,7 @@ public partial class MainOverlayPanelControl : UserControl, IDisposable
         SelectionChangedEventArgs e)
     {
         if (!updatingSelection
-            && ActivitySelector.SelectedItem is ActivityOption option)
+            && ActivitySelector.SelectedItem is ActivityUiOption option)
         {
             controller.SelectActivity(option.Activity);
         }

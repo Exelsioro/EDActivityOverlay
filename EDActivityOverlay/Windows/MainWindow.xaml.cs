@@ -16,6 +16,7 @@ using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Notifications;
 using EDActivityOverlay.Services.Hardware;
 using EDActivityOverlay.Services.Dss;
+using EDActivityOverlay.UserControls;
 using EDActivityOverlay.Windows.Renderers;
 
 namespace EDActivityOverlay
@@ -40,6 +41,7 @@ namespace EDActivityOverlay
         private NotificationIndividualWindow? notificationOverlayWindow;
         private ShipStatusIndividualWindow? shipStatusOverlayWindow;
         private DssPrototypeController? dssPrototypeController;
+        private readonly MainOverlayPanelControl mainPanel;
         private readonly X52OverlayPointerController x52OverlayPointerController;
         private bool isResultsActive = false;
         private bool isPinnedRouteActive = false;
@@ -81,17 +83,17 @@ namespace EDActivityOverlay
         private DateTime interactiveModeEnteredAtUtc;
         private DateTime interactiveFocusLossGraceUntilUtc;
         private static readonly TimeSpan InteractiveFocusLossGracePeriod = TimeSpan.FromMilliseconds(1500);
-        private readonly double baseWindowWidth;
-        private readonly double baseWindowHeight;
         private double lastAppliedScale = 1.0;
         private string chromeStyle = OverlayChromeStyles.Compact;
 
         public MainWindow(string processName = "notepad", Process? foundProcess = null)
         {
             InitializeComponent();
+            mainPanel = new MainOverlayPanelControl(
+                this,
+                showInteractionButton: false);
+            MainPanelHost.Content = mainPanel;
             x52OverlayPointerController = new X52OverlayPointerController(GetInteractiveInputWindowHandle);
-            baseWindowWidth = Width;
-            baseWindowHeight = Height;
             
             // Start hidden - only show when target has focus
             this.Visibility = Visibility.Hidden;
@@ -130,6 +132,7 @@ namespace EDActivityOverlay
 
             Closed += (_, _) =>
             {
+                mainPanel.Dispose();
                 dssPrototypeController?.Dispose();
                 dssPrototypeController = null;
             };
@@ -666,6 +669,7 @@ namespace EDActivityOverlay
             engineeringOverlayWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
             activityWorkspaceWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
             SetChromeStyle(e.Settings.OverlayChromeStyle);
+            RestoreMainOverlayCollapsedState();
 
             RefreshExperimentalDssLifecycle(
                 e.Settings.EnableExperimentalDssAssistant);
@@ -775,83 +779,15 @@ namespace EDActivityOverlay
 
         private void UpdateInteractionStatusUi()
         {
-            if (InteractionStatusBadge == null
-                || CollapsedInteractionStatusBadge == null
-                || InteractionHintText == null)
-            {
-                return;
-            }
-
-            bool canInteract =
-                exclusiveOverlayInteraction
-                || (interactionModeEnabled
-                    && interactiveModeActive);
-
-            string stateText =
-                canInteract
-                    ? Loc.Get(
-                        "Loc_INTERACTIVE")
-                    : Loc.Get(
-                        "Loc_PASSIVE");
-
-            InteractionStatusBadge.Text =
-                stateText;
-
-            CollapsedInteractionStatusBadge.Text =
-                stateText;
-
-            InteractionStatusBadge.Background =
-                chromeStyle == OverlayChromeStyles.Minimal
-                    ? Brushes.Transparent
-                    : canInteract
-                        ? new SolidColorBrush(
-                            Color.FromArgb(
-                                180,
-                                180,
-                                95,
-                                0))
-                        : new SolidColorBrush(
-                            Color.FromArgb(
-                                120,
-                                70,
-                                25,
-                                0));
-
-            string interactionHotkeyText =
-                FormatHotkeyDisplay(
-                    SettingsService.Instance.Settings.InteractiveHotkeyModifiers,
-                    SettingsService.Instance.Settings.InteractiveHotkeyKey);
-
-            string toggleHotkeyText =
-                FormatHotkeyDisplay(
-                    SettingsService.Instance.Settings.ToggleHotkeyModifiers,
-                    SettingsService.Instance.Settings.ToggleHotkeyKey);
-
-            string overlaysStateText =
-                overlaysSuppressedByHotkey
-                    ? Loc.Get(
-                        "Loc_HIDDEN")
-                    : ActivityOptions
-                        .First(
-                            option =>
-                                option.Activity
-                                == currentActivity)
-                        .Label;
-
-            InteractionHintText.Text =
-                Loc.Format(
-                    "Loc_Main_Hint_Format",
-                    toggleHotkeyText,
-                    overlaysStateText,
-                    interactionHotkeyText);
+            mainPanel.RefreshState();
         }
+
         private void SetChromeStyle(string? value)
         {
             chromeStyle = OverlayChromeStyles.Normalize(value);
-            OverlayChromeHelper.Apply(OverlayFrame, chromeStyle);
+            mainPanel.ApplySettings(SettingsService.Instance.Settings);
             UpdateInteractionStatusUi();
         }
-
         private static string FormatHotkeyDisplay(string modifiers, string key)
         {
             if (key.StartsWith("D", StringComparison.OrdinalIgnoreCase) && key.Length == 2 && char.IsDigit(key[1]))

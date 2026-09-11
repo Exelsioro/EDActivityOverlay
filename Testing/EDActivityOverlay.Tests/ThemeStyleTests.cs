@@ -195,7 +195,6 @@ public sealed class ThemeStyleTests
         [
             "ActivityWorkspaceOverlayWindow.xaml.cs",
             "EngineeringWindow.xaml.cs",
-            "MainWindow.xaml.cs",
             "PinnedRouteOverlay.xaml.cs",
             "ResultsOverlayWindow.xaml.cs",
             "ShipStatusOverlayWindow.xaml.cs",
@@ -207,6 +206,16 @@ public sealed class ThemeStyleTests
             string markup = File.ReadAllText(Path.Combine(repository, "EDActivityOverlay", "Windows", file));
             Assert.Contains("OverlayChromeHelper.Apply", markup, StringComparison.Ordinal);
         }
+
+        string mainSurface = File.ReadAllText(Path.Combine(
+            repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "MainOverlayPanelControl.xaml.cs"));
+        Assert.Contains(
+            "OverlayChromeHelper.Apply",
+            mainSurface,
+            StringComparison.Ordinal);
 
         string routeCard = File.ReadAllText(Path.Combine(
             repository, "EDActivityOverlay", "UserControls", "TradeRouteCard.xaml.cs"));

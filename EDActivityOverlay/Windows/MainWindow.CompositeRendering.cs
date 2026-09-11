@@ -149,6 +149,12 @@ public partial class MainWindow
 
     internal void OpenCompositeSettings()
     {
+        if (!OverlayRenderCoordinator.IsCompositeMode)
+        {
+            CloseEngineeringOverlay();
+            CloseActivityWorkspace();
+        }
+
         if (OperatingSystem.IsWindows()
             && Application.Current is App app)
         {

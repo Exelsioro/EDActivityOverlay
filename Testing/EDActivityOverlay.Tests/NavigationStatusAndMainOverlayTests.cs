@@ -138,7 +138,7 @@ public sealed class NavigationStatusAndMainOverlayTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "x:Name=\"OverlayFrame\" Margin=\"0\"",
+            "x:Name=\"MainPanelHost\"",
             xaml,
             StringComparison.Ordinal);
     }

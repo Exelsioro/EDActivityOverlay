@@ -22,6 +22,9 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         Locations
     }
 
+    private const double ExplorationCompactWidth = 420;
+    private const double ExplorationCompactHeight = 350;
+
     private const double TradeCompactWidth = 420;
     private const double TradeCompactHeight = 305;
     private const double TradeFullMinWidth = 1040;
@@ -37,6 +40,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
     private const double MiningFullMaxHeight = 720;
 
     private readonly EDActivityOverlay.MainWindow controller;
+    private readonly ExplorationWorkspaceControl explorationWorkspaceControl;
     private readonly TradeWorkspaceControl tradeWorkspaceControl;
     private readonly MiningWorkspaceControl miningWorkspaceControl;
     private readonly MiningAnalyticsWorkspaceControl miningAnalyticsWorkspaceControl;
@@ -52,15 +56,19 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
     {
         this.controller = controller;
 
+        explorationWorkspaceControl = new ExplorationWorkspaceControl();
         tradeWorkspaceControl = new TradeWorkspaceControl();
         miningWorkspaceControl = new MiningWorkspaceControl();
         miningAnalyticsWorkspaceControl = new MiningAnalyticsWorkspaceControl();
         miningLocationWorkspaceControl = new MiningLocationWorkspaceControl();
 
+        Children.Add(explorationWorkspaceControl);
         Children.Add(tradeWorkspaceControl);
         Children.Add(miningWorkspaceControl);
         Children.Add(miningAnalyticsWorkspaceControl);
         Children.Add(miningLocationWorkspaceControl);
+
+        explorationWorkspaceControl.DragRequested += CompactDragRequestedFromChild;
 
         tradeWorkspaceControl.CloseRequested += CloseCurrentActivityRequested;
         tradeWorkspaceControl.DragRequested += CompactDragRequestedFromChild;
@@ -94,7 +102,10 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
     public event EventHandler? CompactDragRequested;
 
     public bool HasContent =>
-        renderedActivity is ActivityType.Trade or ActivityType.Mining;
+        renderedActivity
+            is ActivityType.Exploration
+            or ActivityType.Trade
+            or ActivityType.Mining;
 
     public bool IsFullMode =>
         renderedActivity switch
@@ -139,12 +150,14 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     public void ApplySettings(AppSettings settings)
     {
+        explorationWorkspaceControl.SetChromeStyle(settings.OverlayChromeStyle);
         tradeWorkspaceControl.SetChromeStyle(settings.OverlayChromeStyle);
         miningWorkspaceControl.SetChromeStyle(settings.OverlayChromeStyle);
     }
 
     public void RefreshLocalization()
     {
+        explorationWorkspaceControl.RefreshLocalization();
         tradeWorkspaceControl.RefreshLocalization();
         miningWorkspaceControl.RefreshLocalization();
         miningAnalyticsWorkspaceControl.RefreshLocalization();
@@ -161,6 +174,10 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
         return renderedActivity switch
         {
+            ActivityType.Exploration =>
+                (Math.Min(ExplorationCompactWidth, widthLimit),
+                 Math.Min(ExplorationCompactHeight, heightLimit)),
+
             ActivityType.Trade when tradeWorkspaceControl.IsFullMode =>
                 (FitFullSize(availableWidth * 0.82, TradeFullMinWidth, TradeFullMaxWidth, widthLimit),
                  FitFullSize(availableHeight * 0.80, TradeFullMinHeight, TradeFullMaxHeight, heightLimit)),
@@ -201,6 +218,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     private void ApplyVisibility()
     {
+        explorationWorkspaceControl.Visibility = Visibility.Collapsed;
         tradeWorkspaceControl.Visibility = Visibility.Collapsed;
         miningWorkspaceControl.Visibility = Visibility.Collapsed;
         miningAnalyticsWorkspaceControl.Visibility = Visibility.Collapsed;
@@ -210,6 +228,10 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         {
             switch (renderedActivity)
             {
+                case ActivityType.Exploration:
+                    explorationWorkspaceControl.Visibility = Visibility.Visible;
+                    break;
+
                 case ActivityType.Trade:
                     tradeWorkspaceControl.Visibility = Visibility.Visible;
                     break;
@@ -264,6 +286,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     private void ApplyJournalState(GameStateSnapshot state)
     {
+        explorationWorkspaceControl.UpdateJournalState(state);
         tradeWorkspaceControl.UpdateJournalState(state);
         miningWorkspaceControl.UpdateJournalState(state);
         miningAnalyticsWorkspaceControl.UpdateJournalState(state);
@@ -421,6 +444,8 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         disposed = true;
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
 
+        explorationWorkspaceControl.DragRequested -= CompactDragRequestedFromChild;
+
         tradeWorkspaceControl.CloseRequested -= CloseCurrentActivityRequested;
         tradeWorkspaceControl.DragRequested -= CompactDragRequestedFromChild;
         tradeWorkspaceControl.ViewModeChanged -= TradeViewModeChanged;
@@ -449,6 +474,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         }
 
         controller.SetPinnedRouteSuppressedByTradeWorkspace(false);
+        explorationWorkspaceControl.Dispose();
         tradeWorkspaceControl.Dispose();
         miningWorkspaceControl.Dispose();
         miningAnalyticsWorkspaceControl.Dispose();

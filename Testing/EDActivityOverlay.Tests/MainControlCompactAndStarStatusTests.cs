@@ -60,8 +60,8 @@ public sealed class MainControlCompactAndStarStatusTests
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "MainWindow.xaml"));
+                    "UserControls",
+                    "MainOverlayPanelControl.xaml"));
 
         Assert.Contains(
             "x:Name=\"CollapsedControlContent\"",
@@ -69,12 +69,12 @@ public sealed class MainControlCompactAndStarStatusTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "CollapseMainOverlayButton_Click",
+            "CollapseButton_Click",
             xaml,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "ExpandMainOverlayButton_Click",
+            "ExpandButton_Click",
             xaml,
             StringComparison.Ordinal);
 
@@ -131,8 +131,8 @@ public sealed class MainControlCompactAndStarStatusTests
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "MainWindow.xaml.cs"));
+                    "UserControls",
+                    "MainOverlayPanelControl.xaml.cs"));
 
         Assert.Contains(
             "InteractionStatusBadge.Text =",

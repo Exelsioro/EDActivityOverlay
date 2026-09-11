@@ -24,6 +24,7 @@ public sealed class CompositeActivityHostTests
 
         Assert.Contains("x:Name=\"ActivityHost\"", xaml, StringComparison.Ordinal);
         Assert.Contains("activityHost.SetActivity(controller.CompositeCurrentActivity)", code, StringComparison.Ordinal);
+        Assert.Contains("new ExplorationWorkspaceControl()", host, StringComparison.Ordinal);
         Assert.Contains("new TradeWorkspaceControl()", host, StringComparison.Ordinal);
         Assert.Contains("new MiningWorkspaceControl()", host, StringComparison.Ordinal);
         Assert.Contains("new MiningAnalyticsWorkspaceControl()", host, StringComparison.Ordinal);
@@ -50,6 +51,44 @@ public sealed class CompositeActivityHostTests
         Assert.Contains("OpenMiningLocationsRequested", host, StringComparison.Ordinal);
         Assert.Contains("SellMiningCargoRequested", host, StringComparison.Ordinal);
         Assert.Contains("CompactDragRequested", host, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CompositeExplorationKeepsDssStateWithoutCvRuntime()
+    {
+        string host = ReadProjectFile(
+            "EDActivityOverlay",
+            "UserControls",
+            "CompositeActivityHostControl.cs");
+        string exploration = ReadProjectFile(
+            "EDActivityOverlay",
+            "UserControls",
+            "ExplorationWorkspaceControl.xaml.cs");
+
+        Assert.Contains(
+            "ActivityType.Exploration",
+            host,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "state.GuiFocus == 10",
+            exploration,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "DssProbePatternCatalog.Get",
+            exploration,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "DssAssistantStateService",
+            exploration,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "DssNativeScanProgressRuntime",
+            exploration,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "DssNativeEfficiencyTargetRuntime",
+            exploration,
+            StringComparison.Ordinal);
     }
 
     [Fact]
