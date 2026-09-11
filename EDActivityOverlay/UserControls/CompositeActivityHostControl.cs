@@ -24,6 +24,10 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     private const double ExplorationCompactWidth = 420;
     private const double ExplorationCompactHeight = 350;
+    private const double ExplorationFullMinWidth = 1040;
+    private const double ExplorationFullMinHeight = 660;
+    private const double ExplorationFullMaxWidth = 1180;
+    private const double ExplorationFullMaxHeight = 760;
 
     private const double TradeCompactWidth = 420;
     private const double TradeCompactHeight = 305;
@@ -56,7 +60,11 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
     {
         this.controller = controller;
 
-        explorationWorkspaceControl = new ExplorationWorkspaceControl();
+        explorationWorkspaceControl = new ExplorationWorkspaceControl
+        {
+            NavigateAsync =
+                NavigateExplorationSystemAsync
+        };
         tradeWorkspaceControl = new TradeWorkspaceControl();
         miningWorkspaceControl = new MiningWorkspaceControl();
         miningAnalyticsWorkspaceControl = new MiningAnalyticsWorkspaceControl();
@@ -69,6 +77,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         Children.Add(miningLocationWorkspaceControl);
 
         explorationWorkspaceControl.DragRequested += CompactDragRequestedFromChild;
+        explorationWorkspaceControl.ViewModeChanged += ExplorationViewModeChanged;
 
         tradeWorkspaceControl.CloseRequested += CloseCurrentActivityRequested;
         tradeWorkspaceControl.DragRequested += CompactDragRequestedFromChild;
@@ -110,6 +119,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
     public bool IsFullMode =>
         renderedActivity switch
         {
+            ActivityType.Exploration => explorationWorkspaceControl.IsFullMode,
             ActivityType.Trade => tradeWorkspaceControl.IsFullMode,
             ActivityType.Mining => miningSurface != MiningSurface.Compact,
             _ => false
@@ -174,6 +184,18 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
         return renderedActivity switch
         {
+            ActivityType.Exploration when explorationWorkspaceControl.IsFullMode =>
+                (FitFullSize(
+                     availableWidth * 0.86,
+                     ExplorationFullMinWidth,
+                     ExplorationFullMaxWidth,
+                     widthLimit),
+                 FitFullSize(
+                     availableHeight * 0.86,
+                     ExplorationFullMinHeight,
+                     ExplorationFullMaxHeight,
+                     heightLimit)),
+
             ActivityType.Exploration =>
                 (Math.Min(ExplorationCompactWidth, widthLimit),
                  Math.Min(ExplorationCompactHeight, heightLimit)),
@@ -260,8 +282,12 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
     {
         bool shouldOwnExclusive =
             presentationEnabled
-            && (renderedActivity == ActivityType.Trade && tradeWorkspaceControl.IsFullMode
-                || renderedActivity == ActivityType.Mining && miningSurface != MiningSurface.Compact);
+            && (renderedActivity == ActivityType.Exploration
+                    && explorationWorkspaceControl.IsFullMode
+                || renderedActivity == ActivityType.Trade
+                    && tradeWorkspaceControl.IsFullMode
+                || renderedActivity == ActivityType.Mining
+                    && miningSurface != MiningSurface.Compact);
 
         controller.SetPinnedRouteSuppressedByTradeWorkspace(
             presentationEnabled
@@ -316,6 +342,12 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         {
             CompactDragRequested?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private void ExplorationViewModeChanged(bool full)
+    {
+        UpdateExclusiveInteraction();
+        PresentationChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void TradeViewModeChanged(bool full)
@@ -407,6 +439,28 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         await NavigateSystemAsync(targetSystem, "Mining location");
     }
 
+    private async Task<EliteNavigationResult> NavigateExplorationSystemAsync(
+        string targetSystem,
+        bool confirmAutomatically,
+        CancellationToken cancellationToken)
+    {
+        IntPtr targetWindow = controller.TargetWindowHandle;
+        if (string.IsNullOrWhiteSpace(targetSystem)
+            || targetWindow == IntPtr.Zero)
+        {
+            return new EliteNavigationResult(
+                EliteNavigationStatus.Failed,
+                targetSystem,
+                "Loc_NAVIGATION_GAME_NOT_FOUND");
+        }
+
+        return await EliteRouteNavigationService.Instance.PrepareAsync(
+            targetSystem,
+            targetWindow,
+            confirmAutomatically,
+            cancellationToken);
+    }
+
     private async Task NavigateSystemAsync(string targetSystem, string source)
     {
         IntPtr targetWindow = controller.TargetWindowHandle;
@@ -445,6 +499,8 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
         JournalMonitorService.Instance.StateChanged -= OnJournalStateChanged;
 
         explorationWorkspaceControl.DragRequested -= CompactDragRequestedFromChild;
+        explorationWorkspaceControl.ViewModeChanged -= ExplorationViewModeChanged;
+        explorationWorkspaceControl.NavigateAsync = null;
 
         tradeWorkspaceControl.CloseRequested -= CloseCurrentActivityRequested;
         tradeWorkspaceControl.DragRequested -= CompactDragRequestedFromChild;

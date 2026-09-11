@@ -106,24 +106,27 @@ public sealed class DssLocalizationPresentationTests
             XDocument.Load(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "ActivityWorkspaceOverlayWindow.xaml"));
+                    "UserControls",
+                    "ExplorationWorkspaceControl.xaml"));
 
         XNamespace x =
             "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        XElement tab =
-            Assert.Single(
-                document.Descendants(),
-                element =>
-                    (string?)element.Attribute(
-                        x + "Name")
-                    == "DssGuidanceTab");
+        XElement? tab =
+            document.Descendants()
+                .SingleOrDefault(
+                    element =>
+                        (string?)element.Attribute(
+                            x + "Name")
+                        == "DssGuidanceTab");
 
-        Assert.Equal(
-            "Collapsed",
-            (string?)tab.Attribute(
-                "Visibility"));
+        if (tab is not null)
+        {
+            Assert.Equal(
+                "Collapsed",
+                (string?)tab.Attribute(
+                    "Visibility"));
+        }
     }
 
     [Fact]

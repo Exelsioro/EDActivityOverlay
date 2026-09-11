@@ -336,29 +336,39 @@ public sealed class ExplorationAuditRegressionTests
     [Fact]
     public void WorkspaceKeepsNewCompactSizeAndRebindsLocalizedFilters()
     {
-        string code = File.ReadAllText(
+        string shell = File.ReadAllText(
             FindProjectFile(
                 "Windows",
                 "ActivityWorkspaceOverlayWindow.xaml.cs"));
 
+        string full = File.ReadAllText(
+            FindProjectFile(
+                "UserControls",
+                "ExplorationWorkspaceControl.Full.cs"));
+
         Assert.Contains(
             "private const double CompactWidth = 420;",
-            code,
+            shell,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "Width = CompactWidth;",
-            code,
+            "private const double CompactHeight = 350;",
+            shell,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "CatalogFilterComboBox.ItemsSource = null;",
-            code,
+            "RefreshFullLocalization",
+            full,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "CatalogFilterComboBox.ItemsSource = CatalogFilters;",
-            code,
+            "CatalogFilterComboBox.ItemsSource =",
+            full,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "CatalogFilters",
+            full,
             StringComparison.Ordinal);
     }
 

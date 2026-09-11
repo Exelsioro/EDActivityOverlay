@@ -129,8 +129,13 @@ public partial class ExplorationWorkspaceControl
 
     private void RefreshFullLocalization()
     {
+        if (CatalogFilterComboBox is null)
+        {
+            return;
+        }
+
         string selectedFilter =
-            (CatalogFilterComboBox?.SelectedItem
+            (CatalogFilterComboBox.SelectedItem
                 as CatalogFilterOption)?.Value
             ?? "All";
 

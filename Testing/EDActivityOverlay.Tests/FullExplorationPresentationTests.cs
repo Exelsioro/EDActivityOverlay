@@ -7,7 +7,7 @@ public sealed class FullExplorationPresentationTests
     [Fact]
     public void FullCatalogUsesWrappedIdentityCellsAndSixColumns()
     {
-        string xaml = File.ReadAllText(FindProjectFile("Windows", "ActivityWorkspaceOverlayWindow.xaml"));
+        string xaml = File.ReadAllText(FindProjectFile("UserControls", "ExplorationWorkspaceControl.xaml"));
         Assert.Contains("MaxHeight=\"40\"", xaml);
         Assert.Contains("x:Name=\"FullPoiPanel\"", xaml);
         Assert.Contains("x:Name=\"SelectedBodyPhysicalText\"", xaml);

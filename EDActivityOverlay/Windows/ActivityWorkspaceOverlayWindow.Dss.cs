@@ -74,7 +74,7 @@ public partial class ActivityWorkspaceOverlayWindow
         explorationWorkspaceControl.SetExternalOverlayContent(
             dssContextPanel);
 
-        dssHudTimer =        dssHudTimer =
+        dssHudTimer =
             new DispatcherTimer
             {
                 Interval =

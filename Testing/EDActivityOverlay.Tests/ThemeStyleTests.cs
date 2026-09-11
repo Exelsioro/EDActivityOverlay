@@ -193,7 +193,6 @@ public sealed class ThemeStyleTests
 
         string[] sharedChromeOwners =
         [
-            "ActivityWorkspaceOverlayWindow.xaml.cs",
             "EngineeringWindow.xaml.cs",
             "PinnedRouteOverlay.xaml.cs",
             "ResultsOverlayWindow.xaml.cs",
@@ -215,6 +214,16 @@ public sealed class ThemeStyleTests
         Assert.Contains(
             "OverlayChromeHelper.Apply",
             mainSurface,
+            StringComparison.Ordinal);
+
+        string explorationSurface = File.ReadAllText(Path.Combine(
+            repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "ExplorationWorkspaceControl.xaml.cs"));
+        Assert.Contains(
+            "OverlayChromeHelper.Apply",
+            explorationSurface,
             StringComparison.Ordinal);
 
         string routeCard = File.ReadAllText(Path.Combine(

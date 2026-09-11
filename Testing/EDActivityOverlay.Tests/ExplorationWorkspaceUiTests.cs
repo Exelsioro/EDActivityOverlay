@@ -24,26 +24,20 @@ public sealed class ExplorationWorkspaceUiTests
         XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        XElement legacyScroll = Assert.Single(
-            document.Descendants(wpf + "ScrollViewer"),
-            element =>
-                (string?)element.Attribute(x + "Name")
-                    == "LegacyCompactScrollViewer");
-
-        Assert.Equal(
-            "Auto",
-            (string?)legacyScroll.Attribute(
-                "VerticalScrollBarVisibility"));
-
-        XElement adaptiveHud = Assert.Single(
+        XElement compact = Assert.Single(
             document.Descendants(),
             element =>
                 (string?)element.Attribute(x + "Name")
-                    == "AdaptiveExplorationPanel");
+                    == "CompactExplorationPanel");
+
+        Assert.Empty(
+            compact.Descendants(wpf + "ScrollViewer"));
 
         Assert.DoesNotContain(
-            adaptiveHud.Descendants(),
-            element => element.Name == wpf + "ScrollViewer");
+            document.Descendants(),
+            element =>
+                (string?)element.Attribute(x + "Name")
+                    == "LegacyCompactScrollViewer");
         Assert.NotNull(document.Descendants().FirstOrDefault(element =>
             (string?)element.Attribute(x + "Name") == "FullOverviewText"));
         Assert.NotNull(document.Descendants().FirstOrDefault(element =>
@@ -58,10 +52,9 @@ public sealed class ExplorationWorkspaceUiTests
             (string?)element.Attribute(x + "Name") == "ToggleRouteFormButton"));
         Assert.NotNull(document.Descendants().FirstOrDefault(element =>
             (string?)element.Attribute(x + "Name") == "ToggleRouteListButton"));
-        XElement dssCanvas = Assert.Single(document.Descendants(), element =>
-            (string?)element.Attribute(x + "Name") == "DssPatternCanvas");
-        Assert.Equal("460", (string?)dssCanvas.Attribute("Width"));
-        Assert.Equal("460", (string?)dssCanvas.Attribute("Height"));
+        XElement full = Assert.Single(document.Descendants(), element =>
+            (string?)element.Attribute(x + "Name") == "FullExplorationPanel");
+        Assert.Equal("Collapsed", (string?)full.Attribute("Visibility"));
     }
 
     [Fact]
@@ -117,15 +110,10 @@ public sealed class ExplorationWorkspaceUiTests
         }
     }
 
-    private static string FindWorkspaceXaml()
-    {
-        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            string candidate = Path.Combine(directory.FullName, "EDActivityOverlay", "Windows", "ActivityWorkspaceOverlayWindow.xaml");
-            if (File.Exists(candidate)) return candidate;
-        }
-        throw new FileNotFoundException("Activity workspace XAML was not found.");
-    }
+    private static string FindWorkspaceXaml() =>
+        FindProjectFile(
+            "UserControls",
+            "ExplorationWorkspaceControl.xaml");
 
     private static string FindProjectFile(params string[] relative)
     {

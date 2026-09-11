@@ -14,7 +14,6 @@ public partial class MainWindow
     private ActivityType currentActivity = ActivityType.Trade;
     private ActivityWorkspaceOverlayWindow? activityWorkspaceWindow;
     private bool restoreActivityWorkspaceVisible;
-    private bool updatingActivitySelector;
     private bool activityHiddenByHotkey;
     public void SelectActivity(ActivityType activity)
     {

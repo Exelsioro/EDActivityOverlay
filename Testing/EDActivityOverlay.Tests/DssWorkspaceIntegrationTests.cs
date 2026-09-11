@@ -21,7 +21,12 @@ public sealed class DssWorkspaceIntegrationTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "RefreshAdaptiveExploration",
+            "explorationWorkspaceControl.SetExternalOverlayContent(",
+            code,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "explorationWorkspaceControl.SetExternalOverlayActive(",
             code,
             StringComparison.Ordinal);
 
