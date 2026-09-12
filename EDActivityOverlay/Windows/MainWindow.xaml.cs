@@ -577,7 +577,7 @@ namespace EDActivityOverlay
         private void RefreshExperimentalDssLifecycle(
             bool enabled)
         {
-            if (OverlayRenderCoordinator.IsCompositeMode)
+            if (VrOverlaySupport.IsEnabled)
             {
                 enabled = false;
             }

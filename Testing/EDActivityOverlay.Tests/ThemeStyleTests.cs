@@ -67,8 +67,11 @@ public sealed class ThemeStyleTests
         Assert.Equal(6, settingsMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
 
         string engineeringMarkup = File.ReadAllText(Path.Combine(
-            repository, "EDActivityOverlay", "Windows", "EngineeringWindow.xaml"));
-        Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", engineeringMarkup, StringComparison.Ordinal);
+            repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "EngineeringWorkspaceControl.xaml"));
+Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", engineeringMarkup, StringComparison.Ordinal);
         Assert.Equal(6, engineeringMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
 
         XElement dataGridRowStyle = Assert.Single(styles.Descendants(),
@@ -193,9 +196,8 @@ public sealed class ThemeStyleTests
 
         string[] sharedChromeOwners =
         [
-            "EngineeringWindow.xaml.cs",
             "PinnedRouteOverlay.xaml.cs",
-            "ResultsOverlayWindow.xaml.cs",
+"ResultsOverlayWindow.xaml.cs",
             "ShipStatusOverlayWindow.xaml.cs",
             "TradeRouteWindow.xaml.cs"
         ];
@@ -206,8 +208,18 @@ public sealed class ThemeStyleTests
             Assert.Contains("OverlayChromeHelper.Apply", markup, StringComparison.Ordinal);
         }
 
-        string mainSurface = File.ReadAllText(Path.Combine(
+        string engineeringSurface = File.ReadAllText(Path.Combine(
             repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "EngineeringWorkspaceControl.xaml.cs"));
+        Assert.Contains(
+            "OverlayChromeHelper.Apply",
+            engineeringSurface,
+            StringComparison.Ordinal);
+
+        string mainSurface = File.ReadAllText(Path.Combine(
+repository,
             "EDActivityOverlay",
             "UserControls",
             "MainOverlayPanelControl.xaml.cs"));

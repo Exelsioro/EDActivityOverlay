@@ -175,17 +175,24 @@ public sealed class MaterialTraderFinderTests
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "EngineeringWindow.xaml"));
+                    "UserControls",
+                    "EngineeringWorkspaceControl.xaml"));
 
         string code =
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "EngineeringWindow.MaterialTraders.cs"));
+                    "UserControls",
+                    "EngineeringWorkspaceControl.MaterialTraders.cs"));
 
         string engineering =
+            File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
+                    "UserControls",
+                    "EngineeringWorkspaceControl.xaml.cs"));
+
+        string host =
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
@@ -193,7 +200,7 @@ public sealed class MaterialTraderFinderTests
                     "EngineeringWindow.xaml.cs"));
 
         string main =
-            File.ReadAllText(
+File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
                     "Windows",
@@ -216,21 +223,21 @@ public sealed class MaterialTraderFinderTests
 
         Assert.Contains(
             "PrepareEngineeringNavigationHandoff",
-            code,
+            engineering,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "EnableExperimentalRouteAutomation",
-            code,
+            engineering,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "EliteRouteNavigationService.Instance.PrepareAsync",
-            code,
+            host,
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "PrepareEngineeringNavigationHandoff",
+            "NavigateAsync",
             engineering,
             StringComparison.Ordinal);
 
