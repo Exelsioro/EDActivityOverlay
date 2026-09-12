@@ -25,6 +25,7 @@ public sealed class CompositeActivityHostTests
         Assert.Contains("x:Name=\"ActivityHost\"", xaml, StringComparison.Ordinal);
         Assert.Contains("activityHost.SetActivity(controller.CompositeCurrentActivity)", code, StringComparison.Ordinal);
         Assert.Contains("new ExplorationWorkspaceControl", host, StringComparison.Ordinal);
+        Assert.Contains("new EngineeringWorkspaceControl", host, StringComparison.Ordinal);
         Assert.Contains("new TradeWorkspaceControl()", host, StringComparison.Ordinal);
         Assert.Contains("new MiningWorkspaceControl()", host, StringComparison.Ordinal);
         Assert.Contains("new MiningAnalyticsWorkspaceControl()", host, StringComparison.Ordinal);
@@ -50,6 +51,8 @@ public sealed class CompositeActivityHostTests
         Assert.Contains("OpenMiningAnalyticsRequested", host, StringComparison.Ordinal);
         Assert.Contains("OpenMiningLocationsRequested", host, StringComparison.Ordinal);
         Assert.Contains("SellMiningCargoRequested", host, StringComparison.Ordinal);
+        Assert.Contains("EngineeringViewModeChanged", host, StringComparison.Ordinal);
+        Assert.Contains("NavigateEngineeringSystemAsync", host, StringComparison.Ordinal);
         Assert.Contains("CompactDragRequested", host, StringComparison.Ordinal);
     }
 

@@ -376,6 +376,7 @@ public partial class CompositeOverlayWindow : Window
         bool canInteract = interactive && !navigationBusy;
         OverlayCanvas.IsHitTestVisible = canInteract;
         PinnedRoutePanel.ApplyInteractionMode(canInteract);
+        activityHost.ApplyInteractionMode(canInteract);
         WindowsAPI.SetClickThrough(this, !canInteract);
 
         if (canInteract && showCursor && IsVisible)

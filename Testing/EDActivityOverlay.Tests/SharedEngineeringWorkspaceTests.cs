@@ -72,6 +72,52 @@ public sealed class SharedEngineeringWorkspaceTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CompositeHostsTheSameEngineeringWorkspaceControl()
+    {
+        string host =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "UserControls",
+                "CompositeActivityHostControl.cs");
+
+        string overlay =
+            ReadProjectFile(
+                "EDActivityOverlay",
+                "Windows",
+                "CompositeOverlayWindow.xaml.cs");
+
+        Assert.Contains(
+            "new EngineeringWorkspaceControl",
+            host,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "ActivityType.Engineering",
+            host,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "engineeringWorkspaceControl.NavigateAsync",
+            host,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "engineeringWorkspaceControl.PreferredSizeChanged",
+            host,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "activityHost.ApplyInteractionMode(canInteract)",
+            overlay,
+            StringComparison.Ordinal);
+
+        Assert.DoesNotContain(
+            "new EngineeringWindow",
+            host,
+            StringComparison.Ordinal);
+    }
+
     private static string ReadProjectFile(
         params string[] relative)
     {
