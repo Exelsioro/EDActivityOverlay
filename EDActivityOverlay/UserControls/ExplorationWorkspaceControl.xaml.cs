@@ -547,7 +547,17 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
             ? "BIO —"
             : $"BIO {active.Progress.CompletedBiologicalSignals}/{active.Progress.BiologicalSignals}";
 
-        return string.Join("  •  ", fss, dss, bio);
+        var parts = new List<string>
+        {
+            fss,
+            dss,
+            bio
+        };
+
+        parts.AddRange(
+            BuildDiscoveryBadges(active.Body));
+
+        return string.Join("  •  ", parts);
     }
 
     private static string BuildAdaptiveBodyObjectives(

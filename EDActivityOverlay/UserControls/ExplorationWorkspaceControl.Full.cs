@@ -526,7 +526,10 @@ public partial class ExplorationWorkspaceControl
         string[] discoveryBadges = BuildDiscoveryBadges(body);
         if (discoveryBadges.Length > 0)
         {
-            progress += "  •  " + string.Join(" / ", discoveryBadges);
+            progress =
+                string.Join(" / ", discoveryBadges)
+                + "  •  "
+                + progress;
         }
 
         return new CatalogRow(

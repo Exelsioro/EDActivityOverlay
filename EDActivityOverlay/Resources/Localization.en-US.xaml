@@ -837,10 +837,10 @@
     <sys:String x:Key="Loc_EXPLORATION_PERSONAL_HISTORY_FORMAT">{0} · {1} · LAST VISIT {2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">FIRST DISCOVERY?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">FIRST MAPPING?</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">First discovery candidate (journal: WasDiscovered=false).</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">First mapping candidate (journal: WasMapped=false).</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">Journal reports that discovery already exists.</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">Journal reports that mapping already exists.</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">FIRST DISCOVERY CANDIDATE</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">FIRST MAPPING CANDIDATE</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">DISCOVERED</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">MAPPED</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">BODY TARGET</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% • {1} bodies • DSS {2} • BIO {3}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">{0} deferred • open the full assistant to resume</sys:String>

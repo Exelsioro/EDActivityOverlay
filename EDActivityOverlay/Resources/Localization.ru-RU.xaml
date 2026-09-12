@@ -837,10 +837,10 @@
     <sys:String x:Key="Loc_EXPLORATION_PERSONAL_HISTORY_FORMAT">{0} · {1} · ПОСЛЕДНИЙ ВИЗИТ {2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">ПЕРВОЕ ОТКРЫТИЕ?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">ПЕРВАЯ КАРТОГРАФИЯ?</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">Кандидат на первое открытие (в журнале: WasDiscovered=false).</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">Кандидат на первую картографию (в журнале: WasMapped=false).</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">Журнал сообщает, что открытие уже выполнено.</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">Журнал сообщает, что картография уже выполнена.</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">КАНДИДАТ НА ПЕРВОЕ ОТКРЫТИЕ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">КАНДИДАТ НА ПЕРВУЮ КАРТОГРАФИЮ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">ОТКРЫТО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">КАРТОГРАФИРОВАНО</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">ЦЕЛЕВОЕ ТЕЛО</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% • тела {1} • DSS {2} • BIO {3}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">отложено {0} • вернуть можно в полном ассистенте</sys:String>
