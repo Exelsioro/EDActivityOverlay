@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
@@ -26,6 +27,8 @@ public partial class CompositeOverlayWindow : Window
     private bool activityDragActive;
     private Point activityDragStart;
     private Point activityDragOrigin;
+    private ComboBox? vrComboBoxSource;
+    private VrComboBoxOption[] vrComboBoxOptions = [];
     private bool disposed;
 
     public CompositeOverlayWindow(EDActivityOverlay.MainWindow controller)
@@ -53,8 +56,11 @@ public partial class CompositeOverlayWindow : Window
         ShipStatusPanel.PreferredHeightChanged += OnShipStatusHeightChanged;
         activityHost.PresentationChanged += OnActivityPresentationChanged;
         activityHost.CompactDragRequested += OnActivityCompactDragRequested;
+        PreviewMouseLeftButtonDown += OnVrComboBoxPreviewMouseLeftButtonDown;
         PreviewMouseMove += OnPreviewMouseMove;
+        PreviewMouseLeftButtonUp += OnVrComboBoxPreviewMouseLeftButtonUp;
         PreviewMouseLeftButtonUp += OnPreviewMouseLeftButtonUp;
+        PreviewKeyDown += OnVrComboBoxPreviewKeyDown;
         SettingsService.Instance.SettingsChanged += OnSettingsChanged;
 
         layoutTimer = new DispatcherTimer
@@ -79,6 +85,11 @@ public partial class CompositeOverlayWindow : Window
     public void RefreshWindowMode()
     {
         VrOverlaySupport.ApplyCompositeWindowIdentity(this);
+        if (!VrOverlaySupport.IsEnabled)
+        {
+            HideVrComboBoxDropDown();
+        }
+
         RefreshLayout();
     }
 
@@ -219,6 +230,7 @@ public partial class CompositeOverlayWindow : Window
 
         if (!targetReady || !presentationFocused)
         {
+            HideVrComboBoxDropDown();
             if (IsVisible)
             {
                 Hide();
@@ -290,6 +302,8 @@ public partial class CompositeOverlayWindow : Window
         {
             PositionPinnedRoute(targetWidth, targetHeight, settings.PinnedRoutePosition);
         }
+
+        RefreshVrComboBoxDropDownPosition();
 
         if (!IsVisible)
         {
@@ -374,6 +388,11 @@ public partial class CompositeOverlayWindow : Window
     private void ApplyInteractionState()
     {
         bool canInteract = interactive && !navigationBusy;
+        if (!canInteract)
+        {
+            HideVrComboBoxDropDown();
+        }
+
         OverlayCanvas.IsHitTestVisible = canInteract;
         PinnedRoutePanel.ApplyInteractionMode(canInteract);
         activityHost.ApplyInteractionMode(canInteract);
@@ -475,6 +494,387 @@ public partial class CompositeOverlayWindow : Window
         Panel.SetZIndex(PinnedRoutePanel, 30);
     }
 
+    private void OnVrComboBoxPreviewMouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (!VrOverlaySupport.IsEnabled
+            || !interactive
+            || navigationBusy)
+        {
+            return;
+        }
+
+        DependencyObject? source =
+            e.OriginalSource
+            as DependencyObject;
+
+        if (source is not null
+            && IsVisualDescendantOf(
+                source,
+                VrComboBoxDropDownHost))
+        {
+            return;
+        }
+
+        ComboBox? combo =
+            FindVisualAncestor<ComboBox>(
+                source);
+
+        if (combo is null
+            || !combo.IsEnabled
+            || !combo.IsVisible)
+        {
+            HideVrComboBoxDropDown();
+            return;
+        }
+
+        // Prevent the normal WPF Popup from ever opening. Popup owns a
+        // separate HWND and is invisible to SteamVR when only this Composite
+        // window is captured.
+        e.Handled = true;
+        combo.IsDropDownOpen = false;
+
+        if (ReferenceEquals(
+                vrComboBoxSource,
+                combo)
+            && VrComboBoxDropDownHost.Visibility
+                == Visibility.Visible)
+        {
+            HideVrComboBoxDropDown();
+            return;
+        }
+
+        ShowVrComboBoxDropDown(
+            combo);
+    }
+
+    private void OnVrComboBoxPreviewMouseLeftButtonUp(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (VrComboBoxDropDownHost.Visibility
+                != Visibility.Visible
+            || vrComboBoxSource is null)
+        {
+            return;
+        }
+
+        DependencyObject? source =
+            e.OriginalSource
+            as DependencyObject;
+
+        ListBoxItem? item =
+            FindVisualAncestor<ListBoxItem>(
+                source);
+
+        if (item?.DataContext
+            is not VrComboBoxOption option)
+        {
+            return;
+        }
+
+        vrComboBoxSource.SelectedItem =
+            option.SourceItem;
+
+        e.Handled =
+            true;
+
+        HideVrComboBoxDropDown();
+    }
+
+    private void OnVrComboBoxPreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (VrComboBoxDropDownHost.Visibility
+                != Visibility.Visible)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            HideVrComboBoxDropDown();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Enter
+            && vrComboBoxSource is not null
+            && VrComboBoxDropDownList.SelectedItem
+                is VrComboBoxOption option)
+        {
+            vrComboBoxSource.SelectedItem =
+                option.SourceItem;
+            HideVrComboBoxDropDown();
+            e.Handled = true;
+        }
+    }
+
+    private void ShowVrComboBoxDropDown(
+        ComboBox combo)
+    {
+        VrComboBoxOption[] options =
+            combo.Items
+                .Cast<object>()
+                .Select(
+                    item =>
+                        new VrComboBoxOption(
+                            item,
+                            GetVrComboBoxDisplayText(
+                                combo,
+                                item)))
+                .ToArray();
+
+        if (options.Length == 0)
+        {
+            HideVrComboBoxDropDown();
+            return;
+        }
+
+        vrComboBoxSource =
+            combo;
+        vrComboBoxOptions =
+            options;
+
+        VrComboBoxDropDownList.ItemsSource =
+            options;
+        VrComboBoxDropDownList.SelectedIndex =
+            combo.SelectedIndex;
+
+        VrComboBoxDropDownHost.Width =
+            Math.Max(
+                combo.ActualWidth,
+                120);
+        VrComboBoxDropDownHost.Visibility =
+            Visibility.Visible;
+
+        Panel.SetZIndex(
+            VrComboBoxDropDownHost,
+            1000);
+
+        RefreshVrComboBoxDropDownPosition();
+    }
+
+    private void RefreshVrComboBoxDropDownPosition()
+    {
+        if (VrComboBoxDropDownHost.Visibility
+                != Visibility.Visible)
+        {
+            return;
+        }
+
+        ComboBox? combo =
+            vrComboBoxSource;
+
+        if (!VrOverlaySupport.IsEnabled
+            || combo is null
+            || !combo.IsVisible
+            || !combo.IsLoaded)
+        {
+            HideVrComboBoxDropDown();
+            return;
+        }
+
+        try
+        {
+            GeneralTransform transform =
+                combo.TransformToAncestor(
+                    OverlayCanvas);
+
+            Point topLeft =
+                transform.Transform(
+                    new Point(0, 0));
+
+            double width =
+                Math.Max(
+                    combo.ActualWidth,
+                    120);
+
+            double estimatedHeight =
+                Math.Min(
+                    320,
+                    Math.Max(
+                        36,
+                        vrComboBoxOptions.Length
+                        * 34
+                        + 6));
+
+            double canvasWidth =
+                Math.Max(
+                    1,
+                    OverlayCanvas.Width);
+            double canvasHeight =
+                Math.Max(
+                    1,
+                    OverlayCanvas.Height);
+
+            double left =
+                Math.Clamp(
+                    topLeft.X,
+                    0,
+                    Math.Max(
+                        0,
+                        canvasWidth - width));
+
+            double below =
+                topLeft.Y
+                + combo.ActualHeight;
+
+            double top =
+                below + estimatedHeight
+                    <= canvasHeight
+                    ? below
+                    : Math.Max(
+                        0,
+                        topLeft.Y
+                        - estimatedHeight);
+
+            VrComboBoxDropDownHost.Width =
+                width;
+
+            Canvas.SetLeft(
+                VrComboBoxDropDownHost,
+                left);
+            Canvas.SetTop(
+                VrComboBoxDropDownHost,
+                top);
+        }
+        catch (InvalidOperationException)
+        {
+            HideVrComboBoxDropDown();
+        }
+    }
+
+    private void HideVrComboBoxDropDown()
+    {
+        VrComboBoxDropDownHost.Visibility =
+            Visibility.Collapsed;
+        VrComboBoxDropDownList.ItemsSource =
+            null;
+        VrComboBoxDropDownList.SelectedIndex =
+            -1;
+        vrComboBoxSource =
+            null;
+        vrComboBoxOptions =
+            [];
+    }
+
+    private static string GetVrComboBoxDisplayText(
+        ComboBox combo,
+        object item)
+    {
+        object? value =
+            item is ComboBoxItem comboItem
+                ? comboItem.Content
+                : item;
+
+        if (value is TextBlock textBlock)
+        {
+            return textBlock.Text;
+        }
+
+        if (!string.IsNullOrWhiteSpace(
+                combo.DisplayMemberPath))
+        {
+            object? current =
+                value;
+
+            foreach (string member
+                     in combo.DisplayMemberPath.Split(
+                         '.',
+                         StringSplitOptions.RemoveEmptyEntries))
+            {
+                current =
+                    current?.GetType()
+                        .GetProperty(member)
+                        ?.GetValue(current);
+
+                if (current is null)
+                {
+                    break;
+                }
+            }
+
+            if (current is not null)
+            {
+                return current.ToString()
+                       ?? string.Empty;
+            }
+        }
+
+        return value?.ToString()
+               ?? string.Empty;
+    }
+
+    private static T? FindVisualAncestor<T>(
+        DependencyObject? source)
+        where T : DependencyObject
+    {
+        DependencyObject? current =
+            source;
+
+        while (current is not null)
+        {
+            if (current is T match)
+            {
+                return match;
+            }
+
+            current =
+                GetVisualOrLogicalParent(
+                    current);
+        }
+
+        return null;
+    }
+
+    private static bool IsVisualDescendantOf(
+        DependencyObject source,
+        DependencyObject ancestor)
+    {
+        DependencyObject? current =
+            source;
+
+        while (current is not null)
+        {
+            if (ReferenceEquals(
+                    current,
+                    ancestor))
+            {
+                return true;
+            }
+
+            current =
+                GetVisualOrLogicalParent(
+                    current);
+        }
+
+        return false;
+    }
+
+    private static DependencyObject? GetVisualOrLogicalParent(
+        DependencyObject source)
+    {
+        try
+        {
+            return VisualTreeHelper.GetParent(
+                       source)
+                   ?? LogicalTreeHelper.GetParent(
+                       source);
+        }
+        catch (InvalidOperationException)
+        {
+            return LogicalTreeHelper.GetParent(
+                source);
+        }
+    }
+
+    private sealed record VrComboBoxOption(
+        object SourceItem,
+        string Text);
+
     private void OnClosed(object? sender, EventArgs e)
     {
         if (disposed)
@@ -493,8 +893,11 @@ public partial class CompositeOverlayWindow : Window
         ShipStatusPanel.PreferredHeightChanged -= OnShipStatusHeightChanged;
         activityHost.PresentationChanged -= OnActivityPresentationChanged;
         activityHost.CompactDragRequested -= OnActivityCompactDragRequested;
+        PreviewMouseLeftButtonDown -= OnVrComboBoxPreviewMouseLeftButtonDown;
         PreviewMouseMove -= OnPreviewMouseMove;
+        PreviewMouseLeftButtonUp -= OnVrComboBoxPreviewMouseLeftButtonUp;
         PreviewMouseLeftButtonUp -= OnPreviewMouseLeftButtonUp;
+        PreviewKeyDown -= OnVrComboBoxPreviewKeyDown;
         if (Mouse.Captured == ActivityHost)
         {
             Mouse.Capture(null);

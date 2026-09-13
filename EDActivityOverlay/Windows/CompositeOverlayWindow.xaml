@@ -25,5 +25,51 @@
         <controls:ShipStatusPanelControl x:Name="ShipStatusPanel" />
         <controls:NotificationPanelControl x:Name="NotificationPanel" />
         <controls:PinnedRoutePanelControl x:Name="PinnedRoutePanel" />
+
+        <!--
+            WPF ComboBox normally renders its drop-down through Popup, which is
+            a separate HWND and therefore is not part of the SteamVR capture of
+            this Composite window. In VR we mirror ComboBox choices here so the
+            expanded list stays inside the single captured HWND.
+        -->
+        <Border x:Name="VrComboBoxDropDownHost"
+                Visibility="Collapsed"
+                Padding="2"
+                Panel.ZIndex="1000"
+                Background="{DynamicResource PrimaryBackgroundColorBrush}"
+                BorderBrush="{DynamicResource AccentColorBrush}"
+                BorderThickness="1">
+            <ListBox x:Name="VrComboBoxDropDownList"
+                     MaxHeight="320"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Foreground="{DynamicResource PrimaryTextColorBrush}"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Text}"
+                                   Padding="8,6"
+                                   TextWrapping="Wrap" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextColorBrush}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource HighlightBackgroundBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SelectedRowBackgroundBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource SelectedRowTextBrush}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </Border>
     </Canvas>
 </Window>
