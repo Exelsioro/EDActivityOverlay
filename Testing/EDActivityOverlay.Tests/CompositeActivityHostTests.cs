@@ -54,6 +54,10 @@ public sealed class CompositeActivityHostTests
         Assert.Contains("EngineeringViewModeChanged", host, StringComparison.Ordinal);
         Assert.Contains("NavigateEngineeringSystemAsync", host, StringComparison.Ordinal);
         Assert.Contains("CompactDragRequested", host, StringComparison.Ordinal);
+        Assert.Contains("ResetActivityPresentationForExit(previousActivity);", host, StringComparison.Ordinal);
+        Assert.Contains("ResetActivityPresentationForExit(currentActivity);", host, StringComparison.Ordinal);
+        Assert.Contains("engineeringWorkspaceControl.SetCompactMode();", host, StringComparison.Ordinal);
+        Assert.Contains("miningSurface =", host, StringComparison.Ordinal);
     }
 
     [Fact]

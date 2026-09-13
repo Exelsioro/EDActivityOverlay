@@ -155,6 +155,11 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
             return;
         }
 
+        if (renderedActivity is ActivityType previousActivity)
+        {
+            ResetActivityPresentationForExit(previousActivity);
+        }
+
         renderedActivity = activity;
         ApplyJournalState(JournalMonitorService.Instance.Current);
         ApplyVisibility();
@@ -377,8 +382,34 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     private void CloseCurrentActivityRequested()
     {
+        if (renderedActivity is ActivityType currentActivity)
+        {
+            ResetActivityPresentationForExit(currentActivity);
+        }
+
         SetPresentationEnabled(false);
         controller.HideCompositeActivity();
+    }
+
+    private void ResetActivityPresentationForExit(
+        ActivityType activity)
+    {
+        switch (activity)
+        {
+            case ActivityType.Engineering:
+                engineeringWorkspaceControl.SetCompactMode();
+                break;
+
+            case ActivityType.Mining:
+                miningSurface =
+                    MiningSurface.Compact;
+                break;
+        }
+
+        // Full Engineering and Mining surfaces own exclusive interaction.
+        // Normalize that ownership before another activity is presented or
+        // before the current activity is hidden.
+        UpdateExclusiveInteraction();
     }
 
     private void CompactDragRequestedFromChild()
