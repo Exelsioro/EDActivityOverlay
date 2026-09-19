@@ -1,0 +1,52 @@
+[1mdiff --git a/EDActivityOverlay/Resources/Localization.en-US.xaml b/EDActivityOverlay/Resources/Localization.en-US.xaml[m
+[1mindex 51f0b78..cd670bd 100644[m
+[1m--- a/EDActivityOverlay/Resources/Localization.en-US.xaml[m
+[1m+++ b/EDActivityOverlay/Resources/Localization.en-US.xaml[m
+[36m@@ -156,8 +156,8 @@[m
+     <sys:String x:Key="Loc_SEARCH_ROUTES">SEARCH ROUTES  ↵</sys:String>[m
+     <sys:String x:Key="Loc_Load_test_data">Load test data</sys:String>[m
+     <sys:String x:Key="Loc_Ready_to_search">Ready to search</sys:String>[m
+[31m-    <sys:String x:Key="Loc_ED_Trade_Overlay">ED Trade Overlay</sys:String>[m
+[31m-    <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ED TRADE OVERLAY</sys:String>[m
+[32m+[m[32m    <sys:String x:Key="Loc_ED_Activity_Overlay">ED Activity Overlay</sys:String>[m
+[32m+[m[32m    <sys:String x:Key="Loc_ED_ACTIVITY_OVERLAY">ED Activity Overlay</sys:String>[m
+     <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">ROUTES  •  LOCAL JOURNAL</sys:String>[m
+     <sys:String x:Key="Loc_Welcome_commander">Welcome, commander...</sys:String>[m
+     <sys:String x:Key="Loc_QUICK_ACCESS">QUICK ACCESS</sys:String>[m
+[1mdiff --git a/EDActivityOverlay/Resources/Localization.ru-RU.xaml b/EDActivityOverlay/Resources/Localization.ru-RU.xaml[m
+[1mindex 2cfc468..44947cd 100644[m
+[1m--- a/EDActivityOverlay/Resources/Localization.ru-RU.xaml[m
+[1m+++ b/EDActivityOverlay/Resources/Localization.ru-RU.xaml[m
+[36m@@ -156,8 +156,8 @@[m
+     <sys:String x:Key="Loc_SEARCH_ROUTES">НАЙТИ МАРШРУТЫ  ↵</sys:String>[m
+     <sys:String x:Key="Loc_Load_test_data">Загрузить тестовые данные</sys:String>[m
+     <sys:String x:Key="Loc_Ready_to_search">Готово к поиску</sys:String>[m
+[31m-    <sys:String x:Key="Loc_ED_Trade_Overlay">Торговый оверлей ED</sys:String>[m
+[31m-    <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ТОРГОВЫЙ ОВЕРЛЕЙ ED</sys:String>[m
+[32m+[m[32m    <sys:String x:Key="Loc_ED_Activity_Overlay">ED Activity Overlay</sys:String>[m
+[32m+[m[32m    <sys:String x:Key="Loc_ED_ACTIVITY_OVERLAY">ED Activity Overlay</sys:String>[m
+     <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">МАРШРУТЫ  •  ЛОКАЛЬНЫЙ ЖУРНАЛ</sys:String>[m
+     <sys:String x:Key="Loc_Welcome_commander">Добро пожаловать, командир...</sys:String>[m
+     <sys:String x:Key="Loc_QUICK_ACCESS">БЫСТРЫЙ ДОСТУП</sys:String>[m
+[1mdiff --git a/EDActivityOverlay/Windows/WaitingWindow.xaml b/EDActivityOverlay/Windows/WaitingWindow.xaml[m
+[1mindex d21c3c2..b16f1e7 100644[m
+[1m--- a/EDActivityOverlay/Windows/WaitingWindow.xaml[m
+[1m+++ b/EDActivityOverlay/Windows/WaitingWindow.xaml[m
+[36m@@ -1,7 +1,7 @@[m
+ ﻿<Window x:Class="EDActivityOverlay.Windows.WaitingWindow"[m
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"[m
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"[m
+[31m-        Title="{DynamicResource Loc_ED_Trade_Overlay}" Height="340" Width="571"[m
+[32m+[m[32m        Title="{DynamicResource Loc_ED_Activity_Overlay}" Height="340" Width="571"[m
+         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"[m
+         Background="{DynamicResource PrimaryBackgroundColorBrush}"[m
+         Foreground="{DynamicResource PrimaryTextColorBrush}">[m
+[36m@@ -19,7 +19,7 @@[m
+                     <ColumnDefinition Width="Auto"/>[m
+                 </Grid.ColumnDefinitions>[m
+                 <StackPanel>[m
+[31m-                    <TextBlock Text="{DynamicResource Loc_ED_TRADE_OVERLAY}" FontSize="20" FontWeight="Bold"[m
+[32m+[m[32m                    <TextBlock Text="{DynamicResource Loc_ED_ACTIVITY_OVERLAY}" FontSize="20" FontWeight="Bold"[m
+                                Foreground="{DynamicResource PrimaryTextColorBrush}"/>[m
+                     <TextBlock Text="{DynamicResource Loc_ROUTES_LOCAL_JOURNAL}"[m
+                                Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" Margin="0,4,0,0"/>[m

@@ -21,6 +21,32 @@ public sealed class ExplorationDiscoveryNotificationTests
             {
               "event":"Scan",
               "BodyName":"Test 1",
+              "PlanetClass":"Rocky body",
+              "WasDiscovered":{{wasDiscovered.ToString().ToLowerInvariant()}},
+              "WasMapped":{{wasMapped.ToString().ToLowerInvariant()}}
+            }
+            """);
+
+        Assert.Equal(
+            expected,
+            NotificationCenterService.GetDiscoveryCandidateMessageKey(
+                document.RootElement));
+    }
+
+    [Theory]
+    [InlineData(false, false, "Loc_Notification_First_Discovery_Format")]
+    [InlineData(true, false, null)]
+    public void StarScanNeverTreatsWasMappedAsFirstMappingCandidate(
+        bool wasDiscovered,
+        bool wasMapped,
+        string? expected)
+    {
+        using JsonDocument document = JsonDocument.Parse(
+            $$"""
+            {
+              "event":"Scan",
+              "BodyName":"Test A",
+              "StarType":"K",
               "WasDiscovered":{{wasDiscovered.ToString().ToLowerInvariant()}},
               "WasMapped":{{wasMapped.ToString().ToLowerInvariant()}}
             }
@@ -36,7 +62,7 @@ public sealed class ExplorationDiscoveryNotificationTests
     public void MissingJournalFlagsAreNotTreatedAsCandidates()
     {
         using JsonDocument document = JsonDocument.Parse(
-            """{"event":"Scan","BodyName":"Test 1"}""");
+            """{"event":"Scan","BodyName":"Test 1","PlanetClass":"Rocky body"}""");
 
         Assert.Null(
             NotificationCenterService.GetDiscoveryCandidateMessageKey(

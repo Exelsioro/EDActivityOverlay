@@ -312,7 +312,12 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
     internal static string? GetDiscoveryCandidateMessageKey(JsonElement element)
     {
         bool firstDiscovery = GetNullableBoolean(element, "WasDiscovered") == false;
-        bool firstMapping = GetNullableBoolean(element, "WasMapped") == false;
+        bool planetaryBody =
+            !string.IsNullOrWhiteSpace(GetString(element, "PlanetClass"))
+            && string.IsNullOrWhiteSpace(GetString(element, "StarType"));
+        bool firstMapping =
+            planetaryBody
+            && GetNullableBoolean(element, "WasMapped") == false;
 
         if (firstDiscovery && firstMapping)
         {

@@ -457,21 +457,11 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
     {
         var parts = new List<string>
         {
-            item.BodyName
+            item.BodyName,
+            BuildCompactFssStatus(item),
+            BuildCompactDssStatus(item),
+            BuildCompactFootfallStatus(item)
         };
-
-        if (!item.Progress.FssScanned)
-        {
-            parts.Add("FSS ○");
-        }
-
-        if (item.DssRequired)
-        {
-            parts.Add(
-                item.Progress.DssMapped
-                    ? "DSS ✓"
-                    : "DSS ○");
-        }
 
         if (item.BiologyRequired)
         {
@@ -487,13 +477,6 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
                     item.Body.DistanceFromArrivalLs));
         }
 
-        string[] discoveryBadges =
-            BuildDiscoveryBadges(item.Body);
-        if (discoveryBadges.Length > 0)
-        {
-            parts.Add(string.Join(" / ", discoveryBadges));
-        }
-
         long value = item.Body.EstimatedMappingValue;
         if (value > 0)
         {
@@ -504,6 +487,62 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         }
 
         return string.Join("  •  ", parts);
+    }
+
+    private static string BuildCompactFssStatus(
+        ExplorationVisitBodyState item)
+    {
+        if (!item.Progress.FssScanned)
+        {
+            return "FSS ○";
+        }
+
+        return ExplorationDiscoveryStatus.IsFirstDiscoveryCandidate(item.Body)
+            ? "FSS ?"
+            : "FSS ✓";
+    }
+
+    private static string BuildCompactDssStatus(
+        ExplorationVisitBodyState item)
+    {
+        if (!ExplorationDiscoveryStatus.SupportsMapping(item.Body))
+        {
+            return "DSS —";
+        }
+
+        if (item.Progress.DssMapped)
+        {
+            return item.Progress.DssEfficient
+                ? "DSS ◎"
+                : "DSS ✓";
+        }
+
+        if (item.Body.MappingStatusKnown && item.Body.WasMapped)
+        {
+            return "DSS ✓";
+        }
+
+        return ExplorationDiscoveryStatus.IsFirstMappingCandidate(item.Body)
+            ? "DSS ?"
+            : "DSS ○";
+    }
+
+    private static string BuildCompactFootfallStatus(
+        ExplorationVisitBodyState item)
+    {
+        if (!ExplorationDiscoveryStatus.SupportsFirstFootfall(item.Body))
+        {
+            return "FF —";
+        }
+
+        if (item.Body.FootfallStatusKnown && item.Body.WasFootfalled)
+        {
+            return "FF ✓";
+        }
+
+        return ExplorationDiscoveryStatus.IsFirstFootfallCandidate(item.Body)
+            ? "FF ?"
+            : "FF ○";
     }
 
     private static string[] BuildDiscoveryBadges(

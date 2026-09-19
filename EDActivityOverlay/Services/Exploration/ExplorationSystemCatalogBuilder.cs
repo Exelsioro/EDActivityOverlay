@@ -127,7 +127,9 @@ public static class ExplorationSystemCatalogBuilder
             LastProbesUsed = local.LastProbesUsed,
             EfficiencyTarget = local.EfficiencyTarget,
             DiscoveryStatusKnown = local.DiscoveryStatusKnown,
-            MappingStatusKnown = local.MappingStatusKnown
+            MappingStatusKnown = local.MappingStatusKnown,
+            FootfallStatusKnown = local.FootfallStatusKnown,
+            WasFootfalled = local.WasFootfalled
         };
     }
 

@@ -156,8 +156,8 @@
     <sys:String x:Key="Loc_SEARCH_ROUTES">НАЙТИ МАРШРУТЫ  ↵</sys:String>
     <sys:String x:Key="Loc_Load_test_data">Загрузить тестовые данные</sys:String>
     <sys:String x:Key="Loc_Ready_to_search">Готово к поиску</sys:String>
-    <sys:String x:Key="Loc_ED_Trade_Overlay">Торговый оверлей ED</sys:String>
-    <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ТОРГОВЫЙ ОВЕРЛЕЙ ED</sys:String>
+    <sys:String x:Key="Loc_ED_Activity_Overlay">ED Activity Overlay</sys:String>
+    <sys:String x:Key="Loc_ED_ACTIVITY_OVERLAY">ED Activity Overlay</sys:String>
     <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">МАРШРУТЫ  •  ЛОКАЛЬНЫЙ ЖУРНАЛ</sys:String>
     <sys:String x:Key="Loc_Welcome_commander">Добро пожаловать, командир...</sys:String>
     <sys:String x:Key="Loc_QUICK_ACCESS">БЫСТРЫЙ ДОСТУП</sys:String>

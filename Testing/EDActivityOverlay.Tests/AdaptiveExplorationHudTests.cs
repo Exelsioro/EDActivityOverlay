@@ -96,6 +96,36 @@ public sealed class AdaptiveExplorationHudTests
     }
 
     [Fact]
+    public void SystemTargetsExposeScanMappingAndFirstFootfallStatus()
+    {
+        string code = File.ReadAllText(
+            FindProjectFile(
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml.cs"));
+
+        Assert.Contains(
+            "BuildCompactFssStatus(item)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BuildCompactDssStatus(item)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BuildCompactFootfallStatus(item)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ExplorationDiscoveryStatus.SupportsMapping(item.Body)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ExplorationDiscoveryStatus.SupportsFirstFootfall(item.Body)",
+            code,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HudRefreshesWhenVisitStateChanges()
     {
         string code = File.ReadAllText(

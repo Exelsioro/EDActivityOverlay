@@ -156,8 +156,8 @@
     <sys:String x:Key="Loc_SEARCH_ROUTES">SEARCH ROUTES  ↵</sys:String>
     <sys:String x:Key="Loc_Load_test_data">Load test data</sys:String>
     <sys:String x:Key="Loc_Ready_to_search">Ready to search</sys:String>
-    <sys:String x:Key="Loc_ED_Trade_Overlay">ED Trade Overlay</sys:String>
-    <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ED TRADE OVERLAY</sys:String>
+    <sys:String x:Key="Loc_ED_Activity_Overlay">ED Activity Overlay</sys:String>
+    <sys:String x:Key="Loc_ED_ACTIVITY_OVERLAY">ED Activity Overlay</sys:String>
     <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">ROUTES  •  LOCAL JOURNAL</sys:String>
     <sys:String x:Key="Loc_Welcome_commander">Welcome, commander...</sys:String>
     <sys:String x:Key="Loc_QUICK_ACCESS">QUICK ACCESS</sys:String>

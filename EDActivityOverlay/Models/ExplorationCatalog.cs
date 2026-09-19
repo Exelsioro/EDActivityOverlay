@@ -23,8 +23,22 @@ public static class ExplorationDiscoveryStatus
     public static bool IsFirstDiscoveryCandidate(ExplorationCatalogBody body) =>
         body.DiscoveryStatusKnown && !body.WasDiscovered;
 
+    public static bool SupportsMapping(ExplorationCatalogBody body) =>
+        body.Type.Equals("Planet", StringComparison.OrdinalIgnoreCase)
+        || body.Type.Equals("Moon", StringComparison.OrdinalIgnoreCase);
+
+    public static bool SupportsFirstFootfall(ExplorationCatalogBody body) =>
+        SupportsMapping(body) && body.Landable;
+
     public static bool IsFirstMappingCandidate(ExplorationCatalogBody body) =>
-        body.MappingStatusKnown && !body.WasMapped;
+        SupportsMapping(body)
+        && body.MappingStatusKnown
+        && !body.WasMapped;
+
+    public static bool IsFirstFootfallCandidate(ExplorationCatalogBody body) =>
+        SupportsFirstFootfall(body)
+        && body.FootfallStatusKnown
+        && !body.WasFootfalled;
 }
 
 [Flags]
@@ -72,6 +86,8 @@ public sealed record ExplorationCatalogBody(
 {
     public bool DiscoveryStatusKnown { get; init; }
     public bool MappingStatusKnown { get; init; }
+    public bool FootfallStatusKnown { get; init; }
+    public bool WasFootfalled { get; init; }
     public double SurfacePressureAtmospheres { get; init; }
     public int LastProbesUsed { get; init; }
     public int EfficiencyTarget { get; init; }

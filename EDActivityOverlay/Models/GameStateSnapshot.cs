@@ -72,6 +72,10 @@ public sealed record ExplorationBodySnapshot(
     public bool DiscoveryStatusKnown { get; init; }
     /// <summary>True when the journal supplied WasMapped for this body.</summary>
     public bool MappingStatusKnown { get; init; }
+    /// <summary>True when the journal supplied WasFootfalled for this body.</summary>
+    public bool FootfallStatusKnown { get; init; }
+    /// <summary>Whether someone had already set foot on the body before this scan.</summary>
+    public bool WasFootfalled { get; init; }
     public bool IsScanned { get; init; }
     public bool IsNotable => Interest != ExplorationInterest.None;
     public bool Landable { get; init; }
