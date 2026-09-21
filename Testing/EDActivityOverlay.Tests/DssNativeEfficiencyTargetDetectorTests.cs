@@ -43,6 +43,34 @@ public sealed class DssNativeEfficiencyTargetDetectorTests
         DssNativeEfficiencyTargetRuntime.ResetForTests();
     }
 
+    [Theory]
+    [InlineData(6)]
+    [InlineData(18)]
+    public void Detector_RecognizesEnglishPrefixTarget(
+        int expectedTarget)
+    {
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+
+        DssCapturedFrame frame =
+            BuildSyntheticEnglishFrame(
+                expectedTarget);
+
+        DssNativeEfficiencyTargetObservation observation =
+            DssNativeEfficiencyTargetDetector.Detect(
+                frame);
+
+        Assert.True(
+            observation.Available);
+
+        Assert.Equal(
+            expectedTarget,
+            observation.Target);
+
+        Assert.True(
+            observation.Confidence >= 0.42d);
+
+        DssNativeEfficiencyTargetRuntime.ResetForTests();
+    }
     [Fact]
     public void Runtime_LatchesOnlyAfterStableRepeatedFrames()
     {
@@ -219,6 +247,194 @@ public sealed class DssNativeEfficiencyTargetDetectorTests
             pixels);
     }
 
+    private static DssCapturedFrame BuildSyntheticEnglishFrame(
+        int target,
+        DateTimeOffset? timestampUtc = null)
+    {
+        const int width = 1920;
+        const int height = 1080;
+        const int stride = width * 4;
+
+        byte[] pixels =
+            new byte[
+                stride * height];
+
+        // Cyan guard for the native "EFFICIENCY TARGET" header.
+        for (int y = 796;
+             y < 803;
+             y++)
+        {
+            for (int x = width - 340;
+                 x < width - 210;
+                 x++)
+            {
+                SetBgra(
+                    pixels,
+                    stride,
+                    x,
+                    y,
+                    blue: 230,
+                    green: 150,
+                    red: 10);
+            }
+        }
+
+        // Matches the supplied 1920x1080 English placement: "6 PROBES".
+        int cursor =
+            width - 212;
+
+        if (target >= 10)
+        {
+            cursor =
+                PaintDigitLeftAligned(
+                    pixels,
+                    stride,
+                    cursor,
+                    819,
+                    target / 10)
+                + 2;
+        }
+
+        cursor =
+            PaintDigitLeftAligned(
+                pixels,
+                stride,
+                cursor,
+                819,
+                target % 10);
+
+        // Neutral unit-word stub. The detector does not OCR this content; it
+        // only uses the wider separator after the numeric token.
+        int unitLeft =
+            cursor + 12;
+
+        for (int glyph = 0;
+             glyph < 6;
+             glyph++)
+        {
+            int glyphLeft =
+                unitLeft
+                + glyph * 8;
+
+            for (int y = 819;
+                 y < 833;
+                 y++)
+            {
+                for (int x = glyphLeft;
+                     x < glyphLeft + 5;
+                     x++)
+                {
+                    if (y == 819
+                        || y == 832
+                        || x == glyphLeft
+                        || x == glyphLeft + 4)
+                    {
+                        SetBgra(
+                            pixels,
+                            stride,
+                            x,
+                            y,
+                            170,
+                            170,
+                            170);
+                    }
+                }
+            }
+        }
+
+        return new DssCapturedFrame(
+            timestampUtc
+                ?? DateTimeOffset.UtcNow,
+            0,
+            0,
+            width,
+            height,
+            stride,
+            pixels);
+    }
+
+    private static int PaintDigitLeftAligned(
+        byte[] pixels,
+        int stride,
+        int left,
+        int top,
+        int digit)
+    {
+        ReadOnlySpan<byte> template =
+            DssNativeEfficiencyTargetDetector
+                .GetDigitTemplateForTests(
+                    digit);
+
+        const int glyphWidth = 12;
+        const int glyphHeight = 14;
+
+        int firstColumn = glyphWidth;
+        int lastColumn = -1;
+
+        for (int y = 0;
+             y < glyphHeight;
+             y++)
+        {
+            for (int x = 0;
+                 x < glyphWidth;
+                 x++)
+            {
+                if (template[
+                        y * glyphWidth + x]
+                    < 25)
+                {
+                    continue;
+                }
+
+                firstColumn =
+                    Math.Min(
+                        firstColumn,
+                        x);
+
+                lastColumn =
+                    Math.Max(
+                        lastColumn,
+                        x);
+            }
+        }
+
+        int visibleWidth =
+            lastColumn >= firstColumn
+                ? lastColumn - firstColumn + 1
+                : 1;
+
+        for (int y = 0;
+             y < glyphHeight;
+             y++)
+        {
+            for (int x = firstColumn;
+                 x <= lastColumn;
+                 x++)
+            {
+                byte value =
+                    template[
+                        y * glyphWidth + x];
+
+                if (value < 25)
+                {
+                    continue;
+                }
+
+                SetBgra(
+                    pixels,
+                    stride,
+                    left
+                    + (x - firstColumn),
+                    top + y,
+                    value,
+                    value,
+                    value);
+            }
+        }
+
+        return
+            left + visibleWidth;
+    }
     private static int PaintDigitRightAligned(
         byte[] pixels,
         int stride,

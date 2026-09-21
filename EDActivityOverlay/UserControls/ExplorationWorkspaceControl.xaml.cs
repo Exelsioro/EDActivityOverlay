@@ -548,7 +548,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
     private static string[] BuildDiscoveryBadges(
         ExplorationCatalogBody body)
     {
-        var badges = new List<string>(2);
+        var badges = new List<string>(3);
 
         if (ExplorationDiscoveryStatus.IsFirstDiscoveryCandidate(body))
         {
@@ -562,6 +562,13 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
             badges.Add(
                 Loc.Get(
                     "Loc_EXPLORATION_FIRST_MAPPING_SHORT"));
+        }
+
+        if (ExplorationDiscoveryStatus.IsFirstFootfallCandidate(body))
+        {
+            badges.Add(
+                Loc.Get(
+                    "Loc_EXPLORATION_FIRST_FOOTFALL_SHORT"));
         }
 
         return badges.ToArray();

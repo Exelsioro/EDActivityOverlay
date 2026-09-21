@@ -442,6 +442,33 @@ internal static class DssNativeEfficiencyTargetDetector
                 DssNativeEfficiencyTargetObservation.Empty;
         }
 
+        // English layouts expose a structurally identifiable numeric prefix
+        // ("6 PROBES", "18 PROBES"). Check that form first so localized unit
+        // text at the old right-aligned coordinates cannot be mistaken for N.
+        // If no valid prefix token exists, preserve the original Russian/
+        // right-aligned detector as the fallback.
+        DssNativeEfficiencyTargetObservation leftAligned =
+            DetectLeftAlignedNativeTarget(
+                frame,
+                scale);
+
+        if (leftAligned.Available)
+        {
+            return
+                leftAligned;
+        }
+
+        return
+            DetectRightAlignedNativeTarget(
+                frame,
+                scale);
+    }
+
+    private static DssNativeEfficiencyTargetObservation
+        DetectRightAlignedNativeTarget(
+            DssCapturedFrame frame,
+            double scale)
+    {
         int left =
             Math.Max(
                 0,
@@ -563,10 +590,8 @@ internal static class DssNativeEfficiencyTargetDetector
                 ones.Value,
                 out int mergedTarget,
                 out double mergedConfidence)
-            && mergedTarget
-               >= MinimumSupportedTarget
-            && mergedTarget
-               <= MaximumSupportedTarget)
+            && IsSupportedTarget(
+                mergedTarget))
         {
             return
                 new DssNativeEfficiencyTargetObservation(
@@ -660,10 +685,8 @@ internal static class DssNativeEfficiencyTargetDetector
                     tensMatch.Confidence);
         }
 
-        if (target
-                < MinimumSupportedTarget
-            || target
-               > MaximumSupportedTarget)
+        if (!IsSupportedTarget(
+                target))
         {
             return
                 DssNativeEfficiencyTargetObservation.Empty;
@@ -676,6 +699,214 @@ internal static class DssNativeEfficiencyTargetDetector
                 confidence);
     }
 
+    private static DssNativeEfficiencyTargetObservation
+        DetectLeftAlignedNativeTarget(
+            DssCapturedFrame frame,
+            double scale)
+    {
+        int left =
+            Math.Max(
+                0,
+                frame.Width
+                - Scale(
+                    390d,
+                    scale));
+
+        int right =
+            Math.Min(
+                frame.Width,
+                frame.Width
+                - Scale(
+                    125d,
+                    scale));
+
+        int top =
+            Math.Max(
+                0,
+                Scale(
+                    816d,
+                    scale));
+
+        int bottom =
+            Math.Min(
+                frame.Height,
+                Scale(
+                    838d,
+                    scale));
+
+        if (right <= left
+            || bottom <= top)
+        {
+            return
+                DssNativeEfficiencyTargetObservation.Empty;
+        }
+
+        List<GlyphComponent> components =
+            FindGlyphComponents(
+                frame,
+                left,
+                top,
+                right,
+                bottom,
+                scale)
+            .OrderBy(
+                component =>
+                    component.X)
+            .ToList();
+
+        if (components.Count < 2)
+        {
+            return
+                DssNativeEfficiencyTargetObservation.Empty;
+        }
+
+        int maximumPairGap =
+            Math.Max(
+                2,
+                Scale(
+                    3d,
+                    scale));
+
+        int minimumUnitGap =
+            Math.Max(
+                6,
+                Scale(
+                    8d,
+                    scale));
+
+        for (int index = 0;
+             index < components.Count - 1;
+             index++)
+        {
+            GlyphComponent first =
+                components[index];
+
+            int mergedDigitWidthThreshold =
+                Math.Max(
+                    8,
+                    Scale(
+                        12d,
+                        scale));
+
+            if (first.Width
+                    >= mergedDigitWidthThreshold
+                && TryClassifyMergedTwoDigitComponent(
+                    frame,
+                    first,
+                    out int mergedTarget,
+                    out double mergedConfidence)
+                && IsSupportedTarget(
+                    mergedTarget))
+            {
+                int gapAfterMerged =
+                    components[index + 1].X
+                    - (first.X
+                       + first.Width);
+
+                if (gapAfterMerged
+                    >= minimumUnitGap)
+                {
+                    return
+                        new DssNativeEfficiencyTargetObservation(
+                            true,
+                            mergedTarget,
+                            mergedConfidence);
+                }
+            }
+
+            DigitMatch firstMatch =
+                ClassifyDigit(
+                    frame,
+                    first);
+
+            if (!firstMatch.Available)
+            {
+                continue;
+            }
+
+            GlyphComponent next =
+                components[index + 1];
+
+            int gapToNext =
+                next.X
+                - (first.X
+                   + first.Width);
+
+            // One-digit English form: "6 PROBES". A substantial gap after the
+            // digit is part of the structural check, so letters inside PROBES
+            // are not accepted merely because one resembles a digit.
+            if (gapToNext >= minimumUnitGap
+                && IsSupportedTarget(
+                    firstMatch.Digit))
+            {
+                return
+                    new DssNativeEfficiencyTargetObservation(
+                        true,
+                        firstMatch.Digit,
+                        firstMatch.Confidence);
+            }
+
+            // Two-digit English form: "18 PROBES". The two digits must be
+            // adjacent, followed by the wider separator before the unit word.
+            if (gapToNext < 0
+                || gapToNext > maximumPairGap
+                || index + 2
+                   >= components.Count)
+            {
+                continue;
+            }
+
+            DigitMatch secondMatch =
+                ClassifyDigit(
+                    frame,
+                    next);
+
+            if (!secondMatch.Available)
+            {
+                continue;
+            }
+
+            int target =
+                firstMatch.Digit * 10
+                + secondMatch.Digit;
+
+            if (!IsSupportedTarget(
+                    target))
+            {
+                continue;
+            }
+
+            GlyphComponent after =
+                components[index + 2];
+
+            int gapAfterNumber =
+                after.X
+                - (next.X
+                   + next.Width);
+
+            if (gapAfterNumber
+                < minimumUnitGap)
+            {
+                continue;
+            }
+
+            return
+                new DssNativeEfficiencyTargetObservation(
+                    true,
+                    target,
+                    Math.Min(
+                        firstMatch.Confidence,
+                        secondMatch.Confidence));
+        }
+
+        return
+            DssNativeEfficiencyTargetObservation.Empty;
+    }
+
+    private static bool IsSupportedTarget(
+        int target) =>
+        target >= MinimumSupportedTarget
+        && target <= MaximumSupportedTarget;
     private static bool HasNativeTargetLabel(
         DssCapturedFrame frame,
         double scale)

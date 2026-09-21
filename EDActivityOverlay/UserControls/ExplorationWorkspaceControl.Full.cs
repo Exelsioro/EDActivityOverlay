@@ -523,12 +523,14 @@ public partial class ExplorationWorkspaceControl
                         ? Loc.Get("Loc_HISTORY_SCANNED")
                         : Loc.Get("Loc_COMMUNITY_DATA_ONLY");
 
-        string[] discoveryBadges = BuildDiscoveryBadges(body);
-        if (discoveryBadges.Length > 0)
+        string globalStatus =
+            BuildCompactGlobalStatus(body);
+
+        if (!string.IsNullOrWhiteSpace(globalStatus))
         {
             progress =
-                string.Join(" / ", discoveryBadges)
-                + "  •  "
+                globalStatus
+                + Environment.NewLine
                 + progress;
         }
 
@@ -554,6 +556,45 @@ public partial class ExplorationWorkspaceControl
             BuildVisitStateLabel(disposition));
     }
 
+    private static string BuildCompactGlobalStatus(
+        ExplorationCatalogBody body)
+    {
+        var parts = new List<string>
+        {
+            Loc.Get(
+                body.DiscoveryStatusKnown
+                    ? body.WasDiscovered
+                        ? "Loc_EXPLORATION_DISCOVERY_YES_SHORT"
+                        : "Loc_EXPLORATION_DISCOVERY_NO_SHORT"
+                    : "Loc_EXPLORATION_DISCOVERY_UNKNOWN_SHORT")
+        };
+
+        if (ExplorationDiscoveryStatus.SupportsMapping(body))
+        {
+            parts.Add(
+                Loc.Get(
+                    body.MappingStatusKnown
+                        ? body.WasMapped
+                            ? "Loc_EXPLORATION_MAPPING_YES_SHORT"
+                            : "Loc_EXPLORATION_MAPPING_NO_SHORT"
+                        : "Loc_EXPLORATION_MAPPING_UNKNOWN_SHORT"));
+        }
+
+        if (ExplorationDiscoveryStatus.SupportsFirstFootfall(body))
+        {
+            parts.Add(
+                Loc.Get(
+                    body.FootfallStatusKnown
+                        ? body.WasFootfalled
+                            ? "Loc_EXPLORATION_FOOTFALL_YES_SHORT"
+                            : "Loc_EXPLORATION_FOOTFALL_NO_SHORT"
+                        : "Loc_EXPLORATION_FOOTFALL_UNKNOWN_SHORT"));
+        }
+
+        return string.Join(
+            "  вЂў  ",
+            parts);
+    }
     private static string BuildVisitMarker(
         ExplorationVisitDisposition? disposition) =>
         disposition switch
@@ -883,27 +924,44 @@ public partial class ExplorationWorkspaceControl
     private static string BuildDiscoveryStatusDetails(
         ExplorationCatalogBody body)
     {
-        var parts = new List<string>();
-
-        if (body.DiscoveryStatusKnown)
+        var parts = new List<string>
         {
-            parts.Add(Loc.Get(
-                body.WasDiscovered
-                    ? "Loc_EXPLORATION_DISCOVERY_CONFIRMED"
-                    : "Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE"));
+            Loc.Get(
+                body.DiscoveryStatusKnown
+                    ? body.WasDiscovered
+                        ? "Loc_EXPLORATION_DISCOVERY_CONFIRMED"
+                        : "Loc_EXPLORATION_DISCOVERY_UNCONFIRMED"
+                    : "Loc_EXPLORATION_DISCOVERY_UNKNOWN")
+        };
+
+        if (ExplorationDiscoveryStatus.SupportsMapping(body))
+        {
+            parts.Add(
+                Loc.Get(
+                    body.MappingStatusKnown
+                        ? body.WasMapped
+                            ? "Loc_EXPLORATION_MAPPING_CONFIRMED"
+                            : "Loc_EXPLORATION_MAPPING_UNCONFIRMED"
+                        : "Loc_EXPLORATION_MAPPING_UNKNOWN"));
         }
 
-        if (body.MappingStatusKnown)
+        if (ExplorationDiscoveryStatus.SupportsFirstFootfall(body))
         {
-            parts.Add(Loc.Get(
-                body.WasMapped
-                    ? "Loc_EXPLORATION_MAPPING_CONFIRMED"
-                    : "Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE"));
+            parts.Add(
+                Loc.Get(
+                    body.FootfallStatusKnown
+                        ? body.WasFootfalled
+                            ? "Loc_EXPLORATION_FOOTFALL_CONFIRMED"
+                            : "Loc_EXPLORATION_FOOTFALL_UNCONFIRMED"
+                        : "Loc_EXPLORATION_FOOTFALL_UNKNOWN"));
         }
 
-        return string.Join("  •  ", parts);
+        return Loc.Format(
+            "Loc_EXPLORATION_GLOBAL_STATUS_FORMAT",
+            string.Join(
+                "  вЂў  ",
+                parts));
     }
-
     private static string BuildSelectedBodyBioGuidance(
         ExplorationCatalogBody body,
         ExplorationVisitBodyState? visit,
