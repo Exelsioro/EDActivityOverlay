@@ -31,12 +31,18 @@ internal sealed class UpdateService
     internal event EventHandler? Changed;
     internal UpdateRelease? AvailableRelease { get; private set; }
     internal string? Error { get; private set; }
-    internal bool IsBusy { get; private set; }
+    internal UpdateOperation Operation { get; private set; }
+    internal bool IsBusy => Operation != UpdateOperation.None;
+    internal DateTimeOffset? LastCheckedUtc { get; private set; }
     internal SemanticVersion? CurrentVersion =>
         SemanticVersion.TryParse(Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion, out var version) ? version : null;
 
     private UpdateService() { }
+
+    internal UpdateStatusPresentation GetPresentation(bool includeBeta) =>
+        UpdateStatusPresentation.Create(CurrentVersion, AvailableRelease?.Version,
+            Operation, Error, LastCheckedUtc is not null, includeBeta);
 
     private void NotifyChanged()
     {
@@ -57,7 +63,7 @@ internal sealed class UpdateService
         if (!await gate.WaitAsync(0, cancellationToken)) return;
         try
         {
-            IsBusy = true;
+            Operation = UpdateOperation.Checking;
             Error = null;
             AvailableRelease = null;
             NotifyChanged();
@@ -66,7 +72,12 @@ internal sealed class UpdateService
             using var response = await Client.GetAsync(ReleasesUri, timeout.Token);
             response.EnsureSuccessStatusCode();
             using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(timeout.Token));
-            AvailableRelease = SelectRelease(document.RootElement, CurrentVersion, includeBeta);
+            SemanticVersion currentVersion = CurrentVersion
+                ?? throw new InvalidOperationException(Loc.Get("Loc_UPDATE_VERSION_UNKNOWN"));
+            AvailableRelease = SelectRelease(document.RootElement, currentVersion, includeBeta);
+            LastCheckedUtc = DateTimeOffset.UtcNow;
+            Logger.Logger.Info($"Update check completed: current={currentVersion.DisplayValue}; "
+                + $"includeBeta={includeBeta}; available={AvailableRelease?.Version.DisplayValue ?? "none"}.");
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -75,7 +86,7 @@ internal sealed class UpdateService
         }
         finally
         {
-            IsBusy = false;
+            Operation = UpdateOperation.None;
             gate.Release();
             NotifyChanged();
         }
@@ -129,7 +140,7 @@ internal sealed class UpdateService
         string? destination = null;
         try
         {
-            IsBusy = true;
+            Operation = UpdateOperation.Installing;
             Error = null;
             NotifyChanged();
 
@@ -180,7 +191,7 @@ internal sealed class UpdateService
         }
         finally
         {
-            IsBusy = false;
+            Operation = UpdateOperation.None;
             gate.Release();
             NotifyChanged();
         }

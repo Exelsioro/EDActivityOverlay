@@ -62,11 +62,11 @@ Additional regression scripts and test harnesses are available under `Testing/`.
 
 Installer artifacts are written to `Installer/`.
 
-The default development release version is `1.3.0-beta.3`. Override it for a
+The default development release version is `1.3.0-beta.4`. Override it for a
 release build without editing project files:
 
 ```powershell
-.\build_installer.ps1 -Version 1.3.0-beta.3
+.\build_installer.ps1 -Version 1.3.0-beta.4
 ```
 
 The script resolves `ISCC.exe` from `PATH` and the standard Inno Setup 6
@@ -89,8 +89,8 @@ the product and installer version. A version containing a suffix such as
 Example:
 
 ```powershell
-git tag v1.3.0-beta.3
-git push origin v1.3.0-beta.3
+git tag v1.3.0-beta.4
+git push origin v1.3.0-beta.4
 ```
 
 ## Troubleshooting

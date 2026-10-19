@@ -35,7 +35,7 @@
 ## Release publication
 
 - Create a new SemVer tag; never reuse or move an existing release tag.
-- Versions with a suffix such as `-beta.3` remain prereleases.
+- Versions with a suffix such as `-beta.4` remain prereleases.
 - Verify update detection from the previous beta and the user-initiated
   installer upgrade path; the app must preserve its data after restart.
 - Download and install the generated installer from GitHub Actions before

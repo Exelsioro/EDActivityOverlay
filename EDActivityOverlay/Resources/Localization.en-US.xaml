@@ -1506,6 +1506,13 @@ Expected profit ~{4:N0} CR</sys:String>
     <sys:String x:Key="Loc_UPDATE_INSTALL">INSTALL UPDATE</sys:String>
     <sys:String x:Key="Loc_UPDATE_AVAILABLE_FORMAT">Version {0} is available.</sys:String>
     <sys:String x:Key="Loc_UPDATE_CURRENT_FORMAT">Current version: {0}. No newer release found.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_INSTALLED_VERSION_FORMAT">Version: {0}</sys:String>
+    <sys:String x:Key="Loc_UPDATE_NOT_CHECKED">Updates have not been checked yet.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_CHECKING">Checking for updates…</sys:String>
+    <sys:String x:Key="Loc_UPDATE_DOWNLOADING">Downloading and verifying the installer…</sys:String>
+    <sys:String x:Key="Loc_UPDATE_UP_TO_DATE">No updates available (stable and beta releases checked).</sys:String>
+    <sys:String x:Key="Loc_UPDATE_UP_TO_DATE_STABLE">No stable updates available. Beta releases are disabled in Settings → Updates.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_VERSION_UNKNOWN">The installed application version could not be determined.</sys:String>
     <sys:String x:Key="Loc_UPDATE_WORKING">Checking or downloading update…</sys:String>
     <sys:String x:Key="Loc_UPDATE_CHECK_FAILED_FORMAT">Update check failed: {0}</sys:String>
     <sys:String x:Key="Loc_UPDATE_FAILED">Update failed</sys:String>

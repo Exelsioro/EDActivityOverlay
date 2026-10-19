@@ -286,6 +286,7 @@ namespace EDActivityOverlay.Windows
             SettingsService.Instance.SetLanguage(option.Code);
             LocalizationService.Instance.ApplyLanguage(option.Code);
             RefreshLocalizedOptions();
+            RefreshUpdateStatus();
         }
 
         private void RefreshLocalizedOptions()
@@ -1262,16 +1263,12 @@ namespace EDActivityOverlay.Windows
         private void RefreshUpdateStatus()
         {
             var service = UpdateService.Instance;
-            string current = service.CurrentVersion?.Value ?? "?";
-            UpdateStatusText.Text = service.IsBusy
-                ? Loc.Get("Loc_UPDATE_WORKING")
-                : service.AvailableRelease is not null
-                    ? Loc.Format("Loc_UPDATE_AVAILABLE_FORMAT", service.AvailableRelease.Version.Value)
-                    : service.Error is not null
-                        ? Loc.Format("Loc_UPDATE_CHECK_FAILED_FORMAT", service.Error)
-                        : Loc.Format("Loc_UPDATE_CURRENT_FORMAT", current);
-            CheckUpdateButton.IsEnabled = !service.IsBusy;
-            InstallUpdateButton.IsEnabled = !service.IsBusy;
+            var presentation = service.GetPresentation(SettingsService.Instance.Settings.IncludeBetaUpdates);
+            CurrentVersionText.Text = Loc.Format("Loc_UPDATE_INSTALLED_VERSION_FORMAT", presentation.CurrentVersion);
+            UpdateStatusText.Text = Loc.Format(presentation.MessageKey, presentation.Arguments);
+            CheckUpdateButton.IsEnabled = presentation.CanCheck;
+            IncludeBetaUpdatesCheckBox.IsEnabled = presentation.CanCheck;
+            InstallUpdateButton.IsEnabled = presentation.CanInstall;
             InstallUpdateButton.Visibility = service.AvailableRelease is null ? Visibility.Collapsed : Visibility.Visible;
         }
 

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-beta.4] - 2026-10-19
+
+### Update visibility
+
+- Always show the installed version in the startup window and Settings header,
+  independently of checking, downloading or network errors; hide Git build
+  metadata from the version label.
+- Keep update status visible when no newer release is available. Distinguish
+  not yet checked, checking, downloading/verifying, no update, available update
+  and check failure. Clarify when only stable releases are being checked.
+- Let the startup window grow with its status text, refresh update text after
+  language changes, and log completed checks for diagnostics.
+
 ## [1.3.0-beta.3] - 2026-10-19
 
 ### Interface and VR

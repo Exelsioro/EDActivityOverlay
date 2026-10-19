@@ -30,6 +30,8 @@
 
                 <TextBlock Text="{DynamicResource Loc_Overlay_controls_appearance_and_local_game_data}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="11" />
 
+                <TextBlock x:Name="CurrentVersionText" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+
             </StackPanel>
 
             <Border x:Name="OverlayModeBadge" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource HighlightBackgroundBrush}" Padding="8,3" VerticalAlignment="Center">
