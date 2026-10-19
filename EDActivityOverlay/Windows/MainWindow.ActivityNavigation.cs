@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Hardware;
+using EDActivityOverlay.UserControls;
 using EDActivityOverlay.Utils;
 using EDActivityOverlay.Windows;
 
@@ -10,40 +11,10 @@ namespace EDActivityOverlay;
 
 public partial class MainWindow
 {
-    private sealed record ActivityOption(ActivityType Activity, string LabelKey)
-    {
-        public string Label => Loc.Get(LabelKey);
-    }
-
-    private static readonly ActivityOption[] ActivityOptions =
-    [
-        new(ActivityType.Trade, "Loc_Trade"),
-        new(ActivityType.Engineering, "Loc_Engineering"),
-        new(ActivityType.Exploration, "Loc_Exploration"),
-        new(ActivityType.Mining, "Loc_Mining")
-    ];
-
     private ActivityType currentActivity = ActivityType.Trade;
     private ActivityWorkspaceOverlayWindow? activityWorkspaceWindow;
     private bool restoreActivityWorkspaceVisible;
-    private bool updatingActivitySelector;
     private bool activityHiddenByHotkey;
-
-    private void ActivitySelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!updatingActivitySelector && ActivitySelector.SelectedItem is ActivityOption option)
-        {
-            SelectActivity(option.Activity);
-        }
-    }
-
-    private void ActivitySettingsButton_Click(object sender, RoutedEventArgs e)
-    {
-        CloseEngineeringOverlay();
-        CloseActivityWorkspace();
-        if (OperatingSystem.IsWindows() && Application.Current is App app) app.ShowOverlaySettingsWindow();
-    }
-
     public void SelectActivity(ActivityType activity)
     {
         if (targetWindow == IntPtr.Zero || !WindowsAPI.IsWindow(targetWindow)) return;
@@ -60,6 +31,18 @@ public partial class MainWindow
         OverlayVisibilityState.SuppressActivity = false;
         currentActivity = activity;
         X52IntegrationService.Instance.SetActivity(activity);
+
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            CloseOverlayWindows();
+            CloseEngineeringOverlay();
+            CloseActivityWorkspace();
+            UpdateActivityNavigationUi();
+            UpdateOverlayInteractionModes();
+            Logger.Logger.Info($"Composite activity selected: {activity}");
+            return;
+        }
+
         switch (activity)
         {
             case ActivityType.Trade:
@@ -90,6 +73,12 @@ public partial class MainWindow
         SelectActivity(
             ActivityType.Trade);
 
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            await OverlayRenderCoordinator.BeginCargoSaleFromMiningAsync();
+            return;
+        }
+
         if (activityWorkspaceWindow is null)
         {
             return;
@@ -101,14 +90,21 @@ public partial class MainWindow
     private void OnX52ControlRequested(object? sender, X52ControlEventArgs e) =>
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            int currentIndex = Array.FindIndex(ActivityOptions, option => option.Activity == currentActivity);
+            int currentIndex = Array.FindIndex(
+                ActivityUiCatalog.All,
+                option => option.Activity == currentActivity);
             switch (e.Action)
             {
                 case X52ControlAction.PreviousActivity:
-                    SelectActivity(ActivityOptions[(currentIndex - 1 + ActivityOptions.Length) % ActivityOptions.Length].Activity);
+                    SelectActivity(
+                        ActivityUiCatalog.All[
+                            (currentIndex - 1 + ActivityUiCatalog.All.Length)
+                            % ActivityUiCatalog.All.Length].Activity);
                     break;
                 case X52ControlAction.NextActivity:
-                    SelectActivity(ActivityOptions[(currentIndex + 1) % ActivityOptions.Length].Activity);
+                    SelectActivity(
+                        ActivityUiCatalog.All[
+                            (currentIndex + 1) % ActivityUiCatalog.All.Length].Activity);
                     break;
                 case X52ControlAction.ToggleActivity:
                     ToggleActivityFromHotkey(currentActivity);
@@ -124,6 +120,20 @@ public partial class MainWindow
 
     private void ToggleActivityFromHotkey(ActivityType activity)
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            if (OverlayVisibilityState.SuppressAll || activity != currentActivity)
+            {
+                SelectActivity(activity);
+                return;
+            }
+
+            activityHiddenByHotkey = !activityHiddenByHotkey;
+            OverlayVisibilityState.SuppressActivity = activityHiddenByHotkey;
+            UpdateInteractionStatusUi();
+            return;
+        }
+
         bool isVisible = activity == currentActivity && activity switch
         {
             ActivityType.Trade => activityWorkspaceWindow?.IsVisible == true
@@ -169,6 +179,12 @@ public partial class MainWindow
 
     private void RestoreCurrentActivityWindows()
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            OverlayVisibilityState.SuppressActivity = false;
+            return;
+        }
+
         if (currentActivity == ActivityType.Trade)
         {
             if (activityWorkspaceWindow is { IsLoaded: true })
@@ -208,6 +224,11 @@ public partial class MainWindow
 
     private void EnsureEngineeringWorkspaceVisible()
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            return;
+        }
+
         if (engineeringOverlayWindow is not { IsLoaded: true })
         {
             engineeringOverlayWindow = new EngineeringWindow(this);
@@ -224,6 +245,11 @@ public partial class MainWindow
 
     private void EnsureJournalWorkspaceVisible(ActivityType activity)
     {
+        if (OverlayRenderCoordinator.IsCompositeMode)
+        {
+            return;
+        }
+
         if (activityWorkspaceWindow is not { IsLoaded: true })
         {
             activityWorkspaceWindow = new ActivityWorkspaceOverlayWindow(this, activity);
@@ -248,12 +274,7 @@ public partial class MainWindow
 
     private void UpdateActivityNavigationUi()
     {
-        if (ActivitySelector == null) return;
-        updatingActivitySelector = true;
-        ActivitySelector.ItemsSource = null;
-        ActivitySelector.ItemsSource = ActivityOptions;
-        ActivitySelector.SelectedItem = ActivityOptions.First(option => option.Activity == currentActivity);
-        updatingActivitySelector = false;
+        mainPanel.RefreshLocalization();
     }
 
     public void RefreshLocalization()
@@ -268,5 +289,6 @@ public partial class MainWindow
         engineeringOverlayWindow?.RefreshLocalization();
         notificationOverlayWindow?.RefreshLocalization();
         shipStatusOverlayWindow?.RefreshLocalization();
+        OverlayRenderCoordinator.RefreshLocalization();
     }
 }

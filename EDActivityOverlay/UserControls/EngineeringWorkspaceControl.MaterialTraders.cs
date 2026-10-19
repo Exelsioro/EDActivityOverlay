@@ -7,9 +7,9 @@ using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Navigation;
 using EDActivityOverlay.Utils;
 
-namespace EDActivityOverlay.Windows;
+namespace EDActivityOverlay.UserControls;
 
-public partial class EngineeringWindow
+public partial class EngineeringWorkspaceControl
 {
     private readonly MaterialTraderFinderService materialTraderFinder =
         new();
@@ -155,6 +155,13 @@ public partial class EngineeringWindow
         object sender,
         RoutedEventArgs e)
     {
+        Func<
+            string,
+            bool,
+            CancellationToken,
+            Task<EliteNavigationResult>>? navigate =
+            NavigateAsync;
+
         if (sender
             is not Button
             {
@@ -163,8 +170,7 @@ public partial class EngineeringWindow
             }
             || string.IsNullOrWhiteSpace(
                 row.SystemName)
-            || targetWindow
-               == IntPtr.Zero)
+            || navigate is null)
         {
             return;
         }
@@ -198,9 +204,8 @@ public partial class EngineeringWindow
         await Task.Yield();
 
         EliteNavigationResult result =
-            await EliteRouteNavigationService.Instance.PrepareAsync(
+            await navigate(
                 row.SystemName,
-                targetWindow,
                 automatic,
                 routeToken);
 
@@ -216,60 +221,6 @@ public partial class EngineeringWindow
                     result.MessageKey,
                     result.TargetSystem,
                     result.Detail);
-    }
-
-    private bool PrepareEngineeringNavigationHandoff()
-    {
-        if (fullAssistantVisible)
-        {
-            fullAssistantVisible =
-                false;
-
-            FullAssistantPanel.Visibility =
-                Visibility.Collapsed;
-
-            EngineeringWidgetHelpPanel.Visibility =
-                Visibility.Collapsed;
-
-            EngineeringWidgetPanel.Visibility =
-                Visibility.Visible;
-
-            MinWidth =
-                0;
-
-            MinHeight =
-                0;
-
-            Width =
-                420;
-
-            Height =
-                340;
-
-            PositionOverTarget();
-        }
-
-        if (parentWindow is not null)
-        {
-            parentWindow.ReturnControlToGameForNavigation();
-        }
-        else
-        {
-            if (overlayMode
-                && IsLoaded)
-            {
-                WindowsAPI.SetClickThrough(
-                    this,
-                    true);
-            }
-
-            WindowsAPI.RestoreCursorVisibility();
-            WindowsAPI.TryActivateWindow(
-                targetWindow);
-        }
-
-        return
-            SettingsService.Instance.Settings.EnableExperimentalRouteAutomation;
     }
 
     private sealed record MaterialTraderRow(

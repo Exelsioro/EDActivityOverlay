@@ -31,10 +31,109 @@ public sealed class OverlayNotificationEventArgs(OverlayNotification notificatio
 /// Shared event-to-notification pipeline. Journal, combat, missions and future
 /// network services publish here; presentation remains independent from producers.
 /// </summary>
+internal readonly record struct ExplorationScanBaseline(
+    string ScanType,
+    bool? WasDiscovered,
+    bool? WasMapped,
+    bool? WasFootfalled);
+
+internal sealed class ExplorationFirstScanTracker
+{
+    private readonly object sync = new();
+    private readonly Dictionary<string, ExplorationScanBaseline> baselines =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (bool Discovery, bool Mapping)> notifiedCandidates =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> mappedThisVisit =
+        new(StringComparer.OrdinalIgnoreCase);
+    private bool incompleteFssNotified;
+
+    public bool TryObserve(
+        string identity,
+        ExplorationScanBaseline current,
+        out ExplorationScanBaseline baseline)
+    {
+        lock (sync)
+        {
+            if (baselines.TryGetValue(
+                    identity,
+                    out baseline))
+            {
+                return false;
+            }
+
+            baselines[identity] =
+                current;
+
+            baseline =
+                current;
+
+            return true;
+        }
+    }
+
+    public void Reset()
+    {
+        lock (sync)
+        {
+            baselines.Clear();
+            notifiedCandidates.Clear();
+            mappedThisVisit.Clear();
+            incompleteFssNotified = false;
+        }
+    }
+
+    public string? TryClaimCandidateMessage(
+        string identity,
+        ExplorationScanBaseline current,
+        bool isPlanet)
+    {
+        lock (sync)
+        {
+            notifiedCandidates.TryGetValue(identity, out var notified);
+            bool discovery = current.WasDiscovered == false && !notified.Discovery;
+            bool mapping = isPlanet
+                           && current.WasMapped == false
+                           && !mappedThisVisit.Contains(identity)
+                           && !notified.Mapping;
+            if (!discovery && !mapping)
+            {
+                return null;
+            }
+
+            notifiedCandidates[identity] =
+                (notified.Discovery || discovery, notified.Mapping || mapping);
+            return NotificationCenterService.GetDiscoveryCandidateMessageKey(discovery, mapping);
+        }
+    }
+
+    public bool TryMarkIncompleteFss()
+    {
+        lock (sync)
+        {
+            if (incompleteFssNotified)
+            {
+                return false;
+            }
+
+            incompleteFssNotified = true;
+            return true;
+        }
+    }
+
+    public void MarkMapped(string identity)
+    {
+        lock (sync)
+        {
+            mappedThisVisit.Add(identity);
+        }
+    }
+}
 public sealed class NotificationCenterService : IJournalDataConsumer, IDisposable
 {
     private readonly object sync = new();
     private readonly Dictionary<string, DateTimeOffset> lastPublished = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ExplorationFirstScanTracker explorationFirstScanTracker = new();
     private bool started;
     private bool disposed;
     private bool lowFuel;
@@ -110,6 +209,11 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
         JsonElement data = journalEvent.Data;
         switch (journalEvent.EventName.ToLowerInvariant())
         {
+            case "location":
+            case "fsdjump":
+            case "carrierjump":
+                explorationFirstScanTracker.Reset();
+                break;
             case "underattack":
                 Publish("combat", NotificationSeverity.Critical,
                     "Loc_Notification_Combat", "Loc_Notification_UnderAttack",
@@ -152,10 +256,29 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                     "Loc_Notification_Mining", "Loc_Notification_Asteroid_Cracked",
                     "mining:cracked", TimeSpan.FromSeconds(3));
                 break;
-            case "fssdiscoveryscan" when GetDouble(data, "Progress") >= 0.999:
-                Publish("exploration", NotificationSeverity.Success,
-                    "Loc_Notification_Exploration", "Loc_Notification_FSS_Complete_Format",
-                    "exploration:fss-complete", TimeSpan.FromSeconds(10), GetInt32(data, "BodyCount"));
+            case "fssdiscoveryscan":
+                double fssProgress = GetDouble(data, "Progress");
+                int fssBodyCount = GetInt32(data, "BodyCount");
+                long fssSystemAddress = GetInt64(data, "SystemAddress");
+                string fssIdentity = fssSystemAddress != 0
+                    ? fssSystemAddress.ToString()
+                    : GetString(data, "SystemName");
+                if (fssProgress >= 0.999)
+                {
+                    Publish("exploration", NotificationSeverity.Success,
+                        "Loc_Notification_Exploration", "Loc_Notification_FSS_Complete_Format",
+                        $"exploration:fss-complete:{fssIdentity}",
+                        TimeSpan.FromSeconds(10), fssBodyCount);
+                }
+                else if (fssBodyCount > 0
+                         && explorationFirstScanTracker.TryMarkIncompleteFss())
+                {
+                    Publish("exploration", NotificationSeverity.Information,
+                        "Loc_Notification_Exploration", "Loc_Notification_FSS_Incomplete_Format",
+                        $"exploration:fss-incomplete:{fssIdentity}",
+                        TimeSpan.FromSeconds(10),
+                        fssBodyCount, (int)Math.Round(Math.Clamp(fssProgress, 0, 1) * 100));
+                }
                 break;
             case "scan":
                 string scannedBody = GetString(data, "BodyName");
@@ -167,12 +290,85 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                         $"exploration:notable:{scannedBody}", TimeSpan.FromSeconds(2), scannedBody);
                 }
 
-                string? discoveryMessage = GetDiscoveryCandidateMessageKey(data);
+                string explorationScanType = GetString(data, "ScanType");
+                int scanBodyId = GetInt32(data, "BodyID");
+                long scanSystemAddress = GetInt64(data, "SystemAddress");
+                if (scanSystemAddress == 0)
+                {
+                    scanSystemAddress =
+                        JournalMonitorService.Instance.Current.SystemAddress;
+                }
+
+                string scanSystemName =
+                    JournalMonitorService.Instance.Current.StarSystem;
+                string scanIdentity = scanSystemAddress != 0
+                    ? $"{scanSystemAddress}:{scanBodyId}"
+                    : $"{scanSystemName}|{scanBodyId}|{scannedBody}";
+
+                var currentScan =
+                    new ExplorationScanBaseline(
+                        explorationScanType,
+                        GetNullableBoolean(data, "WasDiscovered"),
+                        GetNullableBoolean(data, "WasMapped"),
+                        GetNullableBoolean(data, "WasFootfalled"));
+
+                bool firstScanForBody =
+                    explorationFirstScanTracker.TryObserve(
+                        scanIdentity,
+                        currentScan,
+                        out ExplorationScanBaseline baseline);
+
+                string conflict =
+                    firstScanForBody
+                        ? string.Empty
+                        : BuildExplorationScanConflict(
+                            baseline,
+                            currentScan);
+
+                bool planetaryBody =
+                    !string.IsNullOrWhiteSpace(GetString(data, "PlanetClass"))
+                    && string.IsNullOrWhiteSpace(GetString(data, "StarType"));
+                string? discoveryMessage =
+                    explorationFirstScanTracker.TryClaimCandidateMessage(
+                        scanIdentity,
+                        currentScan,
+                        planetaryBody);
+
+                Logger.Logger.Info(
+                    "EXPLORATION SCAN STATUS: "
+                    + $"system={scanSystemName}; "
+                    + $"systemAddress={scanSystemAddress}; "
+                    + $"bodyId={scanBodyId}; "
+                    + $"body={scannedBody}; "
+                    + $"scanType={FormatScanValue(explorationScanType)}; "
+                    + $"wasDiscovered={FormatNullableBoolean(currentScan.WasDiscovered)}; "
+                    + $"wasMapped={FormatNullableBoolean(currentScan.WasMapped)}; "
+                    + $"wasFootfalled={FormatNullableBoolean(currentScan.WasFootfalled)}; "
+                    + $"firstScanForBody={firstScanForBody}; "
+                    + $"baselineScanType={FormatScanValue(baseline.ScanType)}; "
+                    + $"baselineWasDiscovered={FormatNullableBoolean(baseline.WasDiscovered)}; "
+                    + $"baselineWasMapped={FormatNullableBoolean(baseline.WasMapped)}; "
+                    + $"baselineWasFootfalled={FormatNullableBoolean(baseline.WasFootfalled)}; "
+                    + $"notification={discoveryMessage ?? "none"}");
+
+                if (!string.IsNullOrWhiteSpace(conflict))
+                {
+                    Logger.Logger.Warning(
+                        "EXPLORATION STATUS CONFLICT: "
+                        + $"system={scanSystemName}; "
+                        + $"bodyId={scanBodyId}; "
+                        + $"body={scannedBody}; "
+                        + $"baselineScanType={FormatScanValue(baseline.ScanType)}; "
+                        + $"currentScanType={FormatScanValue(explorationScanType)}; "
+                        + conflict);
+                }
+
                 if (discoveryMessage is not null)
                 {
                     Publish("exploration", NotificationSeverity.Success,
                         "Loc_Notification_Exploration", discoveryMessage,
-                        $"exploration:discovery:{scannedBody}", TimeSpan.FromSeconds(3), scannedBody);
+                        $"exploration:discovery:{scanIdentity}:{discoveryMessage}",
+                        TimeSpan.FromSeconds(3), scannedBody);
                 }
                 break;
             case "fssbodysignals":
@@ -187,6 +383,20 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                 }
                 break;
             case "saascancomplete":
+                long mappedSystemAddress = GetInt64(data, "SystemAddress");
+                if (mappedSystemAddress == 0)
+                {
+                    mappedSystemAddress =
+                        JournalMonitorService.Instance.Current.SystemAddress;
+                }
+
+                int mappedBodyId = GetInt32(data, "BodyID");
+                string mappedBodyName = GetString(data, "BodyName");
+                string mappedIdentity = mappedSystemAddress != 0
+                    ? $"{mappedSystemAddress}:{mappedBodyId}"
+                    : $"{JournalMonitorService.Instance.Current.StarSystem}|{mappedBodyId}|{mappedBodyName}";
+                explorationFirstScanTracker.MarkMapped(mappedIdentity);
+
                 int probesUsed = GetInt32(data, "ProbesUsed");
                 int efficiencyTarget = GetInt32(data, "EfficiencyTarget");
                 if (efficiencyTarget > 0 && probesUsed > 0 && probesUsed <= efficiencyTarget)
@@ -261,6 +471,62 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
         cargoFull = isCargoFull;
     }
 
+    private static string BuildExplorationScanConflict(
+        ExplorationScanBaseline baseline,
+        ExplorationScanBaseline current)
+    {
+        var conflicts = new List<string>();
+
+        AddConflict(
+            conflicts,
+            "WasDiscovered",
+            baseline.WasDiscovered,
+            current.WasDiscovered);
+
+        AddConflict(
+            conflicts,
+            "WasMapped",
+            baseline.WasMapped,
+            current.WasMapped);
+
+        AddConflict(
+            conflicts,
+            "WasFootfalled",
+            baseline.WasFootfalled,
+            current.WasFootfalled);
+
+        return string.Join("; ", conflicts);
+    }
+
+    private static void AddConflict(
+        ICollection<string> conflicts,
+        string name,
+        bool? baseline,
+        bool? current)
+    {
+        if (!baseline.HasValue
+            || !current.HasValue
+            || baseline.Value == current.Value)
+        {
+            return;
+        }
+
+        conflicts.Add(
+            $"{name} {baseline.Value.ToString().ToLowerInvariant()}"
+            + $" -> {current.Value.ToString().ToLowerInvariant()}");
+    }
+
+    private static string FormatNullableBoolean(
+        bool? value) =>
+        value.HasValue
+            ? value.Value.ToString().ToLowerInvariant()
+            : "unknown";
+
+    private static string FormatScanValue(
+        string value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? "unknown"
+            : value;
     private static bool GetBoolean(JsonElement element, string property) =>
         element.TryGetProperty(property, out JsonElement value)
         && value.ValueKind is JsonValueKind.True or JsonValueKind.False
@@ -271,6 +537,9 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
 
     private static int GetInt32(JsonElement element, string property) =>
         element.TryGetProperty(property, out JsonElement value) && value.TryGetInt32(out int result) ? result : 0;
+
+    private static long GetInt64(JsonElement element, string property) =>
+        element.TryGetProperty(property, out JsonElement value) && value.TryGetInt64(out long result) ? result : 0;
 
     private static string GetString(JsonElement element, string property) =>
         element.TryGetProperty(property, out JsonElement value) && value.ValueKind == JsonValueKind.String
@@ -312,8 +581,20 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
     internal static string? GetDiscoveryCandidateMessageKey(JsonElement element)
     {
         bool firstDiscovery = GetNullableBoolean(element, "WasDiscovered") == false;
-        bool firstMapping = GetNullableBoolean(element, "WasMapped") == false;
+        bool planetaryBody =
+            !string.IsNullOrWhiteSpace(GetString(element, "PlanetClass"))
+            && string.IsNullOrWhiteSpace(GetString(element, "StarType"));
+        bool firstMapping =
+            planetaryBody
+            && GetNullableBoolean(element, "WasMapped") == false;
 
+        return GetDiscoveryCandidateMessageKey(firstDiscovery, firstMapping);
+    }
+
+    internal static string? GetDiscoveryCandidateMessageKey(
+        bool firstDiscovery,
+        bool firstMapping)
+    {
         if (firstDiscovery && firstMapping)
         {
             return "Loc_Notification_First_Discovery_And_Mapping_Format";

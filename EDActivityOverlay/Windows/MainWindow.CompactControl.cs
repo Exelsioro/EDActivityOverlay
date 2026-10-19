@@ -7,98 +7,10 @@ namespace EDActivityOverlay;
 
 public partial class MainWindow
 {
-    private const double CollapsedMainOverlayBaseWidth = 170d;
-    private const double CollapsedMainOverlayBaseHeight = 32d;
-
-    private bool mainOverlayCollapsed;
-
-    private void CollapseMainOverlayButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (mainOverlayCollapsed)
-        {
-            return;
-        }
-
-        mainOverlayCollapsed = true;
-
-        SettingsService.Instance.SetMainOverlayCollapsed(
-            true);
-
-        ExpandedControlContent.Visibility =
-            Visibility.Collapsed;
-        CollapsedControlContent.Visibility =
-            Visibility.Visible;
-        OverlayFrame.Padding =
-            new Thickness(
-                6,
-                4,
-                6,
-                4);
-
-        ApplyAdaptiveSizeForTarget();
-        PositionMainOverlayInPhysicalCorner();
-        UpdateInteractionStatusUi();
-    }
-
-    private void ExpandMainOverlayButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        if (!mainOverlayCollapsed)
-        {
-            return;
-        }
-
-        mainOverlayCollapsed = false;
-
-        SettingsService.Instance.SetMainOverlayCollapsed(
-            false);
-
-        CollapsedControlContent.Visibility =
-            Visibility.Collapsed;
-        ExpandedControlContent.Visibility =
-            Visibility.Visible;
-        OverlayFrame.Padding =
-            new Thickness(
-                10,
-                7,
-                10,
-                7);
-
-        ApplyAdaptiveSizeForTarget();
-        PositionMainOverlayInPhysicalCorner();
-        UpdateInteractionStatusUi();
-    }
-
     private void RestoreMainOverlayCollapsedState()
     {
-        mainOverlayCollapsed =
-            SettingsService.Instance.Settings.MainOverlayCollapsed;
-
-        ExpandedControlContent.Visibility =
-            mainOverlayCollapsed
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-
-        CollapsedControlContent.Visibility =
-            mainOverlayCollapsed
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-        OverlayFrame.Padding =
-            mainOverlayCollapsed
-                ? new Thickness(
-                    6,
-                    4,
-                    6,
-                    4)
-                : new Thickness(
-                    10,
-                    7,
-                    10,
-                    7);
+        mainPanel.ApplySettings(
+            SettingsService.Instance.Settings);
 
         ApplyMainOverlaySizeForCurrentState();
     }
@@ -134,24 +46,14 @@ public partial class MainWindow
                 scale;
         }
 
-        double baseWidth =
-            mainOverlayCollapsed
-                ? CollapsedMainOverlayBaseWidth
-                : baseWindowWidth;
-
-        double baseHeight =
-            mainOverlayCollapsed
-                ? CollapsedMainOverlayBaseHeight
-                : baseWindowHeight;
-
         double desiredWidth =
             Math.Round(
-                baseWidth
+                mainPanel.PreferredWidth
                 * scale);
 
         double desiredHeight =
             Math.Round(
-                baseHeight
+                mainPanel.PreferredHeight
                 * scale);
 
         if (Math.Abs(
@@ -169,6 +71,9 @@ public partial class MainWindow
             Height =
                 desiredHeight;
         }
+
+        mainPanel.Width = desiredWidth;
+        mainPanel.Height = desiredHeight;
     }
 
     private void PositionMainOverlayInPhysicalCorner()

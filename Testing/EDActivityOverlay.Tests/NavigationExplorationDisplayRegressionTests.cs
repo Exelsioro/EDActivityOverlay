@@ -247,41 +247,54 @@ public sealed class NavigationExplorationDisplayRegressionTests
     [Fact]
     public void WorkspacePreservesCatalogSelectionAndSuppressesPassiveCursor()
     {
-        string code =
+        string shell =
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
                     "Windows",
                     "ActivityWorkspaceOverlayWindow.xaml.cs"));
 
+        string exploration =
+            File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
+                    "UserControls",
+                    "ExplorationWorkspaceControl.xaml.cs"))
+            + Environment.NewLine
+            + File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
+                    "UserControls",
+                    "ExplorationWorkspaceControl.Full.cs"));
+
         Assert.Contains(
             "previousSelection",
-            code,
+            exploration,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "preservedSelection",
-            code,
+            exploration,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "ForceCursor",
-            code,
+            shell,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "IsHitTestVisible",
-            code,
+            shell,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "Cursors.None",
-            code,
+            shell,
             StringComparison.Ordinal);
 
         Assert.Contains(
             "ResolveCurrentVisitValue",
-            code,
+            exploration,
             StringComparison.Ordinal);
     }
 

@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="Loc_DSS_LIVE_PROGRESS_FORMAT">&#x41F;&#x43E;&#x43A;&#x440;&#x44B;&#x442;&#x438;&#x435; {0} • &#x43F;&#x43E;&#x43F;&#x430;&#x434;&#x430;&#x43D;&#x438;&#x44F; {1}/{2}</sys:String>
     <sys:String x:Key="Loc_Activity_assistant">Помощник по занятию</sys:String>
     <sys:String x:Key="Loc_EXPLORATION">ИССЛЕДОВАНИЯ</sys:String>
     <sys:String x:Key="Loc_JOURNAL_ASSISTANT">ПОМОЩНИК ЖУРНАЛА</sys:String>
@@ -85,6 +86,14 @@
     <sys:String x:Key="Loc_Return_to_passive_mode_when_overlay_loses_focus">Возвращаться в пассивный режим при потере фокуса</sys:String>
     <sys:String x:Key="Loc_Show_cursor_in_interactive_mode">Показывать курсор в интерактивном режиме</sys:String>
     <sys:String x:Key="Loc_Automatic_return_to_passive_mode">Автоматический возврат в пассивный режим</sys:String>
+    <sys:String x:Key="Loc_OVERLAY_RENDERER">РЕНДЕР ОВЕРЛЕЯ</sys:String>
+    <sys:String x:Key="Loc_OVERLAY_RENDERER_DESCRIPTION">Individual сохраняет отдельные окна оверлея. Composite отрисовывает перенесённые поверхности внутри одного стабильного окна.</sys:String>
+    <sys:String x:Key="Loc_RENDERER_INDIVIDUAL">Отдельные окна</sys:String>
+    <sys:String x:Key="Loc_RENDERER_COMPOSITE">Композитное окно</sys:String>
+    <sys:String x:Key="Loc_VR_SUPPORT">VR / META QUEST</sys:String>
+    <sys:String x:Key="Loc_ENABLE_VR_OVERLAY_SUPPORT">Режим совместимости VR-оверлея</sys:String>
+    <sys:String x:Key="Loc_VR_OVERLAY_SUPPORT_DESCRIPTION">Оставляет композитное окно отрисованным и доступным для захвата, когда VR-среда владеет фокусом рабочего стола.</sys:String>
+    <sys:String x:Key="Loc_VR_REQUIRES_COMPOSITE">VR-совместимость доступна только при рендере Composite.</sys:String>
     <sys:String x:Key="Loc_LAYOUT">РАСПОЛОЖЕНИЕ</sys:String>
     <sys:String x:Key="Loc_Pinned_route_position">Положение закреплённого маршрута</sys:String>
     <sys:String x:Key="Loc_Engineering_Exploration_and_Exobiology_use_the_opposite_side_when_possible">Инженерия, исследования и экзобиология по возможности используют противоположную сторону экрана.</sys:String>
@@ -148,8 +157,8 @@
     <sys:String x:Key="Loc_SEARCH_ROUTES">НАЙТИ МАРШРУТЫ  ↵</sys:String>
     <sys:String x:Key="Loc_Load_test_data">Загрузить тестовые данные</sys:String>
     <sys:String x:Key="Loc_Ready_to_search">Готово к поиску</sys:String>
-    <sys:String x:Key="Loc_ED_Trade_Overlay">Торговый оверлей ED</sys:String>
-    <sys:String x:Key="Loc_ED_TRADE_OVERLAY">ТОРГОВЫЙ ОВЕРЛЕЙ ED</sys:String>
+    <sys:String x:Key="Loc_ED_Activity_Overlay">ED Activity Overlay</sys:String>
+    <sys:String x:Key="Loc_ED_ACTIVITY_OVERLAY">ED Activity Overlay</sys:String>
     <sys:String x:Key="Loc_ROUTES_LOCAL_JOURNAL">МАРШРУТЫ  •  ЛОКАЛЬНЫЙ ЖУРНАЛ</sys:String>
     <sys:String x:Key="Loc_Welcome_commander">Добро пожаловать, командир...</sys:String>
     <sys:String x:Key="Loc_QUICK_ACCESS">БЫСТРЫЙ ДОСТУП</sys:String>
@@ -528,6 +537,7 @@
     <sys:String x:Key="Loc_Notification_Low_Fuel">Низкий уровень топлива.</sys:String>
     <sys:String x:Key="Loc_Notification_Cargo_Full">Грузовой отсек заполнен.</sys:String>
     <sys:String x:Key="Loc_Notification_FSS_Complete_Format">FSS завершён: тел в системе — {0}.</sys:String>
+    <sys:String x:Key="Loc_Notification_FSS_Incomplete_Format">FSS: тел в системе — {0}, исследовано — {1}%. Есть ещё неидентифицированные тела.</sys:String>
     <sys:String x:Key="Loc_Notification_Biological_Signals_Format">{0}: обнаружено биологических сигналов — {1}.</sys:String>
     <sys:String x:Key="Loc_Notification_DSS_Efficient_Format">{0}: получен бонус эффективности ({1}/{2} зондов).</sys:String>
     <sys:String x:Key="Loc_Notification_Organic_Started_Format">Начат сбор образцов: {0}. Найдите ещё две генетически отличающиеся колонии.</sys:String>
@@ -829,11 +839,28 @@
     <sys:String x:Key="Loc_EXPLORATION_PERSONAL_HISTORY_FORMAT">{0} · {1} · ПОСЛЕДНИЙ ВИЗИТ {2}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_SHORT">ПЕРВОЕ ОТКРЫТИЕ?</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_SHORT">ПЕРВАЯ КАРТОГРАФИЯ?</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">Кандидат на первое открытие (в журнале: WasDiscovered=false).</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">Кандидат на первую картографию (в журнале: WasMapped=false).</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">Журнал сообщает, что открытие уже выполнено.</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">Журнал сообщает, что картография уже выполнена.</sys:String>
-    <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">ЦЕЛЕВОЕ ТЕЛО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_DISCOVERY_CANDIDATE">КАНДИДАТ НА ПЕРВОЕ ОТКРЫТИЕ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_MAPPING_CANDIDATE">КАНДИДАТ НА ПЕРВУЮ КАРТОГРАФИЮ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_CONFIRMED">ОТКРЫТО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_CONFIRMED">КАРТОГРАФИРОВАНО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FIRST_FOOTFALL_SHORT">ПЕРВЫЙ ШАГ?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_GLOBAL_STATUS_FORMAT">ГЛОБАЛЬНЫЙ СТАТУС ПО JOURNAL: {0}</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_UNCONFIRMED">НЕ ИССЛЕДОВАНО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_UNKNOWN">ИССЛЕДОВАНИЕ НЕИЗВЕСТНО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_UNCONFIRMED">НЕ КАРТОГРАФИРОВАНО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_UNKNOWN">КАРТОГРАФИЯ НЕИЗВЕСТНА</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FOOTFALL_CONFIRMED">ПЕРВЫЙ ШАГ БЫЛ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FOOTFALL_UNCONFIRMED">ПЕРВОГО ШАГА НЕ БЫЛО</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FOOTFALL_UNKNOWN">ПЕРВЫЙ ШАГ НЕИЗВЕСТЕН</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_YES_SHORT">ОТКР. ДА</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_NO_SHORT">ОТКР. НЕТ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_DISCOVERY_UNKNOWN_SHORT">ОТКР. ?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_YES_SHORT">КАРТ. ДА</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_NO_SHORT">КАРТ. НЕТ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_MAPPING_UNKNOWN_SHORT">КАРТ. ?</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FOOTFALL_YES_SHORT">ШАГ БЫЛ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FOOTFALL_NO_SHORT">ШАГА НЕТ</sys:String>
+    <sys:String x:Key="Loc_EXPLORATION_FOOTFALL_UNKNOWN_SHORT">ШАГ ?</sys:String>    <sys:String x:Key="Loc_EXPLORATION_MODE_BODY">ЦЕЛЕВОЕ ТЕЛО</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_HEADER_FORMAT">FSS {0}% • тела {1} • DSS {2} • BIO {3}</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_DEFERRED_ONLY_FORMAT">отложено {0} • вернуть можно в полном ассистенте</sys:String>
     <sys:String x:Key="Loc_EXPLORATION_MISSING_GENUSES_FORMAT">Не найдено: {0}</sys:String>
@@ -1470,7 +1497,23 @@
     <sys:String x:Key="Loc_SCO_COMBINED_COOLDOWN">ОХЛАЖДЕНИЕ FSD | SCO ~{0:0.0} с</sys:String>
     <sys:String x:Key="Loc_SCO_ESTIMATED_COOLDOWN">ОХЛАЖДЕНИЕ SCO ~{0:0.0} с</sys:String>
     <sys:String x:Key="Loc_SUPPORT_DEVELOPER">ПОДДЕРЖАТЬ РАЗРАБОТЧИКА</sys:String>
-    <sys:String x:Key="Loc_SUPPORT_DEVELOPER_HINT">Открыть страницу ED Activity Overlay на Ko-fi</sys:String>
+    <sys:String x:Key="Loc_SUPPORT_DEVELOPER_HINT">Открыть страницу поддержки EDAO (Ko-fi, Boosty)</sys:String>
+    <sys:String x:Key="Loc_UPDATE_TAB">Обновления</sys:String>
+    <sys:String x:Key="Loc_UPDATE_TITLE">ОБНОВЛЕНИЯ ПРИЛОЖЕНИЯ</sys:String>
+    <sys:String x:Key="Loc_UPDATE_BETA_CHANNEL">Включить бета-релизы</sys:String>
+    <sys:String x:Key="Loc_UPDATE_BETA_HINT">Бета-версии могут быть нестабильны. Стабильные релизы тоже будут доступны.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_CHECK">ПРОВЕРИТЬ ОБНОВЛЕНИЯ</sys:String>
+    <sys:String x:Key="Loc_UPDATE_INSTALL">УСТАНОВИТЬ</sys:String>
+    <sys:String x:Key="Loc_UPDATE_AVAILABLE_FORMAT">Доступна версия {0}.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_CURRENT_FORMAT">Текущая версия: {0}. Новых релизов нет.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_WORKING">Проверка или загрузка обновления…</sys:String>
+    <sys:String x:Key="Loc_UPDATE_CHECK_FAILED_FORMAT">Не удалось проверить обновления: {0}</sys:String>
+    <sys:String x:Key="Loc_UPDATE_FAILED">Ошибка обновления</sys:String>
+    <sys:String x:Key="Loc_UPDATE_NO_RELEASE">Проверенное обновление недоступно.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_CHECKSUM_MISSING">В релизе нет действительной контрольной суммы установщика.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_SIZE_MISMATCH">Размер загруженного файла не соответствует релизу.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_HASH_MISMATCH">Проверка SHA-256 установщика не пройдена. Он не будет запущен.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_LAUNCH_FAILED">Не удалось запустить установщик.</sys:String>
 </ResourceDictionary>
 
 

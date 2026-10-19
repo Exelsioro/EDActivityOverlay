@@ -33,6 +33,8 @@ namespace EDActivityOverlay.Windows
             
             SetupUI();
             StartMonitoring();
+            UpdateService.Instance.Changed += OnUpdateChanged;
+            RefreshUpdateNotice();
         }
 
         private void SetupUI()
@@ -189,7 +191,30 @@ namespace EDActivityOverlay.Windows
 
         private void SupportDeveloperButton_Click(object sender, RoutedEventArgs e)
         {
-            ProjectSupportService.OpenKoFi();
+            ProjectSupportService.OpenSupportPage();
+        }
+
+        private void OnUpdateChanged(object? sender, EventArgs e) =>
+            Dispatcher.BeginInvoke(new Action(RefreshUpdateNotice));
+
+        private void RefreshUpdateNotice()
+        {
+            var service = UpdateService.Instance;
+            UpdateNotice.Visibility = service.AvailableRelease is null ? Visibility.Collapsed : Visibility.Visible;
+            if (service.AvailableRelease is not null)
+                UpdateNoticeText.Text = service.IsBusy
+                    ? Loc.Get("Loc_UPDATE_WORKING")
+                    : Loc.Format("Loc_UPDATE_AVAILABLE_FORMAT", service.AvailableRelease.Version.Value);
+            InstallUpdateButton.IsEnabled = !service.IsBusy;
+        }
+
+        private async void InstallUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            try { await UpdateService.Instance.InstallAsync(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Loc.Get("Loc_UPDATE_FAILED"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void StartOverlayButton_Click(object sender, RoutedEventArgs e)
@@ -237,6 +262,7 @@ namespace EDActivityOverlay.Windows
 
         protected override void OnClosed(EventArgs e)
         {
+            UpdateService.Instance.Changed -= OnUpdateChanged;
             Logger.Logger.Info($"WaitingWindow is closing - targetFound: {targetFound}, shouldClose: {shouldClose}");
             
             // Stop monitoring

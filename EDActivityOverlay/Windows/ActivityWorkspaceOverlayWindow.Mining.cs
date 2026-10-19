@@ -33,11 +33,8 @@ public partial class ActivityWorkspaceOverlayWindow
             return;
         }
 
-        if (CompactPanel.Parent is not Grid root)
-        {
-            throw new InvalidOperationException(
-                "Activity workspace root Grid was not found.");
-        }
+        Grid root =
+            WorkspaceRoot;
 
         miningWorkspaceControl = new MiningWorkspaceControl
         {
@@ -82,8 +79,7 @@ public partial class ActivityWorkspaceOverlayWindow
             CloseFullExplorationView();
         }
 
-        CompactPanel.Visibility = Visibility.Collapsed;
-        FullExplorationPanel.Visibility = Visibility.Collapsed;
+        explorationWorkspaceControl.Visibility = Visibility.Collapsed;
         miningWorkspaceControl.UpdateJournalState(state);
         miningAnalyticsWorkspaceControl.UpdateJournalState(state);
         miningLocationWorkspaceControl.UpdateJournalState(state);
@@ -282,7 +278,7 @@ public partial class ActivityWorkspaceOverlayWindow
         MinHeight = 0;
         Width = CompactWidth;
         Height = CompactHeight;
-        CompactPanel.Visibility = Visibility.Visible;
+
         PositionOverlay();
     }
 

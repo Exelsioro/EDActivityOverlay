@@ -194,6 +194,22 @@
 
 
 
+                        <TextBlock Text="{DynamicResource Loc_OVERLAY_RENDERER}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
+
+                        <TextBlock Text="{DynamicResource Loc_OVERLAY_RENDERER_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,6" />
+
+                        <ComboBox x:Name="OverlayRenderModeComboBox" Height="32" Margin="0,0,0,18" Style="{DynamicResource ComboBoxStyle}" SelectionChanged="OverlayRenderModeComboBox_SelectionChanged" />
+
+                        <TextBlock Text="{DynamicResource Loc_VR_SUPPORT}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
+
+                        <CheckBox x:Name="EnableVrOverlaySupportCheckBox" Content="{DynamicResource Loc_ENABLE_VR_OVERLAY_SUPPORT}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,6" />
+
+                        <TextBlock Text="{DynamicResource Loc_VR_OVERLAY_SUPPORT_DESCRIPTION}" Foreground="{DynamicResource MutedTextColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,4" />
+
+                        <TextBlock x:Name="VrCompositeRequirementText" Text="{DynamicResource Loc_VR_REQUIRES_COMPOSITE}" Foreground="{DynamicResource AccentColorBrush}" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,20" />
+
+
+
                         <TextBlock Text="{DynamicResource Loc_NOTIFICATIONS}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,10" />
 
                         <CheckBox x:Name="EnableNotificationsCheckBox" Content="{DynamicResource Loc_Enable_overlay_notifications}" Foreground="{DynamicResource PrimaryTextColorBrush}" Margin="0,0,0,8" />
@@ -677,7 +693,27 @@
 
                 </ScrollViewer>
 
-            </TabItem>        </TabControl>
+            </TabItem>
+
+            <TabItem Header="{DynamicResource Loc_UPDATE_TAB}" Style="{DynamicResource EliteTabItemStyle}">
+                <StackPanel Margin="18">
+                    <TextBlock Text="{DynamicResource Loc_UPDATE_TITLE}" Style="{DynamicResource SettingsSectionHeaderStyle}"/>
+                    <CheckBox x:Name="IncludeBetaUpdatesCheckBox" Margin="0,14,0,8"
+                              Content="{DynamicResource Loc_UPDATE_BETA_CHANNEL}"
+                              Checked="IncludeBetaUpdatesCheckBox_Changed" Unchecked="IncludeBetaUpdatesCheckBox_Changed"/>
+                    <TextBlock Text="{DynamicResource Loc_UPDATE_BETA_HINT}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextColorBrush}"/>
+                    <TextBlock x:Name="UpdateStatusText" Margin="0,18,0,12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource PrimaryTextColorBrush}"/>
+                    <WrapPanel>
+                        <Button x:Name="CheckUpdateButton" Content="{DynamicResource Loc_UPDATE_CHECK}"
+                                Height="34" Padding="12,0" Margin="0,0,8,0" Click="CheckUpdateButton_Click"/>
+                        <Button x:Name="InstallUpdateButton" Content="{DynamicResource Loc_UPDATE_INSTALL}"
+                                Height="34" Padding="12,0" Visibility="Collapsed" Click="InstallUpdateButton_Click"/>
+                    </WrapPanel>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
 
 
 

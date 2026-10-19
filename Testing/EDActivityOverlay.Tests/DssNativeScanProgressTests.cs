@@ -46,6 +46,31 @@ public sealed class DssNativeScanProgressTests : IDisposable
     }
 
     [Theory]
+    [InlineData(0.661, 0.643, 0.600, 0.486, 0.70, 0.70, 0)]
+    [InlineData(0.982, 0.256, 0.211, 0.484, 0.35, 0.35, 7)]
+    [InlineData(0.655, 0.815, 0.571, 0.488, 0.70, 0.70, 8)]
+    [InlineData(0.40, 0.80, 0.57, 0.48, 0.70, 0.70, -1)]
+    public void LargeCoverageFontRejectsUnknownShapesAndDistinguishesRecordedDigits(
+        double top,
+        double middle,
+        double bottom,
+        double bottomCenter,
+        double leftSide,
+        double rightSide,
+        int expected)
+    {
+        Assert.Equal(
+            expected,
+            DssNativeScanProgressDetector.ClassifyLargeCoverageShape(
+                top,
+                middle,
+                bottom,
+                bottomCenter,
+                leftSide,
+                rightSide));
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(2)]
     [InlineData(5)]
@@ -87,6 +112,67 @@ public sealed class DssNativeScanProgressTests : IDisposable
         Assert.Equal(
             7,
             observation.HitCount);
+    }
+
+    [Fact]
+    public void CurrentHudLayout_ReadsCoverageAndNumberBeforeImpactedLabel()
+    {
+        DssCapturedFrame frame = BuildSyntheticFrame(
+            coverage: 7,
+            hits: 2,
+            coverageRightEdge: 229,
+            hitsRightEdge: 1700);
+
+        DssNativeScanProgressObservation observation =
+            DssNativeScanProgressDetector.Detect(frame);
+
+        Assert.True(observation.CoverageAvailable);
+        Assert.Equal(7, observation.CoveragePercent);
+        Assert.True(observation.HitCountAvailable);
+        Assert.Equal(2, observation.HitCount);
+    }
+
+    [Fact]
+    public void CoverageDetector_ReadsLargeSevenInCurrentHudFont()
+    {
+        const int width = 1920;
+        const int height = 1080;
+        const int stride = width * 4;
+        byte[] pixels = new byte[stride * height];
+
+        for (int y = 0; y < 40; y++)
+        {
+            int start = y < 6
+                ? 0
+                : y < 22
+                    ? 22 - (y - 6) / 2
+                    : 12;
+            int glyphWidth = y < 6 ? 28 : 6;
+            for (int x = start; x < start + glyphWidth; x++)
+            {
+                int index = (926 + y) * stride + (201 + x) * 4;
+                pixels[index] = 175;
+                pixels[index + 1] = 116;
+                pixels[index + 2] = 2;
+                pixels[index + 3] = 255;
+            }
+        }
+
+        DssCapturedFrame frame = new(
+            DateTimeOffset.UtcNow,
+            0,
+            0,
+            width,
+            height,
+            stride,
+            pixels);
+
+        DssNativeScanProgressObservation observation =
+            DssNativeScanProgressDetector.Detect(frame);
+
+        Assert.True(observation.CoverageAvailable);
+        Assert.Equal(7, observation.CoveragePercent);
+        Assert.True(observation.CoverageConfidence >= 0.30d);
     }
 
     [Fact]
@@ -291,7 +377,9 @@ public sealed class DssNativeScanProgressTests : IDisposable
 
     private static DssCapturedFrame BuildSyntheticFrame(
         int coverage,
-        int hits)
+        int hits,
+        int coverageRightEdge = 207,
+        int hitsRightEdge = 1780)
     {
         const int width = 1920;
         const int height = 1080;
@@ -304,12 +392,14 @@ public sealed class DssNativeScanProgressTests : IDisposable
         PaintCoverage(
             pixels,
             stride,
-            coverage);
+            coverage,
+            coverageRightEdge);
 
         PaintNativeHits(
             pixels,
             stride,
-            hits);
+            hits,
+            hitsRightEdge);
 
         return
             new DssCapturedFrame(
@@ -325,7 +415,8 @@ public sealed class DssNativeScanProgressTests : IDisposable
     private static void PaintCoverage(
         byte[] pixels,
         int stride,
-        int value)
+        int value,
+        int rightEdge = 207)
     {
         string text =
             value.ToString();
@@ -364,7 +455,7 @@ public sealed class DssNativeScanProgressTests : IDisposable
         // Match the real HUD numeric run: 2-digit values start near x=144,
         // while 100% shifts left to keep the percent sign aligned.
         int left =
-            207 - totalWidth;
+            rightEdge - totalWidth;
 
         bool complete =
             value >= 100;
@@ -397,12 +488,12 @@ public sealed class DssNativeScanProgressTests : IDisposable
     private static void PaintNativeHits(
         byte[] pixels,
         int stride,
-        int value)
+        int value,
+        int rightEdge = 1780)
     {
         string text =
             value.ToString();
 
-        int rightEdge = 1780;
         int glyphGap = 3;
         int glyphHeight = 13;
 

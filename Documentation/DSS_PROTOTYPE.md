@@ -1,5 +1,9 @@
 # Live DSS prototype v4
 
+> Historical research notes for an earlier DSS iteration. This is not a
+> description of the current beta. For supported behavior and limitations,
+> see [Exploration and Exobiology Assistant](EXPLORATION_ASSISTANT.md).
+
 This iteration changes the CV architecture from stateless frame-by-frame detection to a
 stateful tracker.
 

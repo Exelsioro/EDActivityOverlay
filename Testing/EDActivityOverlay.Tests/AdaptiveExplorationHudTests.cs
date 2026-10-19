@@ -11,7 +11,7 @@ public sealed class AdaptiveExplorationHudTests
         string xaml = File.ReadAllText(FindWorkspaceXaml());
 
         Assert.Contains(
-            "x:Name=\"AdaptiveExplorationPanel\"",
+            "x:Name=\"CompactExplorationPanel\"",
             xaml,
             StringComparison.Ordinal);
 
@@ -45,24 +45,20 @@ public sealed class AdaptiveExplorationHudTests
         XNamespace x =
             "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        XElement adaptiveHud = Assert.Single(
+        XElement compact = Assert.Single(
             document.Descendants(),
             element =>
                 (string?)element.Attribute(x + "Name")
-                    == "AdaptiveExplorationPanel");
+                    == "CompactExplorationPanel");
 
-        XElement legacyScroll = Assert.Single(
-            document.Descendants(wpf + "ScrollViewer"),
+        Assert.Empty(
+            compact.Descendants(wpf + "ScrollViewer"));
+
+        Assert.DoesNotContain(
+            document.Descendants(),
             element =>
                 (string?)element.Attribute(x + "Name")
                     == "LegacyCompactScrollViewer");
-
-        Assert.Empty(
-            adaptiveHud.Descendants(wpf + "ScrollViewer"));
-
-        Assert.DoesNotContain(
-            legacyScroll.Ancestors(),
-            ancestor => ReferenceEquals(ancestor, adaptiveHud));
     }
 
     [Fact]
@@ -70,8 +66,8 @@ public sealed class AdaptiveExplorationHudTests
     {
         string code = File.ReadAllText(
             FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml.cs"));
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml.cs"));
 
         Assert.Contains(
             "ExplorationVisitStateService.Instance.Current",
@@ -100,12 +96,42 @@ public sealed class AdaptiveExplorationHudTests
     }
 
     [Fact]
+    public void SystemTargetsExposeScanMappingAndFirstFootfallStatus()
+    {
+        string code = File.ReadAllText(
+            FindProjectFile(
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml.cs"));
+
+        Assert.Contains(
+            "BuildCompactFssStatus(item)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BuildCompactDssStatus(item)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BuildCompactFootfallStatus(item)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ExplorationDiscoveryStatus.SupportsMapping(item.Body)",
+            code,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ExplorationDiscoveryStatus.SupportsFirstFootfall(item.Body)",
+            code,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HudRefreshesWhenVisitStateChanges()
     {
         string code = File.ReadAllText(
             FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml.cs"));
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml.cs"));
 
         Assert.Contains(
             "ExplorationVisitStateService.Instance.Changed += OnExplorationVisitStateChanged;",
@@ -120,8 +146,8 @@ public sealed class AdaptiveExplorationHudTests
 
     private static string FindWorkspaceXaml() =>
         FindProjectFile(
-            "Windows",
-            "ActivityWorkspaceOverlayWindow.xaml");
+            "UserControls",
+            "ExplorationWorkspaceControl.xaml");
 
     private static string FindProjectFile(
         params string[] relative)

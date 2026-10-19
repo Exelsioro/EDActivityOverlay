@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Xunit;
 
@@ -13,8 +13,8 @@ public sealed class MainControlCompactPersistenceHotfixTests
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "MainWindow.CompactControl.cs"));
+                    "UserControls",
+                    "MainOverlayPanelControl.xaml.cs"));
 
         Assert.DoesNotContain(
             "new Thickness(6, 4)",

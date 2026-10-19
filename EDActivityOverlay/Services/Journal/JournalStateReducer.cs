@@ -876,8 +876,10 @@ internal sealed class JournalStateReducer
         double solarMasses = TryGetDouble(root, "StellarMass", previous.SolarMasses);
         bool? discoveredFlag = TryGetBoolean(root, "WasDiscovered");
         bool? mappedFlag = TryGetBoolean(root, "WasMapped");
+        bool? footfalledFlag = TryGetBoolean(root, "WasFootfalled");
         bool wasDiscovered = discoveredFlag ?? previous.WasDiscovered;
         bool wasMapped = mappedFlag ?? previous.WasMapped;
+        bool wasFootfalled = footfalledFlag ?? previous.WasFootfalled;
         ExplorationValueEstimate values = ExplorationValueCalculator.Estimate(
             bodyType, bodyClass, terraformable, earthMasses, solarMasses);
         ExplorationInterest interest = DetermineInterest(
@@ -890,8 +892,10 @@ internal sealed class JournalStateReducer
             DistanceFromArrivalLs = TryGetDouble(root, "DistanceFromArrivalLS", previous.DistanceFromArrivalLs),
             WasDiscovered = wasDiscovered,
             WasMapped = wasMapped,
+            WasFootfalled = wasFootfalled,
             DiscoveryStatusKnown = discoveredFlag.HasValue || previous.DiscoveryStatusKnown,
             MappingStatusKnown = mappedFlag.HasValue || previous.MappingStatusKnown,
+            FootfallStatusKnown = footfalledFlag.HasValue || previous.FootfallStatusKnown,
             Interest = interest == ExplorationInterest.None ? previous.Interest : interest,
             Landable = GetBoolean(root, "Landable", previous.Landable),
             GravityG = TryGetDouble(root, "SurfaceGravity", previous.GravityG * 9.80665) / 9.80665,

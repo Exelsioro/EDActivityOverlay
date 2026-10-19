@@ -42,6 +42,7 @@ namespace EDActivityOverlay
 
             Logger.Logger.Info($"Application starting with target process: {targetProcessName}");
             LocalizationService.Instance.Initialize(SettingsService.Instance.Settings.Language);
+            OverlayRenderCoordinator.Initialize();
             InitializeTrayIcon();
 
             var settings = SettingsService.Instance.Settings;
@@ -87,6 +88,15 @@ namespace EDActivityOverlay
             // This gives users control over when to start the overlay
             Logger.Logger.Info($"Starting application - showing waiting window for target process: {targetProcessName}");
             ShowWaitingWindow();
+            UpdateService.Instance.Changed += OnUpdateServiceChanged;
+            _ = UpdateService.Instance.CheckAsync(settings.IncludeBetaUpdates);
+        }
+
+        private void OnUpdateServiceChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+                trayIconService?.SetAvailableUpdate(
+                    UpdateService.Instance.AvailableRelease?.Version.Value)));
         }
 
         private void ShowWaitingWindow()
@@ -174,6 +184,7 @@ namespace EDActivityOverlay
             try
             {
                 Logger.Logger.Info("Application is exiting");
+                UpdateService.Instance.Changed -= OnUpdateServiceChanged;
                 
                 // Clean up waiting window
                 if (waitingWindow != null)

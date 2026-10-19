@@ -74,6 +74,11 @@ namespace EDActivityOverlay.Services
                         }
                         settings.OverlayChromeStyle = OverlayChromeStyles.Normalize(settings.OverlayChromeStyle);
                         settings.ExplorationSpoilerMode = ExplorationSpoilerModes.Normalize(settings.ExplorationSpoilerMode);
+                        settings.OverlayRenderMode = OverlayRenderModes.Normalize(settings.OverlayRenderMode);
+                        if (!OverlayRenderModes.IsComposite(settings.OverlayRenderMode))
+                        {
+                            settings.EnableVrOverlaySupport = false;
+                        }
                         Logger.Logger.Info($"Settings loaded from {_settingsFilePath}");
                         return settings;
                     }
@@ -244,6 +249,13 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"Notification settings updated: enabled={enabled}, duration={durationSeconds}s");
         }
 
+        public void SetIncludeBetaUpdates(bool enabled)
+        {
+            if (_settings.IncludeBetaUpdates == enabled) return;
+            _settings.IncludeBetaUpdates = enabled;
+            SaveSettings();
+        }
+
         public void SetShipStatusWidgetSettings(bool enabled, string position)
         {
             position = string.IsNullOrWhiteSpace(position) ? "TopCenter" : position;
@@ -256,6 +268,49 @@ namespace EDActivityOverlay.Services
             _settings.ShipStatusWidgetPosition = position;
             SaveSettings();
             Logger.Logger.Info($"Ship status widget settings updated: enabled={enabled}, position={position}");
+        }
+
+        public void SetOverlayRenderMode(string? mode)
+        {
+            string normalized = OverlayRenderModes.Normalize(mode);
+            bool disableVr =
+                !OverlayRenderModes.IsComposite(normalized)
+                && _settings.EnableVrOverlaySupport;
+
+            if (string.Equals(_settings.OverlayRenderMode, normalized, StringComparison.Ordinal)
+                && !disableVr)
+            {
+                return;
+            }
+
+            _settings.OverlayRenderMode = normalized;
+            if (disableVr)
+            {
+                _settings.EnableVrOverlaySupport = false;
+            }
+
+            SaveSettings();
+            Logger.Logger.Info($"Overlay renderer updated: mode={normalized}");
+        }
+
+        public void SetVrOverlaySupport(bool enabled)
+        {
+            if (enabled
+                && !OverlayRenderModes.IsComposite(_settings.OverlayRenderMode))
+            {
+                Logger.Logger.Warning(
+                    "VR overlay support requires the Composite renderer; request ignored.");
+                return;
+            }
+
+            if (_settings.EnableVrOverlaySupport == enabled)
+            {
+                return;
+            }
+
+            _settings.EnableVrOverlaySupport = enabled;
+            SaveSettings();
+            Logger.Logger.Info($"VR overlay capture compatibility updated: enabled={enabled}");
         }
 
         public void SetMainOverlayCollapsed(
@@ -587,6 +642,9 @@ namespace EDActivityOverlay.Services
         /// </summary>
         public string Version { get; set; } = "1.0.0";
 
+        /// <summary>Opt into GitHub prereleases when checking for updates.</summary>
+        public bool IncludeBetaUpdates { get; set; }
+
         /// <summary>
         /// Timestamp when settings were last saved
         /// </summary>
@@ -669,6 +727,18 @@ namespace EDActivityOverlay.Services
 
         /// <summary>Placement of the shared ship status widget.</summary>
         public string ShipStatusWidgetPosition { get; set; } = "TopCenter";
+
+        /// <summary>
+        /// Selects the overlay presentation backend. Individual preserves the
+        /// historical one-HWND-per-surface renderer; Composite uses one shared HWND.
+        /// </summary>
+        public string OverlayRenderMode { get; set; } = OverlayRenderModes.Individual;
+
+        /// <summary>
+        /// Applies VR-specific capture and focus behavior to Composite rendering.
+        /// This setting is valid only while OverlayRenderMode is Composite.
+        /// </summary>
+        public bool EnableVrOverlaySupport { get; set; }
 
         /// <summary>
         /// Placement of the compact pinned route relative to the game window.

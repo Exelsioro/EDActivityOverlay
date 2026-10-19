@@ -96,6 +96,12 @@ namespace EDActivityOverlay.Windows
             new HotkeyOption { Label = Loc.Get("Loc_Minimal"), Value = Utils.OverlayChromeStyles.Minimal }
         };
 
+        private static readonly List<HotkeyOption> OverlayRenderModeOptions = new()
+        {
+            new HotkeyOption { Label = Loc.Get("Loc_RENDERER_INDIVIDUAL"), Value = OverlayRenderModes.Individual },
+            new HotkeyOption { Label = Loc.Get("Loc_RENDERER_COMPOSITE"), Value = OverlayRenderModes.Composite }
+        };
+
         private static readonly List<HotkeyOption> ExplorationCacheOptions = new()
         {
             new HotkeyOption { Label = Loc.Format("Loc_Hours_Format", 24), Value = "24" },
@@ -139,6 +145,9 @@ namespace EDActivityOverlay.Windows
             LoadExperimentalDssSettings();
             LoadRouteAutomationSettings();
             LoadX52Settings();
+            IncludeBetaUpdatesCheckBox.IsChecked = SettingsService.Instance.Settings.IncludeBetaUpdates;
+            UpdateService.Instance.Changed += OnUpdateChanged;
+            RefreshUpdateStatus();
             RefreshJournalStatus();
             _ = RefreshStorageUsageAsync();
             ExplorationDataService.Instance.DataChanged += OnExplorationDataChanged;
@@ -294,9 +303,12 @@ namespace EDActivityOverlay.Windows
             PinnedPositionOptions[3].Label = Text("Loc_Top_center");
             OverlayChromeStyleOptions[0].Label = Text("Loc_Compact");
             OverlayChromeStyleOptions[1].Label = Text("Loc_Minimal");
+            OverlayRenderModeOptions[0].Label = Text("Loc_RENDERER_INDIVIDUAL");
+            OverlayRenderModeOptions[1].Label = Text("Loc_RENDERER_COMPOSITE");
             TimeoutComboBox?.Items.Refresh();
             PinnedPositionComboBox?.Items.Refresh();
             OverlayChromeStyleComboBox?.Items.Refresh();
+            OverlayRenderModeComboBox?.Items.Refresh();
             ExplorationCacheOptions[0].Label = LocalizationService.Instance.Format("Loc_Hours_Format", 24);
             ExplorationCacheOptions[1].Label = LocalizationService.Instance.Format("Loc_Days_Format", 3);
             ExplorationCacheOptions[2].Label = LocalizationService.Instance.Format("Loc_Days_Format", 7);
@@ -1213,6 +1225,7 @@ namespace EDActivityOverlay.Windows
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
         {
+            UpdateService.Instance.Changed -= OnUpdateChanged;
             ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
             X52IntegrationService.Instance.StateChanged -= OnX52StateChanged;
             Closed -= SettingsWindow_Closed;
@@ -1240,7 +1253,45 @@ namespace EDActivityOverlay.Windows
 
         private void SupportDeveloperButton_Click(object sender, RoutedEventArgs e)
         {
-            ProjectSupportService.OpenKoFi();
+            ProjectSupportService.OpenSupportPage();
+        }
+
+        private void OnUpdateChanged(object? sender, EventArgs e) =>
+            Dispatcher.BeginInvoke(new Action(RefreshUpdateStatus));
+
+        private void RefreshUpdateStatus()
+        {
+            var service = UpdateService.Instance;
+            string current = service.CurrentVersion?.Value ?? "?";
+            UpdateStatusText.Text = service.IsBusy
+                ? Loc.Get("Loc_UPDATE_WORKING")
+                : service.AvailableRelease is not null
+                    ? Loc.Format("Loc_UPDATE_AVAILABLE_FORMAT", service.AvailableRelease.Version.Value)
+                    : service.Error is not null
+                        ? Loc.Format("Loc_UPDATE_CHECK_FAILED_FORMAT", service.Error)
+                        : Loc.Format("Loc_UPDATE_CURRENT_FORMAT", current);
+            CheckUpdateButton.IsEnabled = !service.IsBusy;
+            InstallUpdateButton.IsEnabled = !service.IsBusy;
+            InstallUpdateButton.Visibility = service.AvailableRelease is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void IncludeBetaUpdatesCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            SettingsService.Instance.SetIncludeBetaUpdates(IncludeBetaUpdatesCheckBox.IsChecked == true);
+            _ = UpdateService.Instance.CheckAsync(SettingsService.Instance.Settings.IncludeBetaUpdates);
+        }
+
+        private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e) =>
+            await UpdateService.Instance.CheckAsync(SettingsService.Instance.Settings.IncludeBetaUpdates);
+
+        private async void InstallUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            try { await UpdateService.Instance.InstallAsync(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Loc.Get("Loc_UPDATE_FAILED"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1446,6 +1497,9 @@ namespace EDActivityOverlay.Windows
             OverlayChromeStyleComboBox.ItemsSource = OverlayChromeStyleOptions;
             OverlayChromeStyleComboBox.DisplayMemberPath = nameof(HotkeyOption.Label);
 
+            OverlayRenderModeComboBox.ItemsSource = OverlayRenderModeOptions;
+            OverlayRenderModeComboBox.DisplayMemberPath = nameof(HotkeyOption.Label);
+
             var settings = SettingsService.Instance.Settings;
             var (modifiers, key) = SettingsService.Instance.GetToggleHotkey();
             var (interactiveModifiers, interactiveKey) = SettingsService.Instance.GetInteractiveHotkey();
@@ -1462,6 +1516,12 @@ namespace EDActivityOverlay.Windows
             EnableInteractionModeCheckBox.IsChecked = settings.EnableInteractionMode;
             ReturnOnFocusLossCheckBox.IsChecked = settings.ReturnOnFocusLoss;
             ShowCursorWhenInteractiveCheckBox.IsChecked = settings.ShowCursorWhenInteractive;
+            EnableVrOverlaySupportCheckBox.IsChecked = settings.EnableVrOverlaySupport;
+            OverlayRenderModeComboBox.SelectedItem = OverlayRenderModeOptions.FirstOrDefault(
+                option => option.Value.Equals(
+                    OverlayRenderModes.Normalize(settings.OverlayRenderMode),
+                    StringComparison.Ordinal))
+                ?? OverlayRenderModeOptions[0];
             EnableNotificationsCheckBox.IsChecked = settings.EnableOverlayNotifications;
             EnableShipStatusWidgetCheckBox.IsChecked = settings.EnableShipStatusWidget;
             NotificationDurationComboBox.SelectedItem = NotificationDurationComboBox.Items
@@ -1476,6 +1536,28 @@ namespace EDActivityOverlay.Windows
             OverlayChromeStyleComboBox.SelectedItem = OverlayChromeStyleOptions.FirstOrDefault(
                 o => o.Value.Equals(Utils.OverlayChromeStyles.Normalize(settings.OverlayChromeStyle), StringComparison.Ordinal))
                 ?? OverlayChromeStyleOptions[0];
+            UpdateVrSupportAvailability();
+        }
+
+        private void OverlayRenderModeComboBox_SelectionChanged(
+            object sender,
+            SelectionChangedEventArgs e) =>
+            UpdateVrSupportAvailability();
+
+        private void UpdateVrSupportAvailability()
+        {
+            bool composite =
+                OverlayRenderModeComboBox.SelectedItem is HotkeyOption option
+                && OverlayRenderModes.IsComposite(option.Value);
+
+            EnableVrOverlaySupportCheckBox.IsEnabled = composite;
+            VrCompositeRequirementText.Visibility =
+                composite ? Visibility.Collapsed : Visibility.Visible;
+
+            if (!composite)
+            {
+                EnableVrOverlaySupportCheckBox.IsChecked = false;
+            }
         }
 
         private static void ConfigureHotkeyPair(ComboBox modifier, ComboBox key)
@@ -1547,6 +1629,12 @@ namespace EDActivityOverlay.Windows
                 EnableShipStatusWidgetCheckBox.IsChecked == true,
                 ShipStatusPositionComboBox.SelectedItem is HotkeyOption shipStatusPosition
                     ? shipStatusPosition.Value : "TopCenter");
+            if (OverlayRenderModeComboBox.SelectedItem is HotkeyOption renderMode)
+            {
+                SettingsService.Instance.SetOverlayRenderMode(renderMode.Value);
+            }
+            SettingsService.Instance.SetVrOverlaySupport(
+                EnableVrOverlaySupportCheckBox.IsChecked == true);
             if (PinnedPositionComboBox.SelectedItem is HotkeyOption pinnedPosition)
             {
                 SettingsService.Instance.SetPinnedRoutePosition(pinnedPosition.Value);

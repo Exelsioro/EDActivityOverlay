@@ -191,13 +191,16 @@ namespace EDActivityOverlay.Windows
                 bool overlayHasFocus = WindowsAPI.IsOverlayWindow(foregroundWindow);
                 bool targetMinimized = WindowsAPI.IsIconic(targetWindow);
                 bool targetVisible = WindowsAPI.IsWindowVisible(targetWindow);
+                bool presentationFocus = OverlayVisibilityPolicy.FocusAllowsPresentation(
+                    targetHasFocus,
+                    overlayHasFocus);
+                bool targetReady = OverlayVisibilityPolicy.TargetReady(
+                    true,
+                    targetVisible,
+                    targetMinimized);
                 
-                // This window should be visible when the target window is focused and visible
-                // OR when any overlay window has focus
-                bool shouldBeVisible = targetVisible && !targetMinimized && (targetHasFocus || overlayHasFocus);
-                
-                // Set topmost only when target or overlay has focus
-                bool shouldBeTopmost = targetHasFocus || overlayHasFocus;
+                bool shouldBeVisible = targetReady && presentationFocus;
+                bool shouldBeTopmost = presentationFocus;
                 
                 if (!shouldBeVisible && this.IsVisible)
                 {

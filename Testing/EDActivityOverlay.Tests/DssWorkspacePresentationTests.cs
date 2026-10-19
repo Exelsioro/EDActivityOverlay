@@ -19,7 +19,7 @@ public sealed class DssWorkspacePresentationTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "AdaptiveExplorationPanel.Opacity =",
+            "explorationWorkspaceControl.SetExternalOverlayActive(",
             code,
             StringComparison.Ordinal);
 
@@ -29,7 +29,7 @@ public sealed class DssWorkspacePresentationTests
             StringComparison.Ordinal);
 
         Assert.DoesNotContain(
-            "bool active =",
+            "AdaptiveExplorationPanel.Opacity =",
             code,
             StringComparison.Ordinal);
     }

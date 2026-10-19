@@ -16,7 +16,9 @@ namespace EDActivityOverlay.Services
         private MenuItem? openItem;
         private MenuItem? engineeringItem;
         private MenuItem? settingsItem;
+        private MenuItem? updateItem;
         private MenuItem? exitItem;
+        private string? availableUpdateVersion;
 
         public event EventHandler? OpenRequested;
         public event EventHandler? EngineeringRequested;
@@ -39,6 +41,10 @@ namespace EDActivityOverlay.Services
             settingsItem = new MenuItem { Header = Loc.Get("Loc_Settings") };
             settingsItem.Click += SettingsItem_Click;
 
+            updateItem = new MenuItem { Visibility = Visibility.Collapsed };
+            updateItem.Click += SettingsItem_Click;
+            RefreshUpdateItem();
+
             exitItem = new MenuItem { Header = Loc.Get("Loc_Exit") };
             exitItem.Click += ExitItem_Click;
 
@@ -46,6 +52,7 @@ namespace EDActivityOverlay.Services
             menu.Items.Add(openItem);
             menu.Items.Add(engineeringItem);
             menu.Items.Add(settingsItem);
+            menu.Items.Add(updateItem);
             menu.Items.Add(new Separator());
             menu.Items.Add(exitItem);
 
@@ -71,11 +78,31 @@ namespace EDActivityOverlay.Services
                 BalloonIcon.Info);
         }
 
+        public void SetAvailableUpdate(string? version)
+        {
+            availableUpdateVersion = version;
+            RefreshUpdateItem();
+        }
+
+        private void RefreshUpdateItem()
+        {
+            if (updateItem == null) return;
+            updateItem.Visibility = string.IsNullOrWhiteSpace(availableUpdateVersion)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            if (updateItem.Visibility == Visibility.Visible)
+            {
+                updateItem.Header = Loc.Format(
+                    "Loc_UPDATE_AVAILABLE_FORMAT", availableUpdateVersion);
+            }
+        }
+
         public void RefreshLocalization()
         {
             if (openItem != null) openItem.Header = Loc.Get("Loc_Open_control_window");
             if (engineeringItem != null) engineeringItem.Header = Loc.Get("Loc_Engineering_assistant");
             if (settingsItem != null) settingsItem.Header = Loc.Get("Loc_Settings");
+            RefreshUpdateItem();
             if (exitItem != null) exitItem.Header = Loc.Get("Loc_Exit");
         }
 
@@ -110,6 +137,12 @@ namespace EDActivityOverlay.Services
             {
                 settingsItem.Click -= SettingsItem_Click;
                 settingsItem = null;
+            }
+
+            if (updateItem != null)
+            {
+                updateItem.Click -= SettingsItem_Click;
+                updateItem = null;
             }
         }
 

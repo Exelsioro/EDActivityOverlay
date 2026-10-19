@@ -16,6 +16,8 @@ using EDActivityOverlay.Services.Journal;
 using EDActivityOverlay.Services.Notifications;
 using EDActivityOverlay.Services.Hardware;
 using EDActivityOverlay.Services.Dss;
+using EDActivityOverlay.UserControls;
+using EDActivityOverlay.Windows.Renderers;
 
 namespace EDActivityOverlay
 {
@@ -34,11 +36,12 @@ namespace EDActivityOverlay
         private bool disposed;
         private TradeRouteWindow? tradeRouteWindow;
         private ResultsOverlayWindow? resultsOverlayWindow;
-        private PinnedRouteOverlay? pinnedRouteOverlay;
+        private PinnedRouteIndividualWindow? pinnedRouteOverlay;
         private EngineeringWindow? engineeringOverlayWindow;
-        private NotificationOverlayWindow? notificationOverlayWindow;
-        private ShipStatusOverlayWindow? shipStatusOverlayWindow;
+        private NotificationIndividualWindow? notificationOverlayWindow;
+        private ShipStatusIndividualWindow? shipStatusOverlayWindow;
         private DssPrototypeController? dssPrototypeController;
+        private readonly MainOverlayPanelControl mainPanel;
         private readonly X52OverlayPointerController x52OverlayPointerController;
         private bool isResultsActive = false;
         private bool isPinnedRouteActive = false;
@@ -80,17 +83,17 @@ namespace EDActivityOverlay
         private DateTime interactiveModeEnteredAtUtc;
         private DateTime interactiveFocusLossGraceUntilUtc;
         private static readonly TimeSpan InteractiveFocusLossGracePeriod = TimeSpan.FromMilliseconds(1500);
-        private readonly double baseWindowWidth;
-        private readonly double baseWindowHeight;
         private double lastAppliedScale = 1.0;
         private string chromeStyle = OverlayChromeStyles.Compact;
 
         public MainWindow(string processName = "notepad", Process? foundProcess = null)
         {
             InitializeComponent();
+            mainPanel = new MainOverlayPanelControl(
+                this,
+                showInteractionButton: false);
+            MainPanelHost.Content = mainPanel;
             x52OverlayPointerController = new X52OverlayPointerController(GetInteractiveInputWindowHandle);
-            baseWindowWidth = Width;
-            baseWindowHeight = Height;
             
             // Start hidden - only show when target has focus
             this.Visibility = Visibility.Hidden;
@@ -108,9 +111,7 @@ namespace EDActivityOverlay
                 FindTargetProcessWithRetry(processName);
             }
             SetupOverlay();
-            notificationOverlayWindow = new NotificationOverlayWindow(targetWindow);
-            shipStatusOverlayWindow = new ShipStatusOverlayWindow(targetWindow);
-            shipStatusOverlayWindow.SetContextSuppression(null);
+            InitializeRenderModeSurfaces();
             SetupUpdateTimer();
             LoadConfiguredSettings();
             RestoreMainOverlayCollapsedState();
@@ -131,6 +132,7 @@ namespace EDActivityOverlay
 
             Closed += (_, _) =>
             {
+                mainPanel.Dispose();
                 dssPrototypeController?.Dispose();
                 dssPrototypeController = null;
             };
@@ -335,6 +337,11 @@ namespace EDActivityOverlay
                 WindowsAPI.IsOverlayWindow(
                     foregroundWindow);
 
+            bool presentationFocus =
+                OverlayVisibilityPolicy.FocusAllowsPresentation(
+                    targetHasFocus,
+                    overlayHasFocus);
+
             IntPtr visibilityWindow =
                 targetHasFocus
                 && foregroundWindow != IntPtr.Zero
@@ -349,12 +356,17 @@ namespace EDActivityOverlay
                 WindowsAPI.IsWindowVisible(
                     visibilityWindow);
 
+            bool targetReadyForPresentation =
+                OverlayVisibilityPolicy.TargetReady(
+                    true,
+                    targetVisible,
+                    targetMinimized);
+
             EvaluateInteractiveAutoReturn(
                 foregroundWindow);
 
             bool shouldBeVisible =
-                targetVisible
-                && !targetMinimized;
+                targetReadyForPresentation;
 
             bool shouldBeTopmost =
                 false;
@@ -362,19 +374,16 @@ namespace EDActivityOverlay
             if (currentState == OverlayState.ForceShow)
             {
                 shouldBeTopmost =
-                    targetHasFocus
-                    || overlayHasFocus;
+                    presentationFocus;
             }
             else if (currentState == OverlayState.Auto)
             {
                 shouldBeVisible =
                     shouldBeVisible
-                    && (targetHasFocus
-                        || overlayHasFocus);
+                    && presentationFocus;
 
                 shouldBeTopmost =
-                    targetHasFocus
-                    || overlayHasFocus;
+                    presentationFocus;
             }
 
             if (IsVisible
@@ -386,14 +395,20 @@ namespace EDActivityOverlay
             }
 
             if (forceVisible
-                && targetVisible
-                && !targetMinimized)
+                && targetReadyForPresentation)
             {
                 shouldBeVisible =
                     true;
 
                 Logger.Logger.Info(
                     "Using forceVisible flag for initial display");
+            }
+
+            if (OverlayRenderCoordinator.IsCompositeMode)
+            {
+                shouldBeVisible = false;
+                shouldBeTopmost = false;
+                forceVisible = false;
             }
 
             if (shouldBeVisible
@@ -562,6 +577,10 @@ namespace EDActivityOverlay
         private void RefreshExperimentalDssLifecycle(
             bool enabled)
         {
+            enabled = DssLifecyclePolicy.ShouldRun(
+                enabled,
+                VrOverlaySupport.IsEnabled);
+
             if (!Dispatcher.CheckAccess())
             {
                 Dispatcher.BeginInvoke(
@@ -639,6 +658,7 @@ namespace EDActivityOverlay
             autoReturnTimeoutSeconds = NormalizeAutoReturnTimeout(e.Settings.AutoReturnTimeoutSeconds);
             returnOnFocusLoss = e.Settings.ReturnOnFocusLoss;
             showCursorWhenInteractive = e.Settings.ShowCursorWhenInteractive;
+            ApplyOverlayRenderModeFromSettings();
             pinnedRouteOverlay?.SetPlacement(e.Settings.PinnedRoutePosition);
             engineeringOverlayWindow?.SetPlacement(GetEngineeringOverlayPlacement());
             activityWorkspaceWindow?.SetPlacement(GetEngineeringOverlayPlacement());
@@ -648,6 +668,7 @@ namespace EDActivityOverlay
             engineeringOverlayWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
             activityWorkspaceWindow?.SetChromeStyle(e.Settings.OverlayChromeStyle);
             SetChromeStyle(e.Settings.OverlayChromeStyle);
+            RestoreMainOverlayCollapsedState();
 
             RefreshExperimentalDssLifecycle(
                 e.Settings.EnableExperimentalDssAssistant);
@@ -740,6 +761,7 @@ namespace EDActivityOverlay
             engineeringOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
             activityWorkspaceWindow?.ApplyInteractionMode(canInteract, showCursor);
             shipStatusOverlayWindow?.ApplyInteractionMode(canInteract, showCursor);
+            OverlayRenderCoordinator.ApplyInteractionMode(canInteract, showCursor);
             WindowsAPI.SetClickThrough(this, !canInteract);
             if (!canInteract || !showCursor)
             {
@@ -756,83 +778,15 @@ namespace EDActivityOverlay
 
         private void UpdateInteractionStatusUi()
         {
-            if (InteractionStatusBadge == null
-                || CollapsedInteractionStatusBadge == null
-                || InteractionHintText == null)
-            {
-                return;
-            }
-
-            bool canInteract =
-                exclusiveOverlayInteraction
-                || (interactionModeEnabled
-                    && interactiveModeActive);
-
-            string stateText =
-                canInteract
-                    ? Loc.Get(
-                        "Loc_INTERACTIVE")
-                    : Loc.Get(
-                        "Loc_PASSIVE");
-
-            InteractionStatusBadge.Text =
-                stateText;
-
-            CollapsedInteractionStatusBadge.Text =
-                stateText;
-
-            InteractionStatusBadge.Background =
-                chromeStyle == OverlayChromeStyles.Minimal
-                    ? Brushes.Transparent
-                    : canInteract
-                        ? new SolidColorBrush(
-                            Color.FromArgb(
-                                180,
-                                180,
-                                95,
-                                0))
-                        : new SolidColorBrush(
-                            Color.FromArgb(
-                                120,
-                                70,
-                                25,
-                                0));
-
-            string interactionHotkeyText =
-                FormatHotkeyDisplay(
-                    SettingsService.Instance.Settings.InteractiveHotkeyModifiers,
-                    SettingsService.Instance.Settings.InteractiveHotkeyKey);
-
-            string toggleHotkeyText =
-                FormatHotkeyDisplay(
-                    SettingsService.Instance.Settings.ToggleHotkeyModifiers,
-                    SettingsService.Instance.Settings.ToggleHotkeyKey);
-
-            string overlaysStateText =
-                overlaysSuppressedByHotkey
-                    ? Loc.Get(
-                        "Loc_HIDDEN")
-                    : ActivityOptions
-                        .First(
-                            option =>
-                                option.Activity
-                                == currentActivity)
-                        .Label;
-
-            InteractionHintText.Text =
-                Loc.Format(
-                    "Loc_Main_Hint_Format",
-                    toggleHotkeyText,
-                    overlaysStateText,
-                    interactionHotkeyText);
+            mainPanel.RefreshState();
         }
+
         private void SetChromeStyle(string? value)
         {
             chromeStyle = OverlayChromeStyles.Normalize(value);
-            OverlayChromeHelper.Apply(OverlayFrame, chromeStyle);
+            mainPanel.ApplySettings(SettingsService.Instance.Settings);
             UpdateInteractionStatusUi();
         }
-
         private static string FormatHotkeyDisplay(string modifiers, string key)
         {
             if (key.StartsWith("D", StringComparison.OrdinalIgnoreCase) && key.Length == 2 && char.IsDigit(key[1]))
@@ -851,6 +805,7 @@ namespace EDActivityOverlay
             }
 
             bool focusIsOnInteractiveOverlay = IsWindowFocused(this, foregroundWindow)
+                || OverlayRenderCoordinator.IsCompositeWindow(foregroundWindow)
                 || IsWindowFocused(tradeRouteWindow, foregroundWindow)
                 || IsWindowFocused(resultsOverlayWindow, foregroundWindow)
                 || IsWindowFocused(pinnedRouteOverlay, foregroundWindow)
@@ -886,7 +841,11 @@ namespace EDActivityOverlay
             interactiveModeActive = true;
             interactiveModeEnteredAtUtc = DateTime.UtcNow;
             interactiveFocusLossGraceUntilUtc = DateTime.MaxValue;
-            if (activityWorkspaceWindow?.IsVisible == true)
+            if (OverlayRenderCoordinator.IsCompositeMode)
+            {
+                OverlayRenderCoordinator.ActivateComposite();
+            }
+            else if (activityWorkspaceWindow?.IsVisible == true)
             {
                 activityWorkspaceWindow.Activate();
             }
@@ -974,6 +933,12 @@ namespace EDActivityOverlay
         {
             try
             {
+                if (OverlayRenderCoordinator.IsCompositeMode)
+                {
+                    OverlayRenderCoordinator.ActivateComposite();
+                    return;
+                }
+
                 if (IsVisible)
                 {
                     Activate();

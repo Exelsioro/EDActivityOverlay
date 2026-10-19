@@ -28,13 +28,13 @@ internal sealed class DssImpactCounterChangeDetector
 {
     internal const double ChangeThreshold = 0.015;
 
-    // Normalized screen-space ROI covering the right-aligned "Probes / Impacts"
-    // numeric block on the DSS HUD. The static "Probes" line is harmless and
-    // improves stability; only the "Impacts" digits change.
-    private const double RoiLeft = 0.916;
-    private const double RoiTop = 0.768;
-    private const double RoiRight = 0.941;
-    private const double RoiBottom = 0.790;
+    // The current HUD puts the changing number BEFORE "IMPACTED", at about
+    // x=1693..1700 on a 1920px frame. The previous ROI was over the static
+    // suffix (x=1759..1807) and could never report a real impact.
+    private const double RoiLeft = 0.865;
+    private const double RoiTop = 0.771;
+    private const double RoiRight = 0.889;
+    private const double RoiBottom = 0.793;
 
     private bool[]? previousSignature;
     private int previousWidth;

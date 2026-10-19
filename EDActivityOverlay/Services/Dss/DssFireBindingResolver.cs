@@ -19,7 +19,10 @@ internal sealed record DssPhysicalInputToken(
     string Device,
     string Key,
     ushort VirtualKey,
-    int JoystickButton);
+    int JoystickButton)
+{
+    public ushort ScanCode { get; init; }
+}
 
 internal sealed record DssFireInputBinding(
     string Action,
@@ -187,7 +190,10 @@ internal static class DssFireBindingResolver
                 device,
                 key,
                 resolved.VirtualKey,
-                0);
+                0)
+            {
+                ScanCode = resolved.ScanCode
+            };
         }
 
         if (device.Equals(

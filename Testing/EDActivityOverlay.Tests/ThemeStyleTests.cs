@@ -64,11 +64,14 @@ public sealed class ThemeStyleTests
         string settingsMarkup = File.ReadAllText(Path.Combine(
             repository, "EDActivityOverlay", "Windows", "SettingsWindow.xaml"));
         Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", settingsMarkup, StringComparison.Ordinal);
-        Assert.Equal(6, settingsMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(7, settingsMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
 
         string engineeringMarkup = File.ReadAllText(Path.Combine(
-            repository, "EDActivityOverlay", "Windows", "EngineeringWindow.xaml"));
-        Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", engineeringMarkup, StringComparison.Ordinal);
+            repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "EngineeringWorkspaceControl.xaml"));
+Assert.Contains("Style=\"{DynamicResource EliteTabControlStyle}\"", engineeringMarkup, StringComparison.Ordinal);
         Assert.Equal(6, engineeringMarkup.Split("Style=\"{DynamicResource EliteTabItemStyle}\"", StringSplitOptions.None).Length - 1);
 
         XElement dataGridRowStyle = Assert.Single(styles.Descendants(),
@@ -92,7 +95,8 @@ public sealed class ThemeStyleTests
             repository, "EDActivityOverlay", "Windows", "SettingsWindow.xaml"));
         string markup = settings.ToString(SaveOptions.DisableFormatting);
 
-        Assert.Equal(6, settings.Descendants().Count(element => element.Name.LocalName == "TabItem"));
+        Assert.Equal(7, settings.Descendants().Count(element => element.Name.LocalName == "TabItem"));
+        Assert.Contains("Loc_UPDATE_TAB", markup, StringComparison.Ordinal);
         Assert.Contains("Loc_CONTROLS", markup, StringComparison.Ordinal);
         Assert.Contains("Loc_EXPERIMENTAL", markup, StringComparison.Ordinal);
         Assert.Contains("Loc_GAME_DATA", markup, StringComparison.Ordinal);
@@ -193,11 +197,8 @@ public sealed class ThemeStyleTests
 
         string[] sharedChromeOwners =
         [
-            "ActivityWorkspaceOverlayWindow.xaml.cs",
-            "EngineeringWindow.xaml.cs",
-            "MainWindow.xaml.cs",
             "PinnedRouteOverlay.xaml.cs",
-            "ResultsOverlayWindow.xaml.cs",
+"ResultsOverlayWindow.xaml.cs",
             "ShipStatusOverlayWindow.xaml.cs",
             "TradeRouteWindow.xaml.cs"
         ];
@@ -207,6 +208,36 @@ public sealed class ThemeStyleTests
             string markup = File.ReadAllText(Path.Combine(repository, "EDActivityOverlay", "Windows", file));
             Assert.Contains("OverlayChromeHelper.Apply", markup, StringComparison.Ordinal);
         }
+
+        string engineeringSurface = File.ReadAllText(Path.Combine(
+            repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "EngineeringWorkspaceControl.xaml.cs"));
+        Assert.Contains(
+            "OverlayChromeHelper.Apply",
+            engineeringSurface,
+            StringComparison.Ordinal);
+
+        string mainSurface = File.ReadAllText(Path.Combine(
+repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "MainOverlayPanelControl.xaml.cs"));
+        Assert.Contains(
+            "OverlayChromeHelper.Apply",
+            mainSurface,
+            StringComparison.Ordinal);
+
+        string explorationSurface = File.ReadAllText(Path.Combine(
+            repository,
+            "EDActivityOverlay",
+            "UserControls",
+            "ExplorationWorkspaceControl.xaml.cs"));
+        Assert.Contains(
+            "OverlayChromeHelper.Apply",
+            explorationSurface,
+            StringComparison.Ordinal);
 
         string routeCard = File.ReadAllText(Path.Combine(
             repository, "EDActivityOverlay", "UserControls", "TradeRouteCard.xaml.cs"));

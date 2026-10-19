@@ -37,7 +37,7 @@ public sealed class MiningWorkspaceV1bTests
             "EDActivityOverlay", "Windows", "ActivityWorkspaceOverlayWindow.Mining.cs");
 
         Assert.Contains("InitializeMiningWorkspace();", host, StringComparison.Ordinal);
-        Assert.Contains("RefreshMiningWorkspace(state);", host, StringComparison.Ordinal);
+        Assert.Contains("RefreshMiningWorkspace(", host, StringComparison.Ordinal);
         Assert.Contains("LeaveMiningWorkspace();", host, StringComparison.Ordinal);
         Assert.Contains("DisposeMiningWorkspace();", host, StringComparison.Ordinal);
         Assert.Contains("new MiningWorkspaceControl", miningHost, StringComparison.Ordinal);

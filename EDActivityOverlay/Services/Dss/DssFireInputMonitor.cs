@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -16,13 +17,20 @@ internal sealed record DssFireInputEvent(
 ///
 /// X52 joystick buttons are read through the same WinMM mechanism previously
 /// used by the old X52 overlay pointer prototype. Keyboard/mouse alternatives
-/// are observed with GetAsyncKeyState.
+/// are observed with GetAsyncKeyState. Short keyboard pulses are also captured
+/// by a temporary, non-blocking low-level hook while DSS is active.
 ///
 /// This class is observation-only: it never captures the device exclusively,
 /// never synthesizes input and never changes Elite's controls.
 /// </summary>
 internal sealed class DssFireInputMonitor : IDisposable
 {
+    private const int WhKeyboardLl = 13;
+    private const int WmKeyDown = 0x0100;
+    private const int WmKeyUp = 0x0101;
+    private const int WmSysKeyDown = 0x0104;
+    private const int WmSysKeyUp = 0x0105;
+
     private const uint JoyReturnButtons =
         0x00000080;
 
@@ -40,10 +48,46 @@ internal sealed class DssFireInputMonitor : IDisposable
         joystickDevices =
             new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<uint, uint> lastJoystickMasks = new();
+
+    private readonly Dictionary<string, (DateTimeOffset Timestamp, string Binding)>
+        lastActionPresses =
+            new(StringComparer.Ordinal);
+
+    private readonly HashSet<ushort> keyboardKeys;
+    private readonly Dictionary<ushort, ushort> keyboardScanCodes;
+    private readonly HashSet<ushort> heldHookKeys = [];
+    private readonly ConcurrentQueue<ushort> keyboardPresses = new();
+    private readonly ConcurrentQueue<(ushort VirtualKey, ushort ScanCode)> hookSamples = new();
+    private readonly ConcurrentQueue<ushort> rawKeyboardPresses = new();
+    private readonly ConcurrentQueue<int> rawJoystickPresses = new();
+    private readonly object hookStateSync = new();
+
+    // The delegate must stay rooted for the entire lifetime of the native hook.
+    private LowLevelKeyboardProc? keyboardHookProc;
+    private IntPtr keyboardHook;
+    private DssRawHidButtonMonitor? rawHidMonitor;
+    private int hookPressCount;
+    private int hookKeyboardMessageCount;
+    private int hookKeyboardSampleCount;
+    private int rawKeyboardPressCount;
+    private int keyboardDownPollCount;
+    private int emittedPressCount;
+    private int acceptedPollCount;
+    private int rejectedPollCount;
+    private int gameFocusPollCount;
+    private int overlayFocusPollCount;
+    private int joystickPressCount;
+    private int deduplicatedPressCount;
+    private int joystickReadFailures;
+    private int joystickTransitionLogs;
+
     private Timer? timer;
     private int polling;
     private bool initialized;
     private bool disposed;
+    private DateTimeOffset lastFocusDiagnosticUtc =
+        DateTimeOffset.MinValue;
 
     public DssFireInputMonitor(
         DssFireBindingSet bindingSet,
@@ -54,6 +98,19 @@ internal sealed class DssFireInputMonitor : IDisposable
 
         this.targetWindowProvider =
             targetWindowProvider;
+
+        keyboardKeys =
+            bindings
+                .Where(binding =>
+                    binding.Input.Kind == DssPhysicalInputKind.Keyboard)
+                .Select(binding => binding.Input.VirtualKey)
+                .ToHashSet();
+        keyboardScanCodes = new Dictionary<ushort, ushort>();
+        foreach (DssPhysicalInputToken input in bindings
+                     .Select(binding => binding.Input)
+                     .Where(input => input.Kind == DssPhysicalInputKind.Keyboard
+                                     && input.ScanCode != 0))
+            keyboardScanCodes.TryAdd(input.ScanCode, input.VirtualKey);
 
         foreach (string device
                  in bindings
@@ -75,6 +132,9 @@ internal sealed class DssFireInputMonitor : IDisposable
             joystickDevices[device] =
                 FindJoystick(
                     device);
+            Logger.Logger.Info(
+                $"DSS joystick input: device='{device}', " +
+                $"WinMM id={joystickDevices[device]?.ToString() ?? "unavailable"}.");
         }
     }
 
@@ -89,7 +149,10 @@ internal sealed class DssFireInputMonitor : IDisposable
             bindings.Select(
                 binding =>
                     $"{binding.Action}/{binding.Slot}=" +
-                    $"{binding.Input.Device}:{binding.Input.Key}"));
+                    $"{binding.Input.Device}:{binding.Input.Key}" +
+                    (binding.Input.Kind == DssPhysicalInputKind.Keyboard
+                        ? $"(VK=0x{binding.Input.VirtualKey:X2})"
+                        : string.Empty)));
 
     public void Start()
     {
@@ -97,6 +160,46 @@ internal sealed class DssFireInputMonitor : IDisposable
             || timer is not null)
         {
             return;
+        }
+
+        // Start is called from the WPF dispatcher. WH_KEYBOARD_LL callbacks
+        // require that installing thread to keep pumping messages.
+        if (keyboardKeys.Count > 0)
+        {
+            keyboardHookProc = KeyboardHookCallback;
+            keyboardHook = SetWindowsHookEx(
+                WhKeyboardLl,
+                keyboardHookProc,
+                GetModuleHandle(null),
+                0);
+
+            if (keyboardHook == IntPtr.Zero)
+            {
+                Logger.Logger.Warning(
+                    $"DSS keyboard event hook unavailable (Win32={Marshal.GetLastWin32Error()}); " +
+                    "falling back to key-state polling.");
+                keyboardHookProc = null;
+            }
+            else
+            {
+                Logger.Logger.Info(
+                    $"DSS keyboard hook installed: keys={keyboardKeys.Count}.");
+            }
+        }
+
+        if (joystickDevices.Count > 0 || keyboardKeys.Count > 0)
+        {
+            rawHidMonitor = new DssRawHidButtonMonitor(
+                bindings.Select(binding => binding.Input)
+                    .Where(input => input.Kind == DssPhysicalInputKind.Keyboard));
+            rawHidMonitor.ButtonPressed += button =>
+                rawJoystickPresses.Enqueue(button);
+            rawHidMonitor.KeyboardPressed += key =>
+            {
+                rawKeyboardPresses.Enqueue(key);
+                Interlocked.Increment(ref rawKeyboardPressCount);
+            };
+            rawHidMonitor.Start();
         }
 
         timer =
@@ -114,6 +217,9 @@ internal sealed class DssFireInputMonitor : IDisposable
             || bindings.Count == 0)
         {
             initialized = false;
+            ClearKeyboardPresses();
+            ClearRawKeyboardPresses();
+            ClearRawJoystickPresses();
             return;
         }
 
@@ -129,12 +235,82 @@ internal sealed class DssFireInputMonitor : IDisposable
             IntPtr target =
                 targetWindowProvider();
 
-            if (target == IntPtr.Zero
-                || WindowsAPI.GetForegroundWindow()
-                   != target)
+            IntPtr foreground =
+                WindowsAPI.GetForegroundWindow();
+
+            uint targetProcessId = 0;
+            if (target != IntPtr.Zero)
             {
+                WindowsAPI.GetWindowThreadProcessId(
+                    target,
+                    out targetProcessId);
+            }
+
+            bool gameHasFocus =
+                WindowsAPI.IsWindowOwnedByProcess(
+                    foreground,
+                    targetProcessId);
+
+            bool overlayHasFocus =
+                WindowsAPI.IsOverlayWindow(
+                    foreground);
+
+            if (target == IntPtr.Zero
+                || !AllowsPollingForFocus(
+                    gameHasFocus,
+                    overlayHasFocus))
+            {
+                Interlocked.Increment(ref rejectedPollCount);
+                LogFocusSkip(
+                    target,
+                    foreground);
                 initialized = false;
+                ClearKeyboardPresses();
+                ClearRawKeyboardPresses();
+                ClearRawJoystickPresses();
                 return;
+            }
+
+            if (Interlocked.Increment(ref acceptedPollCount) == 1)
+            {
+                WindowsAPI.GetWindowThreadProcessId(
+                    foreground, out uint foregroundProcessId);
+                Logger.Logger.Info(
+                    $"DSS fire focus: game={gameHasFocus}; overlay={overlayHasFocus}; " +
+                    $"targetPid={targetProcessId}; foregroundPid={foregroundProcessId}.");
+            }
+            if (gameHasFocus)
+                Interlocked.Increment(ref gameFocusPollCount);
+            if (overlayHasFocus)
+                Interlocked.Increment(ref overlayFocusPollCount);
+
+            var keyboardPulseCounts =
+                new Dictionary<ushort, int>();
+
+            while (keyboardPresses.TryDequeue(out ushort key))
+            {
+                keyboardPulseCounts.TryGetValue(key, out int count);
+                keyboardPulseCounts[key] = count + 1;
+            }
+            while (hookSamples.TryDequeue(out var sample))
+            {
+                Logger.Logger.Info(
+                    $"DSS keyboard hook sample: VK=0x{sample.VirtualKey:X2}; " +
+                    $"scan=0x{sample.ScanCode:X2}.");
+            }
+
+            var rawKeyboardPulseCounts = new Dictionary<ushort, int>();
+            while (rawKeyboardPresses.TryDequeue(out ushort rawKey))
+            {
+                rawKeyboardPulseCounts.TryGetValue(rawKey, out int count);
+                rawKeyboardPulseCounts[rawKey] = count + 1;
+            }
+
+            var rawPulseCounts = new Dictionary<int, int>();
+            while (rawJoystickPresses.TryDequeue(out int button))
+            {
+                rawPulseCounts.TryGetValue(button, out int count);
+                rawPulseCounts[button] = count + 1;
             }
 
             var current =
@@ -146,21 +322,57 @@ internal sealed class DssFireInputMonitor : IDisposable
             {
                 bool down =
                     IsDown(binding);
+                if (binding.Input.Kind == DssPhysicalInputKind.Keyboard && down)
+                    Interlocked.Increment(ref keyboardDownPollCount);
 
                 current[binding.Identity] =
                     down;
 
-                if (initialized
-                    && down
-                    && previousStates.TryGetValue(
-                        binding.Identity,
-                        out bool wasDown)
-                    && !wasDown)
+                previousStates.TryGetValue(
+                    binding.Identity,
+                    out bool wasDown);
+
+                int hookPulses = 0;
+                if (binding.Input.Kind == DssPhysicalInputKind.Keyboard
+                    && binding.Modifiers.All(IsTokenDown))
                 {
+                    keyboardPulseCounts.TryGetValue(
+                        binding.Input.VirtualKey, out int hookCount);
+                    rawKeyboardPulseCounts.TryGetValue(
+                        binding.Input.VirtualKey, out int rawCount);
+                    hookPulses = Math.Max(hookCount, rawCount);
+                }
+                else if (binding.Input.Kind == DssPhysicalInputKind.Joystick
+                    && rawPulseCounts.TryGetValue(
+                        binding.Input.JoystickButton, out int rawCount)
+                    && binding.Modifiers.All(IsTokenDown))
+                {
+                    hookPulses = rawCount;
+                }
+
+                int presses = CountPresses(
+                    initialized,
+                    down,
+                    wasDown,
+                    hookPulses);
+
+                for (int press = 0; press < presses; press++)
+                {
+                    DateTimeOffset now = DateTimeOffset.UtcNow;
+                    if (binding.Input.Kind == DssPhysicalInputKind.Joystick)
+                        Interlocked.Increment(ref joystickPressCount);
+
+                    if (IsDuplicateActionPress(binding, now))
+                    {
+                        Interlocked.Increment(ref deduplicatedPressCount);
+                        continue;
+                    }
+
+                    Interlocked.Increment(ref emittedPressCount);
                     FirePressed?.Invoke(
                         this,
                         new DssFireInputEvent(
-                            DateTimeOffset.UtcNow,
+                            now,
                             binding));
                 }
             }
@@ -189,6 +401,131 @@ internal sealed class DssFireInputMonitor : IDisposable
                 ref polling,
                 0);
         }
+    }
+
+    internal static bool AllowsPollingForFocus(
+        bool targetHasFocus,
+        bool overlayHasFocus) =>
+        OverlayVisibilityPolicy.ResolveFocusAllowsPresentation(
+            vrModeEnabled: false,
+            targetHasFocus,
+            overlayHasFocus);
+
+    internal static int CountPresses(
+        bool initialized,
+        bool down,
+        bool wasDown,
+        int hookPulses) =>
+        Math.Max(
+            hookPulses,
+            initialized && down && !wasDown ? 1 : 0);
+
+    private bool IsDuplicateActionPress(
+        DssFireInputBinding binding,
+        DateTimeOffset now)
+    {
+        bool duplicate =
+            lastActionPresses.TryGetValue(binding.Action, out var last)
+            && now - last.Timestamp < TimeSpan.FromMilliseconds(150);
+
+        if (!duplicate)
+            lastActionPresses[binding.Action] = (now, binding.Identity);
+
+        return duplicate;
+    }
+
+    private IntPtr KeyboardHookCallback(
+        int code,
+        IntPtr message,
+        IntPtr data)
+    {
+        if (code >= 0 && !disposed && Enabled)
+        {
+            int kind = message.ToInt32();
+            if (kind is WmKeyDown or WmSysKeyDown or WmKeyUp or WmSysKeyUp)
+            {
+                Interlocked.Increment(ref hookKeyboardMessageCount);
+                ushort virtualKey = unchecked((ushort)Marshal.ReadInt32(data));
+                ushort scanCode = unchecked((ushort)Marshal.ReadInt32(data, 4));
+                if (kind is WmKeyDown or WmSysKeyDown
+                    && Interlocked.Increment(ref hookKeyboardSampleCount) <= 8)
+                {
+                    hookSamples.Enqueue((virtualKey, scanCode));
+                }
+                ushort key = DssRawHidButtonMonitor.ResolveBoundKeyboardKey(
+                    virtualKey, scanCode, keyboardKeys, keyboardScanCodes);
+                if (key != 0)
+                {
+                    lock (hookStateSync)
+                    {
+                        if (kind is WmKeyDown or WmSysKeyDown)
+                        {
+                            if (heldHookKeys.Add(key))
+                            {
+                                keyboardPresses.Enqueue(key);
+                                Interlocked.Increment(ref hookPressCount);
+                            }
+                        }
+                        else
+                        {
+                            heldHookKeys.Remove(key);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Observation only: never consume Elite's input.
+        return CallNextHookEx(keyboardHook, code, message, data);
+    }
+
+    private void ClearKeyboardPresses()
+    {
+        while (keyboardPresses.TryDequeue(out _))
+        {
+        }
+        while (hookSamples.TryDequeue(out _))
+        {
+        }
+
+        lock (hookStateSync)
+        {
+            heldHookKeys.Clear();
+        }
+    }
+
+    private void ClearRawJoystickPresses()
+    {
+        while (rawJoystickPresses.TryDequeue(out _))
+        {
+        }
+    }
+
+    private void ClearRawKeyboardPresses()
+    {
+        while (rawKeyboardPresses.TryDequeue(out _))
+        {
+        }
+    }
+
+    private void LogFocusSkip(
+        IntPtr target,
+        IntPtr foreground)
+    {
+        DateTimeOffset now =
+            DateTimeOffset.UtcNow;
+
+        if (now - lastFocusDiagnosticUtc
+            < TimeSpan.FromSeconds(5))
+        {
+            return;
+        }
+
+        lastFocusDiagnosticUtc = now;
+        Logger.Logger.Debug(
+            $"DSS fire input polling paused: target=0x{target.ToInt64():X}; " +
+            $"foreground=0x{foreground.ToInt64():X}; " +
+            $"overlay={WindowsAPI.IsOverlayWindow(foreground)}.");
     }
 
     private bool IsDown(
@@ -236,10 +573,14 @@ internal sealed class DssFireInputMonitor : IDisposable
     }
 
     private static bool IsVirtualKeyDown(
-        ushort virtualKey) =>
-        (GetAsyncKeyState(
-             virtualKey)
-         & 0x8000) != 0;
+        ushort virtualKey)
+    {
+        // Logitech profiles can emit a complete key press between two 12 ms
+        // polls. Keep the held-state bit and also accept the "pressed since
+        // last call" bit so a short pulse is not silently lost.
+        short state = GetAsyncKeyState(virtualKey);
+        return (state & 0x8001) != 0;
+    }
 
     private bool IsJoystickButtonDown(
         string device,
@@ -264,12 +605,26 @@ internal sealed class DssFireInputMonitor : IDisposable
                     JoyReturnButtons
             };
 
-        if (joyGetPosEx(
-                deviceId.Value,
-                ref state) != 0)
+        uint result = joyGetPosEx(
+            deviceId.Value,
+            ref state);
+        if (result != 0)
         {
+            Interlocked.Increment(ref joystickReadFailures);
             return false;
         }
+
+        if (lastJoystickMasks.TryGetValue(deviceId.Value, out uint previousMask)
+            && previousMask != state.Buttons
+            && joystickTransitionLogs < 20)
+        {
+            joystickTransitionLogs++;
+            Logger.Logger.Info(
+                $"DSS joystick buttons changed: WinMM id={deviceId.Value}; " +
+                $"0x{previousMask:X8} -> 0x{state.Buttons:X8}.");
+        }
+
+        lastJoystickMasks[deviceId.Value] = state.Buttons;
 
         uint mask =
             1u << (button - 1);
@@ -362,6 +717,14 @@ internal sealed class DssFireInputMonitor : IDisposable
             return true;
         }
 
+        if (elite.Contains("gamepad")
+            && (product.Contains("xbox")
+                || product.Contains("gamepad")
+                || product.Contains("controller")))
+        {
+            return true;
+        }
+
         return elite.Length >= 5
                && product.Length >= 5
                && (
@@ -389,10 +752,37 @@ internal sealed class DssFireInputMonitor : IDisposable
         disposed = true;
         Enabled = false;
 
+        if (keyboardHook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(keyboardHook);
+            keyboardHook = IntPtr.Zero;
+        }
+
+        keyboardHookProc = null;
+
+        rawHidMonitor?.Dispose();
+        rawHidMonitor = null;
+
         timer?.Dispose();
         timer = null;
 
         previousStates.Clear();
+        lastActionPresses.Clear();
+        ClearKeyboardPresses();
+        ClearRawKeyboardPresses();
+        ClearRawJoystickPresses();
+
+        Logger.Logger.Info(
+            $"DSS fire monitor summary: hookMessages={hookKeyboardMessageCount}; " +
+            $"hookPresses={hookPressCount}; " +
+            $"rawKeyboardPresses={rawKeyboardPressCount}; " +
+            $"keyboardDownPolls={keyboardDownPollCount}; " +
+            $"joystickPresses={joystickPressCount}; emitted={emittedPressCount}; " +
+            $"deduplicated={deduplicatedPressCount}; focusAccepted={acceptedPollCount}; " +
+            $"focusRejected={rejectedPollCount}; gameFocusPolls={gameFocusPollCount}; " +
+            $"overlayFocusPolls={overlayFocusPollCount}; " +
+            $"joystickReadFailures={joystickReadFailures}.");
+
         FirePressed = null;
     }
 
@@ -461,6 +851,33 @@ internal sealed class DssFireInputMonitor : IDisposable
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(
         int virtualKey);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    private delegate IntPtr LowLevelKeyboardProc(
+        int code,
+        IntPtr message,
+        IntPtr data);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(
+        int hookType,
+        LowLevelKeyboardProc procedure,
+        IntPtr module,
+        uint threadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hook);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(
+        IntPtr hook,
+        int code,
+        IntPtr message,
+        IntPtr data);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr GetModuleHandle(string? moduleName);
 
     [DllImport(
         "winmm.dll",

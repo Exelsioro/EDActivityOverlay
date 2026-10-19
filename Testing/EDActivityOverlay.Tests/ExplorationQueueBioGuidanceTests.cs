@@ -7,15 +7,12 @@ public sealed class ExplorationQueueBioGuidanceTests
     [Fact]
     public void FullAssistantExposesQueueFiltersAndManualControls()
     {
-        string code = File.ReadAllText(
-            FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml.cs"));
+        string code = ReadExplorationCode();
 
         string xaml = File.ReadAllText(
             FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml"));
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml"));
 
         Assert.Contains(
             "new(\"Remaining\", \"Loc_FILTER_REMAINING\")",
@@ -56,10 +53,7 @@ public sealed class ExplorationQueueBioGuidanceTests
     [Fact]
     public void SelectedBodyGuidanceUsesExactProgressAndPredictions()
     {
-        string code = File.ReadAllText(
-            FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml.cs"));
+        string code = ReadExplorationCode();
 
         Assert.Contains(
             "progress.MissingGenuses",
@@ -90,15 +84,12 @@ public sealed class ExplorationQueueBioGuidanceTests
     [Fact]
     public void QueueStateIsVisibleInCatalogRows()
     {
-        string code = File.ReadAllText(
-            FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml.cs"));
+        string code = ReadExplorationCode();
 
         string xaml = File.ReadAllText(
             FindProjectFile(
-                "Windows",
-                "ActivityWorkspaceOverlayWindow.xaml"));
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml"));
 
         Assert.Contains(
             "string VisitState);",
@@ -115,6 +106,17 @@ public sealed class ExplorationQueueBioGuidanceTests
             xaml,
             StringComparison.Ordinal);
     }
+
+    private static string ReadExplorationCode() =>
+        File.ReadAllText(
+            FindProjectFile(
+                "UserControls",
+                "ExplorationWorkspaceControl.xaml.cs"))
+        + Environment.NewLine
+        + File.ReadAllText(
+            FindProjectFile(
+                "UserControls",
+                "ExplorationWorkspaceControl.Full.cs"));
 
     private static string FindProjectFile(
         params string[] relative)

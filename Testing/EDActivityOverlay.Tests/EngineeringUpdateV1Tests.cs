@@ -368,27 +368,36 @@ public sealed class EngineeringUpdateV1Tests : IDisposable
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "EngineeringWindow.xaml.cs"));
+                    "UserControls",
+                    "EngineeringWorkspaceControl.xaml.cs"));
 
         string traderCode =
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
+                    "UserControls",
+                    "EngineeringWorkspaceControl.MaterialTraders.cs"));
+
+        string hostCode =
+            File.ReadAllText(
+                FindProjectFile(
+                    "EDActivityOverlay",
                     "Windows",
-                    "EngineeringWindow.MaterialTraders.cs"));
+                    "EngineeringWindow.xaml.cs"));
 
         string code =
             mainCode
             + Environment.NewLine
-            + traderCode;
+            + traderCode
+            + Environment.NewLine
+            + hostCode;
 
         string xaml =
             File.ReadAllText(
                 FindProjectFile(
                     "EDActivityOverlay",
-                    "Windows",
-                    "EngineeringWindow.xaml"));
+                    "UserControls",
+                    "EngineeringWorkspaceControl.xaml"));
 
         Assert.Contains(
             "EngineerExperimentalCombo",

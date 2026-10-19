@@ -75,11 +75,11 @@ public sealed class DssImpactCounterChangeDetectorTests
 
         int left =
             (int)Math.Round(
-                width * 0.916);
+                width * 0.865);
 
         int top =
             (int)Math.Round(
-                height * 0.768);
+                height * 0.771);
 
         // Static gray HUD glyph block.
         DrawRect(

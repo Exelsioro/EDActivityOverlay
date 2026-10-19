@@ -11,6 +11,8 @@ internal sealed record DssAssistantLiveSnapshot(
     bool HorizonFound,
     DateTimeOffset UpdatedUtc)
 {
+    public int TargetingStep { get; init; } = 1;
+
     public bool IsFresh(
         DateTimeOffset nowUtc,
         TimeSpan maximumAge) =>
@@ -27,6 +29,7 @@ internal sealed class DssAssistantStateService
 {
     private readonly object sync = new();
     private DssAssistantLiveSnapshot? current;
+    private int targetingStep = 1;
 
     public static DssAssistantStateService Instance { get; } =
         new();
@@ -62,7 +65,25 @@ internal sealed class DssAssistantStateService
                     readiness,
                     geometry.BodyCenterFound,
                     geometry.HorizonMarkerFound,
-                    timestampUtc);
+                    timestampUtc)
+                {
+                    TargetingStep = targetingStep
+                };
+        }
+    }
+
+    public void SetTargetingStep(int step)
+    {
+        lock (sync)
+        {
+            targetingStep = Math.Max(1, step);
+            if (current is not null)
+            {
+                current = current with
+                {
+                    TargetingStep = targetingStep
+                };
+            }
         }
     }
 
@@ -71,6 +92,7 @@ internal sealed class DssAssistantStateService
         lock (sync)
         {
             current = null;
+            targetingStep = 1;
         }
     }
 }
