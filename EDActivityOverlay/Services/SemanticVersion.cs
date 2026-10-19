@@ -25,6 +25,7 @@ internal sealed class SemanticVersion : IComparable<SemanticVersion>
     }
 
     public string Value { get; }
+    public string DisplayValue => Value.TrimStart('v').Split('+')[0];
     public bool IsPrerelease => prerelease.Length != 0;
 
     public static bool TryParse(string? value, out SemanticVersion? version)

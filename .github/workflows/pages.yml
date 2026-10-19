@@ -6,7 +6,11 @@ on:
     paths:
       - docs/support/**
       - .github/workflows/pages.yml
+      - .github/build-update-manifest.mjs
   workflow_dispatch:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
 
 permissions:
   contents: read
@@ -19,12 +23,22 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: master
+      - name: Build public update catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${{ github.repository }}/releases?per_page=100" |
+            node .github/build-update-manifest.mjs docs/updates.json
       - uses: actions/configure-pages@v5
         with:
           enablement: true

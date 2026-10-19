@@ -130,7 +130,7 @@ Additional test harnesses and regression scripts are available under `Testing/`.
 Build a specific version:
 
 ```powershell
-.\build_installer.ps1 -Version 1.3.0-beta.3
+.\build_installer.ps1 -Version 1.3.0-beta.4
 ```
 
 Build app only:
@@ -142,11 +142,16 @@ Build app only:
 Installer output is written to `Installer/`.
 
 Tagged releases are built by GitHub Actions. A tag such as
-`v1.3.0-beta.3` creates a prerelease with a self-contained portable ZIP,
+`v1.3.0-beta.4` creates a prerelease with a self-contained portable ZIP,
 an Inno Setup installer and SHA-256 checksums.
 
-The application checks GitHub Releases on startup and shows an available update
-in the startup window, tray menu and Settings. The beta channel can be enabled in Settings.
+The application checks GitHub Releases on startup. The startup window and
+Settings always show the installed version and a separate update status,
+including checking, no update, available update and network failure. Available
+updates also appear in the tray menu. The beta channel can be enabled in Settings.
+Release metadata is cached for 30 minutes; a GitHub Pages backup catalog keeps
+checks available when GitHub's public API rate limit is reached. The manual
+check button refreshes metadata rather than waiting for the cache to expire.
 Installation is always user-initiated: the installer is downloaded, checked
 against the release's `SHA256SUMS.txt`, launched, and then the app exits. The
 same Inno Setup AppId updates an existing installation in place.

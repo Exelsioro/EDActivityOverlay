@@ -161,7 +161,11 @@ namespace EDActivityOverlay.Windows
             StatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessColorBrush");
         }
 
-        public void RefreshLocalization() => UpdateStatus();
+        public void RefreshLocalization()
+        {
+            UpdateStatus();
+            RefreshUpdateNotice();
+        }
         
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
@@ -200,12 +204,11 @@ namespace EDActivityOverlay.Windows
         private void RefreshUpdateNotice()
         {
             var service = UpdateService.Instance;
-            UpdateNotice.Visibility = service.AvailableRelease is null ? Visibility.Collapsed : Visibility.Visible;
-            if (service.AvailableRelease is not null)
-                UpdateNoticeText.Text = service.IsBusy
-                    ? Loc.Get("Loc_UPDATE_WORKING")
-                    : Loc.Format("Loc_UPDATE_AVAILABLE_FORMAT", service.AvailableRelease.Version.Value);
-            InstallUpdateButton.IsEnabled = !service.IsBusy;
+            var presentation = service.GetPresentation(SettingsService.Instance.Settings.IncludeBetaUpdates);
+            CurrentVersionText.Text = Loc.Format("Loc_UPDATE_INSTALLED_VERSION_FORMAT", presentation.CurrentVersion);
+            UpdateNoticeText.Text = Loc.Format(presentation.MessageKey, presentation.Arguments);
+            InstallUpdateButton.Visibility = service.AvailableRelease is null ? Visibility.Collapsed : Visibility.Visible;
+            InstallUpdateButton.IsEnabled = presentation.CanInstall;
         }
 
         private async void InstallUpdateButton_Click(object sender, RoutedEventArgs e)

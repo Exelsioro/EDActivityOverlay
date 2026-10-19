@@ -55,4 +55,38 @@ public sealed class UpdateServiceTests
         Assert.Equal(hash, UpdateService.ParseChecksum(checksums, "EDActivityOverlay_Setup_1.0.0.exe"));
         Assert.Null(UpdateService.ParseChecksum(checksums, "EDActivityOverlay_Setup_1.0.1.exe"));
     }
+
+    [Theory]
+    [InlineData((int)UpdateOperation.None, false, null, false, "Loc_UPDATE_NOT_CHECKED")]
+    [InlineData((int)UpdateOperation.Checking, false, null, false, "Loc_UPDATE_CHECKING")]
+    [InlineData((int)UpdateOperation.Installing, true, null, true, "Loc_UPDATE_DOWNLOADING")]
+    [InlineData((int)UpdateOperation.None, true, "Network unavailable", true, "Loc_UPDATE_CHECK_FAILED_FORMAT")]
+    [InlineData((int)UpdateOperation.None, true, null, false, "Loc_UPDATE_UP_TO_DATE_STABLE")]
+    [InlineData((int)UpdateOperation.None, true, null, true, "Loc_UPDATE_UP_TO_DATE")]
+    public void InstalledVersionRemainsVisibleForEveryUpdateState(
+        int operationValue, bool hasChecked, string? error, bool includeBeta, string expectedKey)
+    {
+        var operation = (UpdateOperation)operationValue;
+        SemanticVersion.TryParse("1.3.0-beta.4+0123456789abcdef", out var current);
+        var presentation = UpdateStatusPresentation.Create(current, null, operation, error, hasChecked, includeBeta);
+
+        Assert.Equal("1.3.0-beta.4", presentation.CurrentVersion);
+        Assert.Equal(expectedKey, presentation.MessageKey);
+        Assert.False(presentation.CanInstall);
+        Assert.Equal(operation == UpdateOperation.None, presentation.CanCheck);
+    }
+
+    [Fact]
+    public void AvailableUpdateDoesNotReplaceTheInstalledVersion()
+    {
+        SemanticVersion.TryParse("v1.3.0-beta.3+installed", out var current);
+        SemanticVersion.TryParse("v1.3.0-beta.4+release", out var available);
+        var presentation = UpdateStatusPresentation.Create(current, available,
+            UpdateOperation.None, null, hasChecked: true, includeBeta: true);
+
+        Assert.Equal("1.3.0-beta.3", presentation.CurrentVersion);
+        Assert.Equal("Loc_UPDATE_AVAILABLE_FORMAT", presentation.MessageKey);
+        Assert.Equal("1.3.0-beta.4", Assert.Single(presentation.Arguments));
+        Assert.True(presentation.CanInstall);
+    }
 }

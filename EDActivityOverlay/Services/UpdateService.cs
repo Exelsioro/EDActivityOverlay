@@ -23,20 +23,31 @@ internal sealed class UpdateService
 {
     private const string Repository = "Exelsioro/EDActivityOverlay";
     private const long MaxInstallerBytes = 600L * 1024 * 1024;
-    private static readonly Uri ReleasesUri = new($"https://api.github.com/repos/{Repository}/releases?per_page=100");
     private static readonly HttpClient Client = CreateClient();
     private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly UpdateReleaseCatalog releaseCatalog;
 
     internal static UpdateService Instance { get; } = new();
     internal event EventHandler? Changed;
     internal UpdateRelease? AvailableRelease { get; private set; }
     internal string? Error { get; private set; }
-    internal bool IsBusy { get; private set; }
+    internal UpdateOperation Operation { get; private set; }
+    internal bool IsBusy => Operation != UpdateOperation.None;
+    internal DateTimeOffset? LastCheckedUtc { get; private set; }
     internal SemanticVersion? CurrentVersion =>
         SemanticVersion.TryParse(Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion, out var version) ? version : null;
 
-    private UpdateService() { }
+    private UpdateService()
+    {
+        releaseCatalog = new UpdateReleaseCatalog(Client, Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "EDActivityOverlay", "updates", "release-catalog.json"));
+    }
+
+    internal UpdateStatusPresentation GetPresentation(bool includeBeta) =>
+        UpdateStatusPresentation.Create(CurrentVersion, AvailableRelease?.Version,
+            Operation, Error, LastCheckedUtc is not null, includeBeta);
 
     private void NotifyChanged()
     {
@@ -52,21 +63,23 @@ internal sealed class UpdateService
         return client;
     }
 
-    internal async Task CheckAsync(bool includeBeta, CancellationToken cancellationToken = default)
+    internal async Task CheckAsync(bool includeBeta, CancellationToken cancellationToken = default, bool forceRefresh = false)
     {
         if (!await gate.WaitAsync(0, cancellationToken)) return;
         try
         {
-            IsBusy = true;
+            Operation = UpdateOperation.Checking;
             Error = null;
             AvailableRelease = null;
             NotifyChanged();
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(15));
-            using var response = await Client.GetAsync(ReleasesUri, timeout.Token);
-            response.EnsureSuccessStatusCode();
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(timeout.Token));
-            AvailableRelease = SelectRelease(document.RootElement, CurrentVersion, includeBeta);
+            UpdateCatalogSnapshot catalog = await releaseCatalog.FetchAsync(forceRefresh, cancellationToken);
+            using var document = JsonDocument.Parse(catalog.Json);
+            SemanticVersion currentVersion = CurrentVersion
+                ?? throw new InvalidOperationException(Loc.Get("Loc_UPDATE_VERSION_UNKNOWN"));
+            AvailableRelease = SelectRelease(document.RootElement, currentVersion, includeBeta);
+            LastCheckedUtc = catalog.CheckedUtc;
+            Logger.Logger.Info($"Update check completed: current={currentVersion.DisplayValue}; "
+                + $"includeBeta={includeBeta}; available={AvailableRelease?.Version.DisplayValue ?? "none"}.");
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -75,7 +88,7 @@ internal sealed class UpdateService
         }
         finally
         {
-            IsBusy = false;
+            Operation = UpdateOperation.None;
             gate.Release();
             NotifyChanged();
         }
@@ -129,7 +142,7 @@ internal sealed class UpdateService
         string? destination = null;
         try
         {
-            IsBusy = true;
+            Operation = UpdateOperation.Installing;
             Error = null;
             NotifyChanged();
 
@@ -180,7 +193,7 @@ internal sealed class UpdateService
         }
         finally
         {
-            IsBusy = false;
+            Operation = UpdateOperation.None;
             gate.Release();
             NotifyChanged();
         }
