@@ -9,6 +9,26 @@ The application combines local Player Journal data, Frontier companion JSON file
 - Windows 10 version 2004 (build 19041+) or Windows 11
 - Elite Dangerous (`EliteDangerous64.exe`)
 
+## Download and first run
+
+Download the installer or portable ZIP from [GitHub Releases](https://github.com/Exelsioro/EDActivityOverlay/releases).
+The installer includes the .NET runtime. Start the application alongside Elite
+Dangerous, select the activity you want to see, and use Settings to configure
+the Journal path, language, overlay appearance and controls. The application
+reads the local game Journal. Exploration enrichment is optional; remote trade
+route search requires a network connection to the market-data provider.
+
+The installer is not Authenticode-signed, so Windows may show a reputation
+warning. Check the downloaded file against the release's `SHA256SUMS.txt`
+before running it.
+
+This is a beta release. The realtime DSS assistant and automatic Galaxy Map
+interaction are experimental and can be disabled in Settings. VR mode disables
+the DSS assistant because desktop HUD recognition is not calibrated for VR.
+Please report a reproducible issue with the application version, Windows and
+game resolution, overlay mode, input device, and relevant logs in
+[GitHub Issues](https://github.com/Exelsioro/EDActivityOverlay/issues).
+
 ## Current Features
 
 - Overlay windows attached to the game window with focus-aware visibility
@@ -110,7 +130,7 @@ Additional test harnesses and regression scripts are available under `Testing/`.
 Build a specific version:
 
 ```powershell
-.\build_installer.ps1 -Version 1.3.0-beta.1
+.\build_installer.ps1 -Version 1.3.0-beta.3
 ```
 
 Build app only:
@@ -122,8 +142,14 @@ Build app only:
 Installer output is written to `Installer/`.
 
 Tagged releases are built by GitHub Actions. A tag such as
-`v1.3.0-beta.1` creates a prerelease with a self-contained portable ZIP,
+`v1.3.0-beta.3` creates a prerelease with a self-contained portable ZIP,
 an Inno Setup installer and SHA-256 checksums.
+
+The application checks GitHub Releases on startup and shows an available update
+in the startup window, tray menu and Settings. The beta channel can be enabled in Settings.
+Installation is always user-initiated: the installer is downloaded, checked
+against the release's `SHA256SUMS.txt`, launched, and then the app exits. The
+same Inno Setup AppId updates an existing installation in place.
 
 ## Data Migration
 
@@ -132,8 +158,9 @@ Existing application data from the pre-rebrand installation is migrated automati
 ## Support Development
 
 ED Activity Overlay is free and open source. If it is useful to you, you can
-[support continued development on Ko-fi](https://ko-fi.com/exelsior). The same
-link is available from the startup window and Settings inside the application.
+[support continued development](https://exelsioro.github.io/EDActivityOverlay/support/)
+through Ko-fi or Boosty. The same page is linked from the startup window and
+Settings inside the application.
 
 ## Documentation
 

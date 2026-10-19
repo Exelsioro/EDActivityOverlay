@@ -81,8 +81,11 @@ probe radius change overlap.
 After `SAAScanComplete`, the body stores `ProbesUsed` and `EfficiencyTarget` and
 shows whether the efficiency bonus was achieved. Frontier writes both fields
 only after mapping is complete, so pre-scan automatic selection cannot come
-from the Journal. Screen OCR is therefore displayed as a disabled experimental
-setting until resolution/UI-scale calibration is implemented and verified.
+from the Journal. The opt-in realtime DSS assistant reads the desktop HUD using
+screen capture and image recognition, tracks launched probes and shows the next
+aim point. Accuracy depends on the game's display configuration, visibility of
+the native markers and the selected input bindings; the game's own coverage
+display remains authoritative. DSS recognition is disabled in VR mode.
 
 ## Exploration log and unsold estimates
 
@@ -130,5 +133,6 @@ so it must remain an explicit choice.
 - Direct Spansh Road to Riches calculation uses the same public job protocol as
   current community clients. It is not part of Spansh's documented system-data
   OpenAPI surface and can change; offline export import remains supported.
-- OCR of the in-game DSS target is not enabled yet. Manual target selection is
-  the stable supported mode.
+- Realtime DSS recognition is experimental; if it cannot identify the native
+  efficiency target, select a target manually in the full view. It is not
+  available in VR mode.

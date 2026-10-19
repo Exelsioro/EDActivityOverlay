@@ -577,10 +577,9 @@ namespace EDActivityOverlay
         private void RefreshExperimentalDssLifecycle(
             bool enabled)
         {
-            if (VrOverlaySupport.IsEnabled)
-            {
-                enabled = false;
-            }
+            enabled = DssLifecyclePolicy.ShouldRun(
+                enabled,
+                VrOverlaySupport.IsEnabled);
 
             if (!Dispatcher.CheckAccess())
             {

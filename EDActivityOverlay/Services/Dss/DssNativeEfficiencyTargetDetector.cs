@@ -223,6 +223,22 @@ internal static class DssNativeEfficiencyTargetRuntime
         }
     }
 
+    internal static void ResetForBodyChange()
+    {
+        lock (Gate)
+        {
+            latchedTarget = 0;
+            latchedConfidence = 0d;
+            lastObservedUtc =
+                DateTimeOffset.MinValue;
+            lastAttemptUtc =
+                DateTimeOffset.MinValue;
+            lastPhysicalFrameObservedUtc =
+                DateTimeOffset.MinValue;
+            pendingTarget = 0;
+            pendingCount = 0;
+        }
+    }
     internal static void ResetForTests()
     {
         lock (Gate)
@@ -408,6 +424,44 @@ internal static class DssNativeEfficiencyTargetDetector
     // this real 7 than the generic 7 prototype, causing a stable false N=2.
     // Keep a real class-specific variant for 7 so alternate templates expand
     // their own digit class without stealing another class's glyph.
+    // Recorded from the supplied 1919x1079 English HUD "21 PROBES" frame.
+    // Keep these variants inside their own classes instead of weakening the
+    // global ambiguity margin that protects the known N7 -> N2 failure.
+    private static readonly byte[] RecordedEnglishDigit1Template =
+    {
+        0,0,0,0,0,58,58,121,106,0,0,0,
+        0,0,0,0,40,208,208,255,220,0,0,0,
+        0,0,0,0,40,208,208,255,220,0,0,0,
+        0,0,0,40,231,208,208,209,219,0,0,0,
+        0,0,0,165,207,67,67,170,219,0,0,0,
+        0,0,0,54,53,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,170,219,0,0,0,
+        0,0,0,0,0,0,0,105,136,0,0,0
+    };
+
+    private static readonly byte[] RecordedEnglishDigit2Template =
+    {
+        0,0,64,114,114,129,129,111,50,50,0,0,
+        0,88,229,217,217,199,195,224,218,218,71,0,
+        0,88,229,217,217,199,195,224,218,218,71,0,
+        0,161,201,0,0,0,0,0,227,227,129,0,
+        0,160,156,0,0,0,0,0,199,199,136,0,
+        0,56,50,0,0,0,0,0,212,212,128,0,
+        0,0,0,0,43,96,164,255,255,100,0,0,
+        0,0,0,0,43,96,164,255,255,100,0,0,
+        49,186,250,250,248,237,221,119,119,0,0,0,
+        155,241,103,103,68,38,0,0,0,0,0,0,
+        179,184,0,0,0,0,0,0,0,0,0,0,
+        184,228,157,157,157,157,157,156,156,77,0,0,
+        184,228,157,157,157,157,157,156,156,77,0,0,
+        115,175,175,175,175,175,175,174,174,85,0,0
+    };
     private static readonly byte[] RecordedNativeDigit7Template =
     {
         0,36,183,251,250,248,248,248,252,255,131,0,0,0,90,122,121,121,121,122,201,238,49,0,
@@ -458,12 +512,147 @@ internal static class DssNativeEfficiencyTargetDetector
                 leftAligned;
         }
 
+        if (HasLeftAlignedEnglishUnitStructure(
+                frame,
+                scale))
+        {
+            return
+                DssNativeEfficiencyTargetObservation.Empty;
+        }
+
         return
             DetectRightAlignedNativeTarget(
                 frame,
                 scale);
     }
 
+    private static bool HasLeftAlignedEnglishUnitStructure(
+        DssCapturedFrame frame,
+        double scale)
+    {
+        int left =
+            Math.Max(
+                0,
+                frame.Width
+                - Scale(
+                    390d,
+                    scale));
+
+        int right =
+            Math.Min(
+                frame.Width,
+                frame.Width
+                - Scale(
+                    125d,
+                    scale));
+
+        int top =
+            Math.Max(
+                0,
+                Scale(
+                    816d,
+                    scale));
+
+        int bottom =
+            Math.Min(
+                frame.Height,
+                Scale(
+                    838d,
+                    scale));
+
+        if (right <= left
+            || bottom <= top)
+        {
+            return false;
+        }
+
+        List<GlyphComponent> components =
+            FindGlyphComponents(
+                frame,
+                left,
+                top,
+                right,
+                bottom,
+                scale)
+            .OrderBy(
+                component => component.X)
+            .ToList();
+
+        if (components.Count < 5)
+        {
+            return false;
+        }
+
+        int minimumUnitGap =
+            Math.Max(
+                4,
+                Scale(
+                    5d,
+                    scale));
+
+        int maximumUnitGlyphGap =
+            Math.Max(
+                3,
+                Scale(
+                    4d,
+                    scale));
+
+        for (int unitStart = 1;
+             unitStart < components.Count - 3;
+             unitStart++)
+        {
+            GlyphComponent previous =
+                components[unitStart - 1];
+
+            GlyphComponent firstUnit =
+                components[unitStart];
+
+            int gapBeforeUnit =
+                firstUnit.X
+                - (previous.X
+                   + previous.Width);
+
+            if (gapBeforeUnit
+                < minimumUnitGap)
+            {
+                continue;
+            }
+
+            int runLength = 1;
+            GlyphComponent previousUnit =
+                firstUnit;
+
+            for (int index = unitStart + 1;
+                 index < components.Count;
+                 index++)
+            {
+                GlyphComponent current =
+                    components[index];
+
+                int gap =
+                    current.X
+                    - (previousUnit.X
+                       + previousUnit.Width);
+
+                if (gap < 0
+                    || gap > maximumUnitGlyphGap)
+                {
+                    break;
+                }
+
+                runLength++;
+                previousUnit =
+                    current;
+            }
+
+            if (runLength >= 4)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     private static DssNativeEfficiencyTargetObservation
         DetectRightAlignedNativeTarget(
             DssCapturedFrame frame,
@@ -767,11 +956,16 @@ internal static class DssNativeEfficiencyTargetDetector
                     3d,
                     scale));
 
+        // Real 1919x1079 Elite HUD capture ("6 PROBES") has a ~6 px
+        // separator between the numeric token and the unit word. Internal
+        // PROBES glyph gaps are materially smaller (~1-3 px), so 5 reference
+        // pixels still preserves the structural guard while accepting the
+        // actual English layout.
         int minimumUnitGap =
             Math.Max(
-                6,
+                4,
                 Scale(
-                    8d,
+                    5d,
                     scale));
 
         for (int index = 0;
@@ -1539,7 +1733,16 @@ internal static class DssNativeEfficiencyTargetDetector
                 error;
         }
 
-        if (digit == 2)
+        if (digit == 1)
+        {
+            error =
+                Math.Min(
+                    error,
+                    CalculateNormalizedTemplateError(
+                        normalized,
+                        RecordedEnglishDigit1Template));
+        }
+        else if (digit == 2)
         {
             error =
                 Math.Min(
@@ -1547,6 +1750,13 @@ internal static class DssNativeEfficiencyTargetDetector
                     CalculateNormalizedTemplateError(
                         normalized,
                         RecordedNativeDigit2Template));
+
+            error =
+                Math.Min(
+                    error,
+                    CalculateNormalizedTemplateError(
+                        normalized,
+                        RecordedEnglishDigit2Template));
         }
         else if (digit == 7)
         {

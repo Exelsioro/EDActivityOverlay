@@ -42,6 +42,11 @@ internal sealed class ExplorationFirstScanTracker
     private readonly object sync = new();
     private readonly Dictionary<string, ExplorationScanBaseline> baselines =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (bool Discovery, bool Mapping)> notifiedCandidates =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> mappedThisVisit =
+        new(StringComparer.OrdinalIgnoreCase);
+    private bool incompleteFssNotified;
 
     public bool TryObserve(
         string identity,
@@ -72,6 +77,55 @@ internal sealed class ExplorationFirstScanTracker
         lock (sync)
         {
             baselines.Clear();
+            notifiedCandidates.Clear();
+            mappedThisVisit.Clear();
+            incompleteFssNotified = false;
+        }
+    }
+
+    public string? TryClaimCandidateMessage(
+        string identity,
+        ExplorationScanBaseline current,
+        bool isPlanet)
+    {
+        lock (sync)
+        {
+            notifiedCandidates.TryGetValue(identity, out var notified);
+            bool discovery = current.WasDiscovered == false && !notified.Discovery;
+            bool mapping = isPlanet
+                           && current.WasMapped == false
+                           && !mappedThisVisit.Contains(identity)
+                           && !notified.Mapping;
+            if (!discovery && !mapping)
+            {
+                return null;
+            }
+
+            notifiedCandidates[identity] =
+                (notified.Discovery || discovery, notified.Mapping || mapping);
+            return NotificationCenterService.GetDiscoveryCandidateMessageKey(discovery, mapping);
+        }
+    }
+
+    public bool TryMarkIncompleteFss()
+    {
+        lock (sync)
+        {
+            if (incompleteFssNotified)
+            {
+                return false;
+            }
+
+            incompleteFssNotified = true;
+            return true;
+        }
+    }
+
+    public void MarkMapped(string identity)
+    {
+        lock (sync)
+        {
+            mappedThisVisit.Add(identity);
         }
     }
 }
@@ -202,10 +256,29 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                     "Loc_Notification_Mining", "Loc_Notification_Asteroid_Cracked",
                     "mining:cracked", TimeSpan.FromSeconds(3));
                 break;
-            case "fssdiscoveryscan" when GetDouble(data, "Progress") >= 0.999:
-                Publish("exploration", NotificationSeverity.Success,
-                    "Loc_Notification_Exploration", "Loc_Notification_FSS_Complete_Format",
-                    "exploration:fss-complete", TimeSpan.FromSeconds(10), GetInt32(data, "BodyCount"));
+            case "fssdiscoveryscan":
+                double fssProgress = GetDouble(data, "Progress");
+                int fssBodyCount = GetInt32(data, "BodyCount");
+                long fssSystemAddress = GetInt64(data, "SystemAddress");
+                string fssIdentity = fssSystemAddress != 0
+                    ? fssSystemAddress.ToString()
+                    : GetString(data, "SystemName");
+                if (fssProgress >= 0.999)
+                {
+                    Publish("exploration", NotificationSeverity.Success,
+                        "Loc_Notification_Exploration", "Loc_Notification_FSS_Complete_Format",
+                        $"exploration:fss-complete:{fssIdentity}",
+                        TimeSpan.FromSeconds(10), fssBodyCount);
+                }
+                else if (fssBodyCount > 0
+                         && explorationFirstScanTracker.TryMarkIncompleteFss())
+                {
+                    Publish("exploration", NotificationSeverity.Information,
+                        "Loc_Notification_Exploration", "Loc_Notification_FSS_Incomplete_Format",
+                        $"exploration:fss-incomplete:{fssIdentity}",
+                        TimeSpan.FromSeconds(10),
+                        fssBodyCount, (int)Math.Round(Math.Clamp(fssProgress, 0, 1) * 100));
+                }
                 break;
             case "scan":
                 string scannedBody = GetString(data, "BodyName");
@@ -252,10 +325,14 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                             baseline,
                             currentScan);
 
+                bool planetaryBody =
+                    !string.IsNullOrWhiteSpace(GetString(data, "PlanetClass"))
+                    && string.IsNullOrWhiteSpace(GetString(data, "StarType"));
                 string? discoveryMessage =
-                    firstScanForBody
-                        ? GetDiscoveryCandidateMessageKey(data)
-                        : null;
+                    explorationFirstScanTracker.TryClaimCandidateMessage(
+                        scanIdentity,
+                        currentScan,
+                        planetaryBody);
 
                 Logger.Logger.Info(
                     "EXPLORATION SCAN STATUS: "
@@ -290,7 +367,8 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                 {
                     Publish("exploration", NotificationSeverity.Success,
                         "Loc_Notification_Exploration", discoveryMessage,
-                        $"exploration:discovery:{scanIdentity}", TimeSpan.FromSeconds(3), scannedBody);
+                        $"exploration:discovery:{scanIdentity}:{discoveryMessage}",
+                        TimeSpan.FromSeconds(3), scannedBody);
                 }
                 break;
             case "fssbodysignals":
@@ -305,6 +383,20 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
                 }
                 break;
             case "saascancomplete":
+                long mappedSystemAddress = GetInt64(data, "SystemAddress");
+                if (mappedSystemAddress == 0)
+                {
+                    mappedSystemAddress =
+                        JournalMonitorService.Instance.Current.SystemAddress;
+                }
+
+                int mappedBodyId = GetInt32(data, "BodyID");
+                string mappedBodyName = GetString(data, "BodyName");
+                string mappedIdentity = mappedSystemAddress != 0
+                    ? $"{mappedSystemAddress}:{mappedBodyId}"
+                    : $"{JournalMonitorService.Instance.Current.StarSystem}|{mappedBodyId}|{mappedBodyName}";
+                explorationFirstScanTracker.MarkMapped(mappedIdentity);
+
                 int probesUsed = GetInt32(data, "ProbesUsed");
                 int efficiencyTarget = GetInt32(data, "EfficiencyTarget");
                 if (efficiencyTarget > 0 && probesUsed > 0 && probesUsed <= efficiencyTarget)
@@ -496,6 +588,13 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
             planetaryBody
             && GetNullableBoolean(element, "WasMapped") == false;
 
+        return GetDiscoveryCandidateMessageKey(firstDiscovery, firstMapping);
+    }
+
+    internal static string? GetDiscoveryCandidateMessageKey(
+        bool firstDiscovery,
+        bool firstMapping)
+    {
         if (firstDiscovery && firstMapping)
         {
             return "Loc_Notification_First_Discovery_And_Mapping_Format";

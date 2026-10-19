@@ -445,6 +445,38 @@ internal static class DssNativeScanProgressRuntime
             && hitCounterSettled;
     }
 
+    internal static void ResetForBodyChange()
+    {
+        lock (Gate)
+        {
+            lastAttemptUtc =
+                DateTimeOffset.MinValue;
+
+            coveragePercent = -1;
+            coverageConfidence = 0d;
+            coverageLastObservedUtc =
+                DateTimeOffset.MinValue;
+            coverageStableSinceUtc =
+                DateTimeOffset.MinValue;
+            pendingCoverage = -1;
+            pendingCoverageCount = 0;
+
+            hitCount = -1;
+            hitCountConfidence = 0d;
+            hitCountLastObservedUtc =
+                DateTimeOffset.MinValue;
+            hitCountChangedUtc =
+                DateTimeOffset.MinValue;
+            pendingHitCount = -1;
+            pendingHitCountFrames = 0;
+
+            correctionGateTargetN = -1;
+            correctionGateStep = 0;
+            previousCorrectionLaunchHitBaseline = -1;
+            previousCorrectionStepObservedUtc =
+                DateTimeOffset.MinValue;
+        }
+    }
     internal static void ResetForTests()
     {
         lock (Gate)
@@ -512,7 +544,7 @@ internal static class DssNativeScanProgressRuntime
 /// Fixed-layout CV for Frontier-native DSS scan progress.
 ///
 /// Coverage percentage:
-/// - bottom-left, x=125..212, y=920..975 in 1080p reference space;
+/// - bottom-left, x=125..232, y=920..975 in 1080p reference space;
 /// - cyan while incomplete, neutral-white at 100%;
 /// - only the numeric columns are sampled, excluding the percent marker.
 ///
@@ -579,7 +611,7 @@ internal static class DssNativeScanProgressDetector
             Math.Min(
                 frame.Width,
                 Scale(
-                    212d,
+                    232d,
                     scale));
 
         int top =
@@ -632,9 +664,22 @@ internal static class DssNativeScanProgressDetector
                     coveragePixels: true,
                     CoverageMaximumAcceptedError);
 
+            if ((!match.Available
+                 || match.Confidence < 0.30d)
+                && TryClassifyLargeCoverageDigit(
+                    frame,
+                    component,
+                    out DigitMatch largeDigit))
+            {
+                match = largeDigit;
+            }
+
             if (!match.Available)
             {
-                continue;
+                // An unrecognized active digit must invalidate the whole
+                // number. Otherwise 20% could be reported as 0% when only
+                // its second digit matches a known shape.
+                return NumericObservation.Empty;
             }
 
             matches.Add(
@@ -683,20 +728,183 @@ internal static class DssNativeScanProgressDetector
         DssCapturedFrame frame,
         double scale)
     {
+        // In the current English DSS HUD the number precedes "IMPACTED"
+        // (right edge ~x=1700 at 1080p). Older localized captures placed the
+        // number at ~x=1780. Probe both layouts without accepting the label
+        // letters as the hit count.
+        NumericObservation current = DetectNativeHitCountAtOffset(
+            frame,
+            scale,
+            rightOffset: 220d);
+
+        return current.Available
+            ? current
+            : DetectNativeHitCountAtOffset(
+                frame,
+                scale,
+                rightOffset: 140d);
+    }
+
+    private static bool TryClassifyLargeCoverageDigit(
+        DssCapturedFrame frame,
+        GlyphComponent component,
+        out DigitMatch match)
+    {
+        match = DigitMatch.Empty;
+
+        // Elite's large coverage font differs from the small neutral HUD
+        // digits. Recorded 000%, 007% and 008% frames are distinguished by
+        // their upper, middle, lower and side occupancy instead of trying to
+        // match the wrong font. Unsupported shapes stay unknown.
+        if (component.Width < 16
+            || component.Height < 28)
+        {
+            return false;
+        }
+
+        int topRows = Math.Max(1, component.Height / 6);
+        int middleStart = component.Height * 17 / 40;
+        int middleEnd = Math.Max(
+            middleStart + 1,
+            component.Height * 23 / 40);
+        int bottomStart = component.Height * 3 / 4;
+        int sideStart = component.Height / 4;
+        int sideEnd = component.Height * 3 / 4;
+        int sideWidth = Math.Max(1, component.Width / 4);
+        int topPixels = 0;
+        int middlePixels = 0;
+        int bottomPixels = 0;
+        long bottomX = 0;
+        int leftSidePixels = 0;
+        int rightSidePixels = 0;
+
+        for (int y = 0; y < component.Height; y++)
+        {
+            int row = (component.Y + y) * frame.Stride;
+            for (int x = 0; x < component.Width; x++)
+            {
+                if (GetCoverageGlyphLuma(
+                        frame,
+                        row + (component.X + x) * 4) == 0)
+                {
+                    continue;
+                }
+
+                if (y < topRows)
+                {
+                    topPixels++;
+                }
+
+                if (y >= middleStart && y < middleEnd)
+                {
+                    middlePixels++;
+                }
+
+                if (y >= bottomStart)
+                {
+                    bottomPixels++;
+                    bottomX += x;
+                }
+
+                if (y >= sideStart && y < sideEnd)
+                {
+                    if (x < sideWidth)
+                    {
+                        leftSidePixels++;
+                    }
+
+                    if (x >= component.Width - sideWidth)
+                    {
+                        rightSidePixels++;
+                    }
+                }
+            }
+        }
+
+        double topFill = topPixels
+            / (double)(component.Width * topRows);
+        double bottomFill = bottomPixels
+            / (double)(component.Width
+                * (component.Height - bottomStart));
+        double middleFill = middlePixels
+            / (double)(component.Width
+                * (middleEnd - middleStart));
+        double bottomCenter = bottomPixels > 0
+            ? bottomX / (double)(bottomPixels * component.Width)
+            : 1d;
+        int sideArea = sideWidth * Math.Max(1, sideEnd - sideStart);
+        double leftSideFill = leftSidePixels / (double)sideArea;
+        double rightSideFill = rightSidePixels / (double)sideArea;
+
+        int digit = ClassifyLargeCoverageShape(
+            topFill,
+            middleFill,
+            bottomFill,
+            bottomCenter,
+            leftSideFill,
+            rightSideFill);
+
+        if (digit < 0)
+        {
+            return false;
+        }
+
+        match = new DigitMatch(true, digit, 0.80d);
+        return true;
+    }
+
+    internal static int ClassifyLargeCoverageShape(
+        double topFill,
+        double middleFill,
+        double bottomFill,
+        double bottomCenter,
+        double leftSideFill,
+        double rightSideFill)
+    {
+        if (topFill >= 0.78d
+            && bottomFill <= 0.35d
+            && bottomCenter <= 0.70d)
+        {
+            return 7;
+        }
+
+        if (topFill is < 0.55d or > 0.78d
+            || bottomFill is < 0.48d or > 0.70d
+            || leftSideFill < 0.30d
+            || rightSideFill < 0.30d)
+        {
+            return -1;
+        }
+
+        if (middleFill >= 0.75d)
+        {
+            return 8;
+        }
+
+        return middleFill is >= 0.55d and <= 0.72d
+            ? 0
+            : -1;
+    }
+
+    private static NumericObservation DetectNativeHitCountAtOffset(
+        DssCapturedFrame frame,
+        double scale,
+        double rightOffset)
+    {
         int left =
             Math.Max(
                 0,
                 frame.Width
-                - Scale(
-                    185d,
+                    - Scale(
+                    rightOffset + 40d,
                     scale));
 
         int right =
             Math.Min(
                 frame.Width,
                 frame.Width
-                - Scale(
-                    130d,
+                    - Scale(
+                    rightOffset - 10d,
                     scale));
 
         int top =
@@ -738,7 +946,7 @@ internal static class DssNativeScanProgressDetector
         int expectedRightEdge =
             frame.Width
             - Scale(
-                140d,
+                rightOffset,
                 scale);
 
         int rightTolerance =

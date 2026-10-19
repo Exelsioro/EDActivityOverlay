@@ -4,20 +4,20 @@ namespace EDActivityOverlay.Services;
 
 internal static class ProjectSupportService
 {
-    internal const string KoFiUrl = "https://ko-fi.com/exelsior";
+    internal const string SupportPageUrl = "https://exelsioro.github.io/EDActivityOverlay/support/";
 
-    internal static void OpenKoFi()
+    internal static void OpenSupportPage()
     {
         try
         {
-            Logger.Logger.Info($"User opened project support page: {KoFiUrl}");
+            Logger.Logger.Info($"User opened project support page: {SupportPageUrl}");
             Logger.Logger.LogUserAction(
                 "Project support page opened",
-                new { Uri = KoFiUrl });
+                new { Uri = SupportPageUrl });
 
             Process.Start(new ProcessStartInfo
             {
-                FileName = KoFiUrl,
+                FileName = SupportPageUrl,
                 UseShellExecute = true
             });
         }

@@ -3,22 +3,33 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using EDActivityOverlay.Models;
 using EDActivityOverlay.Services;
 using EDActivityOverlay.Services.Exploration;
 using EDActivityOverlay.Services.Journal;
+using EDActivityOverlay.Services.Dss;
 using EDActivityOverlay.Utils;
 
 namespace EDActivityOverlay.UserControls;
 
 /// <summary>
 /// Compact Exploration activity surface used by the composite renderer.
-/// DSS presentation intentionally stays journal/catalog based here: the VR
-/// renderer must not start or consume the experimental CV pipeline.
+/// On the desktop it consumes the presentation snapshots published by the
+/// DSS runtime. In VR the DSS lifecycle policy keeps both the CV pipeline and
+/// this surface disabled.
 /// </summary>
 public partial class ExplorationWorkspaceControl : UserControl, IDisposable
 {
     private GameStateSnapshot currentJournal = GameStateSnapshot.Empty;
+    private readonly DispatcherTimer dssPresentationTimer;
+    private string dssPresentationBodyKey = string.Empty;
+    private int dssLastCoveragePercent = -1;
+    private int dssLastHitCount = -1;
+    private int dssLastOfficialTarget;
+    private string dssLastOfficialTargetSource = string.Empty;
+    private string dssLastPlanSignature = string.Empty;
+    private DssModuleSnapshot dssPresentationModule = DssModuleSnapshot.Empty;
     private bool disposed;
 
     public ExplorationWorkspaceControl()
@@ -32,14 +43,25 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         ExplorationRouteService.Instance.RouteChanged += OnExplorationRouteChanged;
         SettingsService.Instance.SettingsChanged += OnSettingsChanged;
 
+        dssPresentationTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(100),
+            DispatcherPriority.Background,
+            OnDssPresentationTick,
+            Dispatcher);
+        dssPresentationTimer.Start();
+
         SetChromeStyle(SettingsService.Instance.Settings.OverlayChromeStyle);
         UpdateJournalState(JournalMonitorService.Instance.Current);
     }
 
     public event Action? DragRequested;
 
+    public bool IsCompactDssMode =>
+        !fullExplorationVisible && ShouldShowStateOnlyDss(currentJournal);
+
     public void SetChromeStyle(string? style)
     {
+        dssLastPlanSignature = string.Empty;
         string normalized =
             OverlayChromeStyles.Normalize(style);
 
@@ -60,6 +82,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
 
     public void RefreshLocalization()
     {
+        dssLastPlanSignature = string.Empty;
         RefreshFullLocalization();
         RefreshPresentation();
     }
@@ -102,12 +125,18 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         if (ShouldShowStateOnlyDss(state))
         {
             RefreshStateOnlyDss(state);
+            CompactRouteAlertPanel.Visibility = Visibility.Collapsed;
+            FooterHintText.Text = string.Empty;
+            OpenExplorationAssistantButton.Visibility = Visibility.Collapsed;
+            return;
         }
         else
         {
             DssContextPanel.Visibility = Visibility.Collapsed;
             RefreshAdaptiveExploration(state, queue);
         }
+
+        OpenExplorationAssistantButton.Visibility = Visibility.Visible;
 
         string routeAlert = BuildCompactRouteOrAlert(
             state,
@@ -123,11 +152,26 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
     }
 
     private static bool ShouldShowStateOnlyDss(GameStateSnapshot state) =>
-        SettingsService.Instance.Settings.EnableExperimentalDssAssistant
+        DssLifecyclePolicy.ShouldRun(
+            SettingsService.Instance.Settings.EnableExperimentalDssAssistant,
+            VrOverlaySupport.IsEnabled)
         && state.GuiFocus == 10;
+
+    private void OnDssPresentationTick(object? sender, EventArgs e)
+    {
+        if (!disposed
+            && !fullExplorationVisible
+            && ShouldShowStateOnlyDss(currentJournal))
+        {
+            RefreshStateOnlyDss(currentJournal);
+        }
+    }
 
     private void RefreshStateOnlyDss(GameStateSnapshot state)
     {
+        // FSS and visit summaries describe the system, not the live DSS body.
+        ModuleStatusText.Text = string.Empty;
+        DestinationVisitStatusText.Visibility = Visibility.Collapsed;
         SystemContextPanel.Visibility = Visibility.Collapsed;
         BodyContextPanel.Visibility = Visibility.Collapsed;
         ExobioContextPanel.Visibility = Visibility.Collapsed;
@@ -147,44 +191,78 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
                         : Loc.Get("Loc_DSS_BODY_TARGET");
 
         CompactContextTitleText.Text = bodyName;
-        DssBodyText.Text = bodyName;
 
-        bool hasKnownBodyTarget = body?.EfficiencyTarget > 0;
-        int configuredTarget = SettingsService.Instance.Settings.DssEfficiencyTarget;
-        int target = hasKnownBodyTarget
-            ? body!.EfficiencyTarget
-            : Math.Clamp(
-                configuredTarget,
-                DssProbePatternCatalog.MinimumTarget,
-                DssProbePatternCatalog.MaximumTarget);
+        DssAssistantLiveSnapshot? live =
+            DssAssistantStateService.Instance.Current;
+        bool hasFreshLiveState =
+            live?.IsFresh(
+                DateTimeOffset.UtcNow,
+                TimeSpan.FromSeconds(2.5)) == true;
 
-        DssTargetText.Text =
-            $"{Loc.Get("Loc_DSS_EFFICIENCY_TARGET")}: {target}";
+        if (!string.IsNullOrWhiteSpace(live?.BodyName))
+        {
+            bodyName = live!.BodyName;
+            CompactContextTitleText.Text = bodyName;
+        }
 
-        DssTargetHintText.Text = hasKnownBodyTarget
-            ? string.Empty
-            : Loc.Get("Loc_DSS_SELECT_TARGET_HINT");
-        DssTargetHintText.Visibility = hasKnownBodyTarget
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        int bodyId = live?.BodyId >= 0
+            ? live.BodyId
+            : body?.BodyId ?? state.DestinationBodyId;
+        string bodyKey = $"{state.SystemAddress}|{bodyId}|{bodyName}";
+        if (!bodyKey.Equals(
+                dssPresentationBodyKey,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            dssPresentationBodyKey = bodyKey;
+            dssLastCoveragePercent = -1;
+            dssLastHitCount = -1;
+            dssLastOfficialTarget = 0;
+            dssLastOfficialTargetSource = string.Empty;
+            dssLastPlanSignature = string.Empty;
+            try
+            {
+                dssPresentationModule =
+                    DssJournalContextReader.ReadLatestDssModule(
+                        JournalMonitorService.Instance.JournalDirectory);
+            }
+            catch
+            {
+                dssPresentationModule = DssModuleSnapshot.Empty;
+            }
+        }
 
-        DssResultText.Text =
-            body is { LastProbesUsed: > 0, EfficiencyTarget: > 0 }
-                ? Loc.Format(
-                    body.LastProbesUsed <= body.EfficiencyTarget
-                        ? "Loc_DSS_RESULT_EFFICIENT"
-                        : "Loc_DSS_RESULT_OVER_TARGET",
-                    body.LastProbesUsed,
-                    body.EfficiencyTarget)
-                : Loc.Get("Loc_DSS_NO_RESULT_YET");
+        RefreshCompactDssDetails(state, body, hasFreshLiveState ? live : null);
+    }
 
-        DssProbePattern pattern = DssProbePatternCatalog.Get(target);
-        DssPlanText.Text =
-            Loc.Get(pattern.StrategyKey)
-            + Environment.NewLine
-            + Loc.Get(pattern.AdjustmentKey);
+    private static string ResolveDssReadinessText(
+        DssAssistantLiveSnapshot? live)
+    {
+        if (live is null
+            || !live.IsFresh(
+                DateTimeOffset.UtcNow,
+                TimeSpan.FromSeconds(2.5)))
+        {
+            return Loc.Get("Loc_DSS_CALIBRATE_HORIZON");
+        }
 
-        DrawStaticDssPattern(pattern);
+        return live.Readiness.State switch
+        {
+            DssAssistantReadinessState.SelectBodyTarget =>
+                Loc.Get("Loc_DSS_SELECT_BODY_DETAIL"),
+            DssAssistantReadinessState.NeedBodyRadius =>
+                Loc.Get("Loc_DSS_BODY_DATA_DETAIL"),
+            DssAssistantReadinessState.Calibrating =>
+                Loc.Get("Loc_DSS_CALIBRATE_ANGULAR"),
+            DssAssistantReadinessState.TooClose =>
+                Loc.Get("Loc_DSS_TOO_CLOSE"),
+            DssAssistantReadinessState.TooFar =>
+                Loc.Get("Loc_DSS_TOO_FAR"),
+            DssAssistantReadinessState.Ready when live.Readiness.IsFarReadyEdge =>
+                Loc.Get("Loc_DSS_READY_FAR_EDGE_DETAIL"),
+            DssAssistantReadinessState.Ready =>
+                Loc.Get("Loc_DSS_READY_DETAIL"),
+            _ => Loc.Get("Loc_DSS_STARTING")
+        };
     }
 
     private static ExplorationBodySnapshot? ResolveDestinationBody(
@@ -210,76 +288,6 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
                 body => body.Name.Equals(
                     name,
                     StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void DrawStaticDssPattern(DssProbePattern pattern)
-    {
-        DssPlanCanvas.Children.Clear();
-
-        Brush border = ResourceBrush("BorderColorBrush", Brushes.DimGray);
-        Brush accent = ResourceBrush("AccentColorBrush", Brushes.DeepSkyBlue);
-        Brush primary = ResourceBrush("PrimaryTextColorBrush", Brushes.White);
-        Brush failure = ResourceBrush("FailureColorBrush", Brushes.OrangeRed);
-
-        const double centerX = 54;
-        const double centerY = 48;
-        const double radius = 35;
-
-        var disc = new Ellipse
-        {
-            Width = radius * 2,
-            Height = radius * 2,
-            Stroke = border,
-            StrokeThickness = 1
-        };
-        Canvas.SetLeft(disc, centerX - radius);
-        Canvas.SetTop(disc, centerY - radius);
-        DssPlanCanvas.Children.Add(disc);
-
-        foreach (DssAimPoint point in pattern.Points.OrderBy(item => item.Sequence))
-        {
-            Brush fill = point.Zone switch
-            {
-                DssAimZone.FarSide => failure,
-                DssAimZone.Limb => accent,
-                _ => primary
-            };
-
-            double x = centerX + point.X * radius;
-            double y = centerY + point.Y * radius;
-
-            var marker = new Ellipse
-            {
-                Width = 10,
-                Height = 10,
-                Fill = fill,
-                Stroke = ResourceBrush(
-                    "PrimaryBackgroundColorBrush",
-                    Brushes.Black),
-                StrokeThickness = 1
-            };
-
-            Canvas.SetLeft(marker, x - 5);
-            Canvas.SetTop(marker, y - 5);
-            DssPlanCanvas.Children.Add(marker);
-
-            var label = new TextBlock
-            {
-                Text = point.Sequence.ToString(),
-                FontSize = 7,
-                FontWeight = FontWeights.Bold,
-                Foreground = ResourceBrush(
-                    "PrimaryBackgroundColorBrush",
-                    Brushes.Black),
-                IsHitTestVisible = false
-            };
-            label.Measure(new Size(
-                double.PositiveInfinity,
-                double.PositiveInfinity));
-            Canvas.SetLeft(label, x - label.DesiredSize.Width / 2d);
-            Canvas.SetTop(label, y - label.DesiredSize.Height / 2d);
-            DssPlanCanvas.Children.Add(label);
-        }
     }
 
     private Brush ResourceBrush(string key, Brush fallback) =>
@@ -1062,6 +1070,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         }
 
         disposed = true;
+        dssPresentationTimer.Stop();
         DisposeFullWorkspace();
         ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
         ExplorationHistoryService.Instance.HistoryChanged -= OnExplorationHistoryChanged;

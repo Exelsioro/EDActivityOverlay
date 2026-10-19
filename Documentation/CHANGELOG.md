@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-beta.3] - 2026-10-19
+
+### Interface and VR
+
+- Added a composite overlay presentation and optional VR-compatible mode.
+- Unified the activity workspaces for Trade, Engineering, Exploration and Mining.
+- Kept the experimental desktop DSS assistant disabled while VR mode is active.
+
+### Exploration and DSS
+
+- Improved discovery/mapping candidate notifications and their known-state handling.
+- Refined experimental DSS lifecycle, native HUD recognition, probe-progress
+  presentation and input-binding handling for keyboard and HOTAS controls.
+
+### Distribution
+
+- Added a project support page and user-initiated, checksum-verified update
+  checks for stable and optional beta releases.
+- Made available updates visible from the tray even after the startup window
+  has been hidden.
+
+Realtime DSS recognition and automatic Galaxy Map interaction remain optional
+experimental features. VR mode intentionally disables DSS recognition.
+
 ## [1.3.0-beta.2] - 2026-09-10
 
 ### Mining

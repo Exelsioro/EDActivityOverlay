@@ -249,6 +249,13 @@ namespace EDActivityOverlay.Services
             Logger.Logger.Info($"Notification settings updated: enabled={enabled}, duration={durationSeconds}s");
         }
 
+        public void SetIncludeBetaUpdates(bool enabled)
+        {
+            if (_settings.IncludeBetaUpdates == enabled) return;
+            _settings.IncludeBetaUpdates = enabled;
+            SaveSettings();
+        }
+
         public void SetShipStatusWidgetSettings(bool enabled, string position)
         {
             position = string.IsNullOrWhiteSpace(position) ? "TopCenter" : position;
@@ -634,6 +641,9 @@ namespace EDActivityOverlay.Services
         /// Application version when settings were last saved
         /// </summary>
         public string Version { get; set; } = "1.0.0";
+
+        /// <summary>Opt into GitHub prereleases when checking for updates.</summary>
+        public bool IncludeBetaUpdates { get; set; }
 
         /// <summary>
         /// Timestamp when settings were last saved

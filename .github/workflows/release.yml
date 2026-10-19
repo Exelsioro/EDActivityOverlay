@@ -40,8 +40,14 @@ jobs:
           if ($version -notmatch '^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.-]+)?$') {
             throw "Release tag is not a supported SemVer version: $tag"
           }
-
           $fileVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
+
+          [xml]$project = Get-Content -LiteralPath '.\EDActivityOverlay\EDActivityOverlay.csproj'
+          $declaredVersion = $project.Project.PropertyGroup.Version
+          if ($declaredVersion -ne $version) {
+            throw "Release tag $tag does not match project version $declaredVersion"
+          }
+
           "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
           "FILE_VERSION=$fileVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
           "IS_PRERELEASE=$($version.Contains('-').ToString().ToLowerInvariant())" |
@@ -184,12 +190,15 @@ jobs:
           $arguments = @(
             'release', 'create', '${{ github.ref_name }}',
             '--verify-tag',
+            '--fail-on-no-commits',
             '--title', "ED Activity Overlay $env:RELEASE_VERSION",
             '--generate-notes'
           )
 
           if ($env:IS_PRERELEASE -eq 'true') {
             $arguments += '--prerelease'
+            $arguments += '--notes'
+            $arguments += 'Beta release: realtime DSS recognition and automatic Galaxy Map interaction are optional experimental features. VR mode disables DSS recognition. The installer is not code-signed; verify SHA256SUMS.txt before running it. Please report reproducible problems through GitHub Issues.'
           }
           else {
             $arguments += '--latest'

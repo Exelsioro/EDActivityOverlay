@@ -78,25 +78,31 @@
               <TextBlock x:Name="ExobioBodyProgressText" Margin="0,6,0,0" FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
             </StackPanel>
           </Border>
-          <!-- Composite/VR keeps the DSS assistance state, but this
-                         surface is deliberately journal/catalog-only. It must
-                         never consume CV/runtime screen-recognition state. -->
-          <Border x:Name="DssContextPanel" Visibility="Collapsed" Padding="9,7" Background="{DynamicResource SecondaryBackgroundColorBrush}" BorderBrush="{DynamicResource AccentColorBrush}" BorderThickness="2,0,0,0">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="112" />
-              </Grid.ColumnDefinitions>
-              <StackPanel>
-                <TextBlock Text="{DynamicResource Loc_DSS_ASSISTANT}" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource AccentColorBrush}" />
-                <TextBlock x:Name="DssBodyText" Margin="0,2,0,0" FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource PrimaryTextColorBrush}" />
-                <TextBlock x:Name="DssTargetText" Margin="0,6,0,0" FontSize="10" Foreground="{DynamicResource PrimaryTextColorBrush}" />
-                <TextBlock x:Name="DssTargetHintText" Margin="0,3,0,0" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" />
-                <TextBlock x:Name="DssResultText" Margin="0,5,0,0" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
-                <TextBlock x:Name="DssPlanText" Margin="0,5,0,0" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource AccentColorBrush}" />
-              </StackPanel>
-              <Canvas x:Name="DssPlanCanvas" Grid.Column="1" Width="108" Height="96" Margin="4,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right" IsHitTestVisible="False" />
-            </Grid>
+          <!-- Desktop composite consumes presentation-only snapshots from the
+               DSS runtime. VR disables both the runtime and this surface. -->
+          <Border x:Name="DssContextPanel" Visibility="Collapsed" Padding="9,7" Background="{DynamicResource SecondaryBackgroundColorBrush}" BorderBrush="{DynamicResource AccentColorBrush}" BorderThickness="2,0,0,0">
+              <StackPanel>
+                <TextBlock x:Name="DssReadinessTitleText" Margin="0,7,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentColorBrush}" />
+                <TextBlock x:Name="DssTargetHintText" Margin="0,3,0,0" FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                <Border Height="1" Margin="0,7,0,6" Background="{DynamicResource BorderColorBrush}" Opacity="0.7" />
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="112" />
+                  </Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <TextBlock x:Name="DssMetricsText" Margin="0,0,0,4" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                    <TextBlock x:Name="DssDistanceText" Margin="0,0,0,4" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                    <TextBlock x:Name="DssTargetText" Margin="0,0,0,4" FontSize="10" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                    <TextBlock x:Name="DssResultText" Margin="0,0,0,4" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                    <TextBlock x:Name="DssPlanText" Margin="0,0,0,4" FontSize="9" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource AccentColorBrush}" />
+                    <TextBlock x:Name="DssMappingText" Margin="0,0,0,4" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource AccentColorBrush}" />
+                    <TextBlock x:Name="DssScannerText" Margin="0,0,0,4" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+                    <TextBlock x:Name="DssTrackingText" Margin="0,0,0,4" FontSize="9" TextWrapping="Wrap" Foreground="{DynamicResource MutedTextColorBrush}" />
+                  </StackPanel>
+                  <Canvas x:Name="DssPlanCanvas" Grid.Column="1" Width="108" Height="96" Margin="4,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right" IsHitTestVisible="False" />
+                </Grid>
+              </StackPanel>
           </Border>
         </Grid>
         <Border x:Name="CompactRouteAlertPanel" Grid.Row="4" Margin="0,7,0,0" Visibility="Collapsed" Padding="9,6" Background="{DynamicResource SecondaryBackgroundColorBrush}" BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1,0,0,0">

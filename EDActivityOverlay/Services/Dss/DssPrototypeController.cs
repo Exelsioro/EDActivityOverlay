@@ -83,6 +83,7 @@ internal sealed class DssPrototypeController : IDisposable
     private Task? captureTask;
     private long frameSequence;
     private int launchSequence;
+    private int ignoredFireInputCount;
 
     // Step 1 is visible before the first shot. A non-MISS fire advances the
     // sequence; SAAScanComplete suppresses further targets.
@@ -197,6 +198,7 @@ internal sealed class DssPrototypeController : IDisposable
 
         frameSequence = 0;
         launchSequence = 0;
+        ignoredFireInputCount = 0;
         latestLaunchFrame = null;
         impactCounterDetector.Reset();
         flightCorrelator.Reset();
@@ -290,6 +292,14 @@ internal sealed class DssPrototypeController : IDisposable
 
         if (!sameBody)
         {
+            // Native HUD telemetry is body-specific. Never carry an efficiency
+            // target, hit count, or coverage value from the previous body.
+            DssNativeEfficiencyTargetRuntime
+                .ResetForBodyChange();
+
+            DssNativeScanProgressRuntime
+                .ResetForBodyChange();
+
             targetingProgressSystemAddress =
                 context.SystemAddress;
             targetingProgressBodyId =
@@ -300,6 +310,7 @@ internal sealed class DssPrototypeController : IDisposable
             Interlocked.Exchange(
                 ref targetingSequentialStep,
                 1);
+            DssAssistantStateService.Instance.SetTargetingStep(1);
             Interlocked.Exchange(
                 ref targetingScanComplete,
                 0);
@@ -321,6 +332,8 @@ internal sealed class DssPrototypeController : IDisposable
             $"DSS TARGETING resumed same body at step " +
             $"{Volatile.Read(ref targetingSequentialStep)}; " +
             $"complete={Volatile.Read(ref targetingScanComplete) != 0}.");
+        DssAssistantStateService.Instance.SetTargetingStep(
+            Volatile.Read(ref targetingSequentialStep));
     }
 
     internal static bool IsSameTargetingBody(
@@ -695,6 +708,11 @@ internal sealed class DssPrototypeController : IDisposable
                     // allowed to seed native DSS state.
                     DssNativeEfficiencyTargetRuntime.Observe(
                         frame);
+
+                    // A game-confirmed impact is authoritative even when a
+                    // short Logitech fire pulse escaped input polling. Never
+                    // move backwards or count an already observed fire twice.
+                    ReconcileTargetingStepFromNativeHits();
 
                     Stopwatch detectWatch =
                         Stopwatch.StartNew();
@@ -1097,7 +1115,10 @@ internal sealed class DssPrototypeController : IDisposable
         try
         {
             DssFireBindingSet bindings =
-                DssFireBindingResolver.Resolve();
+                DssLogitechProfileFireBindings.AddProfileInputs(
+                    DssFireBindingResolver.Resolve(),
+                    SettingsService.Instance.Settings.EnableX52Support,
+                    SettingsService.Instance.Settings.X52StartupProfilePath);
 
             sessionLogger?.LogFireBindings(
                 bindings);
@@ -1143,6 +1164,13 @@ internal sealed class DssPrototypeController : IDisposable
             || !captureActive
             || latestState.GuiFocus != 10)
         {
+            if (Interlocked.Increment(ref ignoredFireInputCount) <= 3)
+            {
+                Logger.Logger.Warning(
+                    $"DSS fire input ignored: disposed={disposed}; " +
+                    $"session={sessionActive}; capture={captureActive}; " +
+                    $"GuiFocus={latestState.GuiFocus}; binding={e.Binding.Identity}.");
+            }
             return;
         }
 
@@ -1214,6 +1242,9 @@ internal sealed class DssPrototypeController : IDisposable
                     Interlocked.Increment(
                         ref targetingSequentialStep);
 
+                DssAssistantStateService.Instance.SetTargetingStep(
+                    nextStep);
+
                 sequenceAdvanced = true;
 
                 Logger.Logger.Info(
@@ -1256,6 +1287,58 @@ internal sealed class DssPrototypeController : IDisposable
             $"pendingHit={queuedForImpact}; " +
             $"frameAge={launch.FrameAgeMilliseconds:0.#} ms.");
     }
+
+    private void ReconcileTargetingStepFromNativeHits()
+    {
+        if (!DssNativeScanProgressRuntime.TryGetFresh(
+                out DssNativeScanProgressSnapshot progress)
+            || progress.HitCount < 1
+            || Volatile.Read(ref targetingScanComplete) != 0)
+        {
+            return;
+        }
+
+        while (true)
+        {
+            int currentStep = Volatile.Read(
+                ref targetingSequentialStep);
+            int nextStep = NextStepForNativeHits(
+                currentStep,
+                progress.HitCount);
+
+            if (nextStep == currentStep)
+            {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(
+                    ref targetingSequentialStep,
+                    nextStep,
+                    currentStep) == currentStep)
+            {
+                DssAssistantStateService.Instance.SetTargetingStep(
+                    nextStep);
+                Logger.Logger.Info(
+                    $"DSS TARGETING reconciled from native hits: " +
+                    $"{currentStep} -> {nextStep}; " +
+                    $"hits={progress.HitCount}.");
+                return;
+            }
+        }
+    }
+
+    internal static int NextStepForNativeHits(
+        int currentStep,
+        int hitCount) =>
+        hitCount < 0
+            ? currentStep
+            : Math.Max(
+                currentStep,
+                Math.Min(
+                    hitCount + 1,
+                    DssPredictiveBatchPlanner.MaximumBatchCount
+                    + DssPredictiveBatchPlanner.MaximumCorrectionShots
+                    + 1));
 
     private void MarkCoverageCandidateUsed(
         int candidateId)

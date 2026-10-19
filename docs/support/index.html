@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0a0c0f" />
+  <meta name="description" content="Support the continued development of EDAO, a free companion app for Elite Dangerous." />
+  <meta property="og:title" content="Support EDAO Development" />
+  <meta property="og:description" content="Help keep EDAO free and improving. Choose your preferred way to support development." />
+  <meta property="og:type" content="website" />
+  <title>Support EDAO — Independent Elite Dangerous Companion</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0a0c0f; --panel: #11161c; --edge: #323840; --muted: #9ba7b4; --text: #f0f4f8; --accent: #ffab43; --accent-strong: #ffd295; }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse 70% 50% at 50% -14%, #25201a 0%, transparent 70%), var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color: inherit; }
+    .wrap { position: relative; width: min(100% - 40px, 610px); margin: 0 auto; padding: 78px 0 44px; }
+    .halo { z-index: -1; position: absolute; width: 380px; height: 380px; left: 50%; top: 0; transform: translateX(-50%); border-radius: 50%; border: 1px solid #7651273d; box-shadow: 0 0 0 42px #e0901708,0 0 0 84px #e0901705; pointer-events:none; }
+    .eyebrow { color: var(--accent); letter-spacing: .28em; font-size: 11px; font-weight: 780; text-transform: uppercase; text-align: center; }
+    .logo { font-size: clamp(58px, 14vw, 84px); line-height: 1; font-weight: 850; letter-spacing: -.095em; margin: 20px 0 11px; text-align: center; padding-right: .095em; }
+    .logo span { color: var(--accent); }
+    h1 { font-size: clamp(25px, 5vw, 35px); letter-spacing: -.045em; line-height: 1.15; font-weight: 740; text-align: center; margin: 14px 0; }
+    .lead { color: #bac4ce; text-align: center; font-size: 15px; line-height: 1.7; max-width: 505px; margin: 16px auto 37px; }
+    .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 780; margin: 0 0 12px 3px; }
+    .options { display: grid; gap: 12px; }
+    .option { text-decoration: none; min-height: 88px; border: 1px solid var(--edge); background: linear-gradient(115deg, #191e24, #101419); border-radius: 16px; padding: 17px 19px; display: flex; gap: 16px; align-items: center; transition: background .18s, border .18s, transform .18s; }
+    .option[href]:hover { border-color: #ffb75a; background: #24201d; transform: translateY(-2px); }
+    .option[href]:focus-visible, .footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    .symbol { width: 48px; height: 48px; flex: none; display:grid;place-items:center;border-radius: 12px; background: #30251b; color: var(--accent-strong); font-size: 23px; font-weight: 780; }
+    .content { flex: 1; min-width: 0; }
+    .name { font-weight: 760; font-size: 17px; margin-bottom: 4px; }
+    .hint { color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .arrow { color: var(--accent); font-size: 24px; line-height: 1; margin-left: 4px; }
+    .note { margin: 27px 3px 30px; border-left: 2px solid #bc7d37; padding: 6px 0 6px 17px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .note strong { color: #e3ebf1; font-weight: 640; }
+    .footer { border-top: 1px solid #2b323a; padding-top: 23px; display:flex; align-items:center; justify-content:space-between; gap:12px; color: var(--muted); font-size: 12px; }
+    .footer a { color: #e2e8ee; text-underline-offset: 3px; }
+    .disclaimer { text-align:center; color:#64707b; font-size:11px; line-height:1.5; margin-top:30px; }
+    @media(max-width:480px){ .wrap {padding-top:56px; width:min(100% - 28px,610px);} .option{padding:14px;} .lead{font-size:14px;} .halo{width:300px;height:300px;} .footer{flex-direction:column;align-items:flex-start;} }
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="halo" aria-hidden="true"></div>
+    <div class="eyebrow">Community supported · Free software</div>
+    <div class="logo" aria-label="EDAO">EDA<span>O</span></div>
+    <h1>Support EDAO Development</h1>
+    <p class="lead">EDAO is an independent companion app for <em>Elite Dangerous</em>. If it makes your time in the galaxy better, you can help fund continued development — completely voluntarily.</p>
+
+    <h2 class="label">Choose your preferred method</h2>
+    <div class="options">
+      <a class="option" href="https://ko-fi.com/exelsior" target="_blank" rel="noopener noreferrer">
+        <span class="symbol" aria-hidden="true">♥</span>
+        <span class="content"><span class="name">Support on Ko-fi</span><div class="hint">One-time support</div></span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+      <a class="option" href="https://boosty.to/exelsioro/donate" target="_blank" rel="noopener noreferrer">
+        <span class="symbol" aria-hidden="true">★</span>
+        <span class="content"><span class="name">Support on Boosty</span><div class="hint">Alternative payment option</div></span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <div class="note"><strong>Always free. No paywalls.</strong> Donations are optional and do not unlock features or provide special treatment. Thank you for supporting independent development. o7</div>
+
+    <footer class="footer">
+      <span>Made for commanders, by a commander.</span>
+      <a href="https://github.com/Exelsioro/EDActivityOverlay" target="_blank" rel="noopener noreferrer">View the project on GitHub ↗</a>
+    </footer>
+    <div class="disclaimer">Unofficial community project. Not affiliated with Frontier Developments.</div>
+  </main>
+</body>
+</html>

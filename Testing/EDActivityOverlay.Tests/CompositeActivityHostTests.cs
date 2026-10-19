@@ -61,7 +61,7 @@ public sealed class CompositeActivityHostTests
     }
 
     [Fact]
-    public void CompositeExplorationKeepsDssStateWithoutCvRuntime()
+    public void CompositeExplorationConsumesDssPresentationRuntimeOutsideVr()
     {
         string host = ReadProjectFile(
             "EDActivityOverlay",
@@ -71,9 +71,25 @@ public sealed class CompositeActivityHostTests
             "EDActivityOverlay",
             "UserControls",
             "ExplorationWorkspaceControl.xaml.cs");
+        string dssPresentation = ReadProjectFile(
+            "EDActivityOverlay",
+            "UserControls",
+            "ExplorationWorkspaceControl.Dss.cs");
+        string xaml = ReadProjectFile(
+            "EDActivityOverlay",
+            "UserControls",
+            "ExplorationWorkspaceControl.xaml");
 
         Assert.Contains(
             "ActivityType.Exploration",
+            host,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ExplorationCompactDssHeight",
+            host,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "explorationWorkspaceControl.IsCompactDssMode",
             host,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -81,20 +97,56 @@ public sealed class CompositeActivityHostTests
             exploration,
             StringComparison.Ordinal);
         Assert.Contains(
+            "live!.TargetingStep",
+            dssPresentation,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
             "DssProbePatternCatalog.Get",
             exploration,
             StringComparison.Ordinal);
-        Assert.DoesNotContain(
+        Assert.Contains(
             "DssAssistantStateService",
             exploration,
             StringComparison.Ordinal);
-        Assert.DoesNotContain(
+        Assert.Contains(
             "DssNativeScanProgressRuntime",
+            dssPresentation,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "DssNativeEfficiencyTargetRuntime",
+            dssPresentation,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "VrOverlaySupport.IsEnabled",
             exploration,
             StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "DssNativeEfficiencyTargetRuntime",
+        Assert.Contains(
+            "RefreshCompactDssDetails",
             exploration,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "GenerateOrderedSphericalPlan",
+            dssPresentation,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BuildCompactAngularSummary",
+            dssPresentation,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BuildCompactDistanceSummary",
+            dssPresentation,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "x:Name=\"DssReadinessTitleText\"",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "x:Name=\"DssPlanCanvas\"",
+            xaml,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Width=\"108\" Height=\"96\" Visibility=\"Collapsed\"",
+            xaml,
             StringComparison.Ordinal);
     }
 

@@ -145,6 +145,9 @@ namespace EDActivityOverlay.Windows
             LoadExperimentalDssSettings();
             LoadRouteAutomationSettings();
             LoadX52Settings();
+            IncludeBetaUpdatesCheckBox.IsChecked = SettingsService.Instance.Settings.IncludeBetaUpdates;
+            UpdateService.Instance.Changed += OnUpdateChanged;
+            RefreshUpdateStatus();
             RefreshJournalStatus();
             _ = RefreshStorageUsageAsync();
             ExplorationDataService.Instance.DataChanged += OnExplorationDataChanged;
@@ -1222,6 +1225,7 @@ namespace EDActivityOverlay.Windows
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
         {
+            UpdateService.Instance.Changed -= OnUpdateChanged;
             ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
             X52IntegrationService.Instance.StateChanged -= OnX52StateChanged;
             Closed -= SettingsWindow_Closed;
@@ -1249,7 +1253,45 @@ namespace EDActivityOverlay.Windows
 
         private void SupportDeveloperButton_Click(object sender, RoutedEventArgs e)
         {
-            ProjectSupportService.OpenKoFi();
+            ProjectSupportService.OpenSupportPage();
+        }
+
+        private void OnUpdateChanged(object? sender, EventArgs e) =>
+            Dispatcher.BeginInvoke(new Action(RefreshUpdateStatus));
+
+        private void RefreshUpdateStatus()
+        {
+            var service = UpdateService.Instance;
+            string current = service.CurrentVersion?.Value ?? "?";
+            UpdateStatusText.Text = service.IsBusy
+                ? Loc.Get("Loc_UPDATE_WORKING")
+                : service.AvailableRelease is not null
+                    ? Loc.Format("Loc_UPDATE_AVAILABLE_FORMAT", service.AvailableRelease.Version.Value)
+                    : service.Error is not null
+                        ? Loc.Format("Loc_UPDATE_CHECK_FAILED_FORMAT", service.Error)
+                        : Loc.Format("Loc_UPDATE_CURRENT_FORMAT", current);
+            CheckUpdateButton.IsEnabled = !service.IsBusy;
+            InstallUpdateButton.IsEnabled = !service.IsBusy;
+            InstallUpdateButton.Visibility = service.AvailableRelease is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void IncludeBetaUpdatesCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            SettingsService.Instance.SetIncludeBetaUpdates(IncludeBetaUpdatesCheckBox.IsChecked == true);
+            _ = UpdateService.Instance.CheckAsync(SettingsService.Instance.Settings.IncludeBetaUpdates);
+        }
+
+        private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e) =>
+            await UpdateService.Instance.CheckAsync(SettingsService.Instance.Settings.IncludeBetaUpdates);
+
+        private async void InstallUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            try { await UpdateService.Instance.InstallAsync(); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Loc.Get("Loc_UPDATE_FAILED"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

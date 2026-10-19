@@ -24,6 +24,7 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     private const double ExplorationCompactWidth = 420;
     private const double ExplorationCompactHeight = 350;
+    private const double ExplorationCompactDssHeight = 400;
     private const double ExplorationFullMinWidth = 1040;
     private const double ExplorationFullMinHeight = 660;
     private const double ExplorationFullMaxWidth = 1180;
@@ -225,7 +226,11 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
             ActivityType.Exploration =>
                 (Math.Min(ExplorationCompactWidth, widthLimit),
-                 Math.Min(ExplorationCompactHeight, heightLimit)),
+                 Math.Min(
+                     explorationWorkspaceControl.IsCompactDssMode
+                         ? ExplorationCompactDssHeight
+                         : ExplorationCompactHeight,
+                     heightLimit)),
 
             ActivityType.Engineering when engineeringWorkspaceControl.IsFullMode =>
                 (FitFullSize(
@@ -362,11 +367,18 @@ public sealed class CompositeActivityHostControl : Grid, IDisposable
 
     private void ApplyJournalState(GameStateSnapshot state)
     {
+        bool wasCompactDss =
+            explorationWorkspaceControl.IsCompactDssMode;
         explorationWorkspaceControl.UpdateJournalState(state);
         tradeWorkspaceControl.UpdateJournalState(state);
         miningWorkspaceControl.UpdateJournalState(state);
         miningAnalyticsWorkspaceControl.UpdateJournalState(state);
         miningLocationWorkspaceControl.UpdateJournalState(state);
+        if (renderedActivity == ActivityType.Exploration
+            && wasCompactDss != explorationWorkspaceControl.IsCompactDssMode)
+        {
+            PresentationChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void OnJournalStateChanged(object? sender, GameStateChangedEventArgs e)
