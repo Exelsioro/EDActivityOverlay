@@ -149,6 +149,9 @@ The application checks GitHub Releases on startup. The startup window and
 Settings always show the installed version and a separate update status,
 including checking, no update, available update and network failure. Available
 updates also appear in the tray menu. The beta channel can be enabled in Settings.
+Release metadata is cached for 30 minutes; a GitHub Pages backup catalog keeps
+checks available when GitHub's public API rate limit is reached. The manual
+check button refreshes metadata rather than waiting for the cache to expire.
 Installation is always user-initiated: the installer is downloaded, checked
 against the release's `SHA256SUMS.txt`, launched, and then the app exits. The
 same Inno Setup AppId updates an existing installation in place.

@@ -1513,6 +1513,7 @@
     <sys:String x:Key="Loc_UPDATE_UP_TO_DATE">Обновлений нет (проверены стабильные и бета-релизы).</sys:String>
     <sys:String x:Key="Loc_UPDATE_UP_TO_DATE_STABLE">Стабильных обновлений нет. Бета-релизы выключены в Настройки → Обновления.</sys:String>
     <sys:String x:Key="Loc_UPDATE_VERSION_UNKNOWN">Не удалось определить версию установленного приложения.</sys:String>
+    <sys:String x:Key="Loc_UPDATE_SOURCES_UNAVAILABLE">GitHub и резервный каталог обновлений недоступны. Повторите проверку позже.</sys:String>
     <sys:String x:Key="Loc_UPDATE_WORKING">Проверка или загрузка обновления…</sys:String>
     <sys:String x:Key="Loc_UPDATE_CHECK_FAILED_FORMAT">Не удалось проверить обновления: {0}</sys:String>
     <sys:String x:Key="Loc_UPDATE_FAILED">Ошибка обновления</sys:String>

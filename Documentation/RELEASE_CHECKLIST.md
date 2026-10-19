@@ -41,6 +41,8 @@
 - Download and install the generated installer from GitHub Actions before
   publishing release notes.
 - Verify `SHA256SUMS.txt` against both distributed artifacts.
+- Verify the Pages workflow refreshed `updates.json` after publication and
+  the backup catalog exposes the new release's installer and checksum URLs.
 - Note that the installer is not Authenticode-signed; do not describe a
   SmartScreen/reputation warning as proof of a bad checksum or as a signed build.
 - Record experimental features and known limitations in the release notes.

@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and check failure. Clarify when only stable releases are being checked.
 - Let the startup window grow with its status text, refresh update text after
   language changes, and log completed checks for diagnostics.
+- Cache release metadata for 30 minutes and use a public Pages catalog when
+  GitHub's unauthenticated API quota is exhausted. Respect API retry/reset
+  headers; installer URLs and SHA-256 verification retain the same checks.
 
 ## [1.3.0-beta.3] - 2026-10-19
 

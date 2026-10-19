@@ -1280,7 +1280,7 @@ namespace EDActivityOverlay.Windows
         }
 
         private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e) =>
-            await UpdateService.Instance.CheckAsync(SettingsService.Instance.Settings.IncludeBetaUpdates);
+            await UpdateService.Instance.CheckAsync(SettingsService.Instance.Settings.IncludeBetaUpdates, forceRefresh: true);
 
         private async void InstallUpdateButton_Click(object sender, RoutedEventArgs e)
         {

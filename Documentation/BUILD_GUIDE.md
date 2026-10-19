@@ -93,6 +93,15 @@ git tag v1.3.0-beta.4
 git push origin v1.3.0-beta.4
 ```
 
+The Pages workflow publishes the support site and a compact `updates.json`
+catalog generated from public GitHub Releases. It runs after a successful
+`Release` workflow as well as on site/publisher changes and manual dispatch.
+The workflow's token is used only to fetch metadata in CI; the public catalog
+contains release flags, asset names/sizes and original GitHub download URLs.
+The application can therefore check for updates without a user token when the
+unauthenticated GitHub API is rate-limited. Publisher tests run with
+`node --test Testing/build-update-manifest.test.mjs`.
+
 ## Troubleshooting
 
 - Missing app executable: run a full build or publish.
