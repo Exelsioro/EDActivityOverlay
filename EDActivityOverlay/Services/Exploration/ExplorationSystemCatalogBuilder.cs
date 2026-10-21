@@ -65,7 +65,7 @@ public static class ExplorationSystemCatalogBuilder
         string type = Prefer(local.BodyType, external?.Type);
         string subtype = Prefer(local.BodyClass, external?.Subtype, local.Description);
         bool terraformable = local.Terraformable
-                             || ContainsTerraform(external?.TerraformingState);
+                             || TerraformingStatus.IsPositive(external?.TerraformingState);
         long mappingValue =
             ExplorationPresentationValueResolver.ResolveMappingEstimate(
                 local);
@@ -121,9 +121,14 @@ public static class ExplorationSystemCatalogBuilder
                 ? "Journal"
                 : $"Journal + {externalSource}")
         {
-            SurfacePressureAtmospheres = local.SurfacePressureAtmospheres > 0
+            SurfacePressureAtmospheres = ExplorationPhysicalMeasurements.IsPressureKnown(
+                local.SurfacePressureAtmospheres, local.SurfacePressureKnown)
                 ? local.SurfacePressureAtmospheres
                 : external?.SurfacePressureAtmospheres ?? 0,
+            SurfacePressureKnown = ExplorationPhysicalMeasurements.IsPressureKnown(
+                local.SurfacePressureAtmospheres, local.SurfacePressureKnown)
+                || external is not null && ExplorationPhysicalMeasurements.IsPressureKnown(
+                    external.SurfacePressureAtmospheres, external.SurfacePressureKnown),
             LastProbesUsed = local.LastProbesUsed,
             EfficiencyTarget = local.EfficiencyTarget,
             DiscoveryStatusKnown = local.DiscoveryStatusKnown,
@@ -138,7 +143,7 @@ public static class ExplorationSystemCatalogBuilder
         ExplorationHistoryBodySnapshot? history,
         string source)
     {
-        bool terraformable = ContainsTerraform(body.TerraformingState);
+        bool terraformable = TerraformingStatus.IsPositive(body.TerraformingState);
         int biologicalSignals =
             history?.BiologicalSignals ?? 0;
         IReadOnlyList<string> genuses =
@@ -181,7 +186,8 @@ public static class ExplorationSystemCatalogBuilder
             highlights,
             source)
         {
-            SurfacePressureAtmospheres = body.SurfacePressureAtmospheres
+            SurfacePressureAtmospheres = body.SurfacePressureAtmospheres,
+            SurfacePressureKnown = body.SurfacePressureKnown
         };
     }
 
@@ -228,9 +234,6 @@ public static class ExplorationSystemCatalogBuilder
 
     private static string Identity(ExplorationCatalogBody body) =>
         body.BodyId >= 0 ? $"id:{body.BodyId}" : $"name:{body.Name}";
-
-    private static bool ContainsTerraform(string? value) =>
-        value?.Contains("Terraform", StringComparison.OrdinalIgnoreCase) == true;
 
     private static bool Contains(string value, params string[] candidates) =>
         candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));

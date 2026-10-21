@@ -236,6 +236,31 @@
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
     
+    <!-- Opt-in overlay hierarchy; keep themes, chrome and the user's global body size. -->
+    <Style x:Key="OverlayBodyTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="TextTrimming" Value="None"/>
+    </Style>
+    <Style x:Key="OverlayDetailTextStyle" TargetType="TextBlock" BasedOn="{StaticResource OverlayBodyTextStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextColorBrush}"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style x:Key="OverlayCaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource OverlayDetailTextStyle}">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="OverlayActionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource OverlayBodyTextStyle}">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentColorBrush}"/>
+    </Style>
+    <Style x:Key="OverlayNumericCellTextStyle" TargetType="TextBlock">
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="4,0"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+    </Style>
+
     <!-- Border Styles -->
     
     <Style x:Key="WindowBorderStyle" TargetType="Border">

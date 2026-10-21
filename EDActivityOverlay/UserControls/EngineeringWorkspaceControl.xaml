@@ -56,17 +56,17 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <StackPanel>
-                                                <TextBlock Text="{Binding Material}" FontWeight="SemiBold"
+                                                <TextBlock Text="{Binding Material}" FontWeight="SemiBold" FontSize="12"
                                                            Foreground="{DynamicResource PrimaryTextColorBrush}"
+                                                           ToolTip="{Binding Material}"
                                                            TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Progress}" FontSize="9"
-                                                           Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                                <TextBlock Text="{Binding Progress}" Style="{DynamicResource OverlayCaptionTextStyle}"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
-                                                <Button Content="{DynamicResource Loc_COPY_SYSTEM_SHORT}" Padding="6,2" Margin="0,0,4,0"
+                                                <Button Content="{DynamicResource Loc_COPY_SYSTEM_SHORT}" Padding="6,2" MinHeight="28" Margin="0,0,4,0"
                                                         IsEnabled="{Binding CanCopySystem}" CommandParameter="{Binding}"
                                                         Click="CopyWidgetSystem_Click"/>
-                                                <Button Content="{DynamicResource Loc_HELP}" Padding="7,2"
+                                                <Button Content="{DynamicResource Loc_HELP}" Padding="7,2" MinHeight="28"
                                                         IsEnabled="{Binding CanOpenHelp}" CommandParameter="{Binding}"
                                                         Click="OpenWidgetHelp_Click"/>
                                             </StackPanel>
@@ -325,8 +325,8 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL}" Binding="{Binding Name}" Width="*"/>
                                 <DataGridTextColumn Header="{DynamicResource Loc_TYPE}" Binding="{Binding CategoryName}" Width="120"/>
-                                <DataGridTextColumn Header="{DynamicResource Loc_HAVE_NEED}" Binding="{Binding ProgressText}" Width="120"/>
-                                <DataGridTextColumn Header="{DynamicResource Loc_MISSING}" Binding="{Binding Missing}" Width="95"/>
+                                <DataGridTextColumn Header="{DynamicResource Loc_HAVE_NEED}" Binding="{Binding ProgressText}" Width="120" ElementStyle="{DynamicResource OverlayNumericCellTextStyle}"/>
+                                <DataGridTextColumn Header="{DynamicResource Loc_MISSING}" Binding="{Binding Missing}" Width="95" ElementStyle="{DynamicResource OverlayNumericCellTextStyle}"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -338,16 +338,21 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="{DynamicResource Loc_MISSING_MATERIALS_RECOMMENDED_SOURCES}" FontWeight="Bold"
-                               Foreground="{DynamicResource AccentColorBrush}" Margin="0,0,0,8"/>
-                    <DataGrid x:Name="AdviceGrid" Grid.Row="1" AlternationCount="2" MouseDoubleClick="AdviceGrid_MouseDoubleClick">
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="{DynamicResource Loc_MISSING_MATERIALS_RECOMMENDED_SOURCES}" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentColorBrush}"/>
+                        <TextBlock Text="{DynamicResource Loc_ENGINEERING_ADVICE_SELECTION_HINT}" Margin="0,4,0,0"
+                                   Style="{DynamicResource OverlayDetailTextStyle}"/>
+                    </StackPanel>
+                    <DataGrid x:Name="AdviceGrid" Grid.Row="1" MinHeight="80" SelectionMode="Single" AlternationCount="2" MouseDoubleClick="AdviceGrid_MouseDoubleClick">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL}" Binding="{Binding Material}" Width="180"/>
-                            <DataGridTextColumn Header="{DynamicResource Loc_MISSING}" Binding="{Binding Missing}" Width="80"/>
-                            <DataGridTextColumn Header="{DynamicResource Loc_SOURCE}" Binding="{Binding Source}" Width="160"/>
-                            <DataGridTextColumn Header="{DynamicResource Loc_WHERE_TO_GO}" Binding="{Binding Destination}" Width="200"/>
-                            <DataGridTextColumn Header="{DynamicResource Loc_HOW_TO_GET}" Binding="{Binding Instructions}" Width="*"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MATERIAL}" Binding="{Binding Material}" Width="2*" MinWidth="140"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_MISSING}" Binding="{Binding Missing}" Width="80" ElementStyle="{DynamicResource OverlayNumericCellTextStyle}"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_SOURCE}" Binding="{Binding Source}" Width="2*" MinWidth="150"/>
+                            <DataGridTextColumn Header="{DynamicResource Loc_WHERE_TO_GO}" Binding="{Binding Destination}" Width="2*" MinWidth="170"/>
                             <DataGridTemplateColumn Header="{DynamicResource Loc_ACTIONS}" Width="190">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -364,7 +369,34 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Border x:Name="AdviceHelpPanel" Grid.Row="2" Visibility="Collapsed"
+                    <Border x:Name="AdviceDetailPanel" Grid.Row="2" DataContext="{Binding SelectedItem, ElementName=AdviceGrid}"
+                            Margin="0,10,0,0" Padding="12"
+                            BorderBrush="{DynamicResource AccentColorBrush}" BorderThickness="2,0,0,0"
+                            Background="{DynamicResource HighlightBackgroundBrush}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Visibility, ElementName=AdviceHelpPanel}" Value="Visible">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc_HOW_TO_GET}" Style="{DynamicResource OverlayCaptionTextStyle}"/>
+                            <TextBlock Text="{Binding Material}" Margin="0,3,0,6" FontWeight="SemiBold"
+                                       Style="{DynamicResource OverlayBodyTextStyle}"/>
+                            <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                                <TextBlock Text="{Binding Instructions}" Style="{DynamicResource OverlayBodyTextStyle}"/>
+                            </ScrollViewer>
+                            <TextBlock Text="{Binding Destination}" Margin="0,6,0,0" Style="{DynamicResource OverlayDetailTextStyle}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="AdviceHelpPanel" Grid.Row="3" Visibility="Collapsed"
                             Margin="0,10,0,0" Padding="12"
                             BorderBrush="{DynamicResource BorderColorBrush}" BorderThickness="1"
                             Background="{DynamicResource SecondaryBackgroundColorBrush}">
@@ -389,7 +421,7 @@
                                 </StackPanel>
                             </Grid>
                             <TextBlock Grid.Row="1" Text="{DynamicResource Loc_All_known_acquisition_methods}"
-                                       Margin="0,4,0,8" Foreground="{DynamicResource MutedTextColorBrush}"/>
+                                       Margin="0,4,0,8" Style="{DynamicResource OverlayDetailTextStyle}"/>
                             <ScrollViewer Grid.Row="2" MaxHeight="245" VerticalScrollBarVisibility="Auto">
                                 <ItemsControl x:Name="AdviceHelpOptions">
                                     <ItemsControl.ItemTemplate>
@@ -401,7 +433,7 @@
                                                     <TextBlock Text="{Binding Title}" FontWeight="Bold"
                                                                Foreground="{DynamicResource PrimaryTextColorBrush}"/>
                                                     <TextBlock Text="{Binding Instructions}" Margin="0,3,0,0"
-                                                               TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}"/>
+                                                               Style="{DynamicResource OverlayBodyTextStyle}"/>
                                                     <TextBlock Text="{Binding Destination}" Margin="0,4,0,0"
                                                                FontWeight="SemiBold" Foreground="{DynamicResource AccentColorBrush}"/>
                                                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">

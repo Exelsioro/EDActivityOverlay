@@ -11,9 +11,24 @@ The activity shortcut (`Ctrl+3` by default) toggles the compact workspace. It
 shows current-system FSS progress, detailed scans and DSS mappings made during
 the current visit, efficient mappings, biological signals, valuable mapping
 targets, organic sample spacing, fuel risk, imported-route progress and nearby
-curated POIs. The surface radar points along the shortest route out of the last
-sample's colony-exclusion radius; it deliberately does not claim to know the
-location of an undiscovered colony. Use `Ctrl+6` to interact and open the full
+curated POIs. Surface sampling takes precedence over the exploration queue:
+the radar remains available with no selected destination or with a different
+body selected, but never reuses samples from another body/system/commander.
+Both prior sample positions are checked before spacing is declared sufficient.
+When zones overlap, the arrow estimates a way out of both zones rather than
+oscillating between the nearest samples. The arrow is approximate,
+not an optimal path or the location of an undiscovered colony. Unknown sample
+positions or an unknown body radius never produce a ready indication. A known
+radius from the body's scan is preferred over the potentially missing/stale
+Status.json radius. With no heading, distances remain available without a
+made-up forward arrow. Sample
+positions are persisted across restarts; journal bootstrap preserves recorded
+positions but cannot reconstruct missing ones from the current `Status.json`.
+The surface widget separates the main action (approximate distance still needed,
+spacing satisfied, or the reason guidance is unavailable) from supporting
+measurements and bearing. The organism stays in the context header and sample
+progress has its own caption; full long organism names are available as tooltips.
+Use `Ctrl+6` to interact and open the full
 system catalog.
 
 ## Full system catalog
@@ -28,6 +43,12 @@ Candidates are shown only when the journal explicitly reports the corresponding
 `WasDiscovered=false`/`WasMapped=false`; missing flags remain unknown. Selecting a body shows scan/mapping estimates,
 distance, gravity, temperature, atmosphere, volcanism, biological signals and
 the exact data source. System and body names can be copied independently.
+Missing gravity, temperature and pressure are displayed as "no data", not as
+measured zeroes. Pressure explicitly supplied as zero remains a valid vacuum
+measurement and takes precedence over community enrichment. Legacy cache entries
+without pressure-presence metadata treat zero as unknown until refreshed or scanned.
+Terraforming labels and local value estimates use explicit positive Journal/Spansh
+codes or the EDSM candidate label, never a substring match of "Not terraformable".
 
 ## Exobiology prediction
 

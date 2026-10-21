@@ -130,7 +130,7 @@ internal sealed class JournalStateReducer
 
         lock (sync)
         {
-            state = ReduceJournalEvent(state, eventName, timestamp, root);
+            state = ReduceJournalEvent(state, eventName, timestamp, root, origin);
             state = CopyCollections(state);
         }
 
@@ -369,7 +369,8 @@ internal sealed class JournalStateReducer
         GameStateSnapshot current,
         string eventName,
         DateTimeOffset timestamp,
-        JsonElement root)
+        JsonElement root,
+        JournalEventOrigin origin)
     {
         current = current with { LastEventUtc = MaxTimestamp(current.LastEventUtc, timestamp) };
         switch (eventName.ToLowerInvariant())
@@ -621,6 +622,9 @@ internal sealed class JournalStateReducer
                 string bodyName = explorationBodies.TryGetValue(organicBodyId, out ExplorationBodySnapshot? organicBody)
                     ? organicBody.Name
                     : current.CurrentBody;
+                IReadOnlyList<OrganicSampleLocation> sampleLocations = OrganicSampleNavigation.Record(
+                    previousProgress, scanType, timestamp, origin, current.Latitude, current.Longitude);
+                OrganicSampleLocation? lastKnownSample = sampleLocations.LastOrDefault();
                 organicProgress[progressKey] = new OrganicScanProgressSnapshot(
                     current.Commander,
                     current.SystemAddress,
@@ -633,13 +637,14 @@ internal sealed class JournalStateReducer
                     sampleStage,
                     scanType.Equals("Analyse", StringComparison.OrdinalIgnoreCase),
                     colonyRange,
-                    current.Latitude,
-                    current.Longitude,
+                    lastKnownSample?.Latitude,
+                    lastKnownSample?.Longitude,
                     timestamp)
                 {
                     GenusKey = genusIdentifier,
                     SpeciesKey = speciesIdentifier,
-                    VariantKey = variantIdentifier
+                    VariantKey = variantIdentifier,
+                    SampleLocations = sampleLocations
                 };
                 explorationProgressStore?.Save(organicProgress.Values);
                 return current with
@@ -871,7 +876,7 @@ internal sealed class JournalStateReducer
         string bodyType = !string.IsNullOrWhiteSpace(starType) ? "Star" : "Planet";
         string bodyClass = !string.IsNullOrWhiteSpace(rawPlanetClass) ? rawPlanetClass : starType;
         string terraformState = GetString(root, "TerraformState");
-        bool terraformable = terraformState.Contains("Terraform", StringComparison.OrdinalIgnoreCase);
+        bool terraformable = TerraformingStatus.IsPositive(terraformState);
         double earthMasses = TryGetDouble(root, "MassEM", previous.EarthMasses);
         double solarMasses = TryGetDouble(root, "StellarMass", previous.SolarMasses);
         bool? discoveredFlag = TryGetBoolean(root, "WasDiscovered");
@@ -901,6 +906,8 @@ internal sealed class JournalStateReducer
             GravityG = TryGetDouble(root, "SurfaceGravity", previous.GravityG * 9.80665) / 9.80665,
             SurfaceTemperatureKelvin = TryGetDouble(root, "SurfaceTemperature", previous.SurfaceTemperatureKelvin),
             SurfacePressureAtmospheres = TryGetDouble(root, "SurfacePressure", previous.SurfacePressureAtmospheres * 101325) / 101325,
+            SurfacePressureKnown = TryGetNullableDouble(root, "SurfacePressure") is >= 0
+                ? true : previous.SurfacePressureKnown,
             RadiusMeters = TryGetDouble(root, "Radius", previous.RadiusMeters),
             Atmosphere = GetLocalizedNameOrFallback(root, "Atmosphere", previous.Atmosphere),
             Volcanism = GetLocalizedNameOrFallback(root, "Volcanism", previous.Volcanism),
@@ -1059,7 +1066,7 @@ internal sealed class JournalStateReducer
         if (planetClass.Contains("Water world", StringComparison.OrdinalIgnoreCase)) return ExplorationInterest.WaterWorld;
         if (planetClass.Contains("Ammonia world", StringComparison.OrdinalIgnoreCase)) return ExplorationInterest.AmmoniaWorld;
         if (!string.IsNullOrWhiteSpace(terraformState)
-            && terraformState.Contains("Terraform", StringComparison.OrdinalIgnoreCase)) return ExplorationInterest.Terraformable;
+            && TerraformingStatus.IsPositive(terraformState)) return ExplorationInterest.Terraformable;
         if (starType.Equals("N", StringComparison.OrdinalIgnoreCase)) return ExplorationInterest.NeutronStar;
         if (starType.Equals("H", StringComparison.OrdinalIgnoreCase)
             || starType.Contains("BlackHole", StringComparison.OrdinalIgnoreCase)) return ExplorationInterest.BlackHole;
@@ -1192,8 +1199,10 @@ internal sealed class JournalStateReducer
         element.TryGetProperty(property, out JsonElement value) && value.TryGetUInt64(out ulong result) ? result : 0;
 
     private static double TryGetDouble(JsonElement element, string property, double fallback = 0) =>
-        element.TryGetProperty(property, out JsonElement value) && value.TryGetDouble(out double result) ? result : fallback;
+        TryGetNullableDouble(element, property) ?? fallback;
 
     private static double? TryGetNullableDouble(JsonElement element, string property) =>
-        element.TryGetProperty(property, out JsonElement value) && value.TryGetDouble(out double result) ? result : null;
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out double result)
+        && double.IsFinite(result) ? result : null;
 }

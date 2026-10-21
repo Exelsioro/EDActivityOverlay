@@ -25,6 +25,18 @@ A copy of the license is distributed as
 
 The application does not require or load an EDDiscovery installation.
 
+## Observatory Core / Botanist
+
+The canonical organic-genus aliases in `ExobiologyCatalog.cs` were reviewed
+against and adapted from Observatory Botanist's journal identifier mapping.
+The two-sample distance workflow was reviewed as an interoperability reference;
+EDAO's sample storage, bootstrap handling and navigation assessment are its own
+implementation. No Observatory binary or plugin installation is required.
+
+- Source: https://github.com/Xjph/ObservatoryCore/blob/119115187a40d5e2a9e02c73b3489a9e67644811/ObservatoryBotanist/Botanist.cs
+- MIT License, Copyright (c) 2021 Jonathan Miller
+- Distributed notice: `ThirdPartyLicenses/ObservatoryCore-MIT.txt`
+
 ## EDCD / Coriolis
 
 Russian names for Coriolis engineering blueprints, experimental effects, modules and recipe ingredients in `CoriolisRussianLocalization.cs` are adapted from the Coriolis Russian translation data.

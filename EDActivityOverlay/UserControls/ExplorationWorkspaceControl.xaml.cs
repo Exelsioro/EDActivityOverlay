@@ -303,12 +303,10 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         ExplorationVisitBodyState? active =
             queueMatchesSystem ? queue.Active : null;
         OrganicScanProgressSnapshot? activeOrganic =
-            active is null
-                ? null
-                : state.GetActiveOrganicForBody(active.BodyId);
+            OrganicSampleNavigation.ResolveActiveSurfaceSample(state);
 
         SystemContextPanel.Visibility =
-            active is null
+            active is null && activeOrganic is null
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         BodyContextPanel.Visibility =
@@ -316,7 +314,7 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         ExobioContextPanel.Visibility =
-            active is not null && activeOrganic is not null
+            activeOrganic is not null
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -327,6 +325,18 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
                 queue.DeferredCount,
                 queue.CompletedCount)
             : string.Empty;
+
+        if (activeOrganic is not null)
+        {
+            CompactModeText.Text = Loc.Get("Loc_EXPLORATION_MODE_EXOBIO");
+            CompactContextTitleText.Text =
+                !string.IsNullOrWhiteSpace(activeOrganic.Variant) ? activeOrganic.Variant : activeOrganic.Species;
+            SurfaceNavigationText.Text = BuildSurfaceNavigation(state, activeOrganic);
+            ExobioBodyProgressText.Text = active?.BodyId == activeOrganic.BodyId
+                ? BuildAdaptiveExobioProgress(active, activeOrganic)
+                : Loc.Format("Loc_EXOBIO_SURFACE_SAMPLE_PROGRESS_FORMAT", activeOrganic.Stage, state.CurrentBody);
+            return;
+        }
 
         if (active is null)
         {
@@ -362,34 +372,17 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
             return;
         }
 
-        if (activeOrganic is null)
-        {
-            CompactModeText.Text =
-                Loc.Get("Loc_EXPLORATION_MODE_BODY");
-            CompactContextTitleText.Text = active.BodyName;
-            BodyStatusText.Text = BuildAdaptiveBodyStatus(active);
-            BodyObjectiveText.Text = BuildAdaptiveBodyObjectives(active);
-            BodyMissingText.Text = BuildAdaptiveMissingBiology(active);
-            BodyMissingText.Visibility =
-                string.IsNullOrWhiteSpace(BodyMissingText.Text)
-                    ? Visibility.Collapsed
-                    : Visibility.Visible;
-            BodyMetaText.Text = BuildAdaptiveBodyMeta(active);
-            return;
-        }
-
         CompactModeText.Text =
-            Loc.Get("Loc_EXPLORATION_MODE_EXOBIO");
-        CompactContextTitleText.Text =
-            !string.IsNullOrWhiteSpace(activeOrganic.Variant)
-                ? activeOrganic.Variant
-                : !string.IsNullOrWhiteSpace(activeOrganic.Species)
-                    ? activeOrganic.Species
-                    : active.BodyName;
-        SurfaceNavigationText.Text =
-            BuildSurfaceNavigation(state, activeOrganic);
-        ExobioBodyProgressText.Text =
-            BuildAdaptiveExobioProgress(active, activeOrganic);
+            Loc.Get("Loc_EXPLORATION_MODE_BODY");
+        CompactContextTitleText.Text = active.BodyName;
+        BodyStatusText.Text = BuildAdaptiveBodyStatus(active);
+        BodyObjectiveText.Text = BuildAdaptiveBodyObjectives(active);
+        BodyMissingText.Text = BuildAdaptiveMissingBiology(active);
+        BodyMissingText.Visibility =
+            string.IsNullOrWhiteSpace(BodyMissingText.Text)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        BodyMetaText.Text = BuildAdaptiveBodyMeta(active);
     }
 
     private static bool QueueMatchesSystem(
@@ -741,54 +734,20 @@ public partial class ExplorationWorkspaceControl : UserControl, IDisposable
         GameStateSnapshot state,
         OrganicScanProgressSnapshot active)
     {
-        string name = !string.IsNullOrWhiteSpace(active.Variant)
-            ? active.Variant
-            : active.Species;
+        OrganicSampleSeparation separation = OrganicSampleNavigation.Assess(state, active);
+        OrganicSampleGuidancePresentation presentation = OrganicSampleGuidancePresentation.Create(separation);
+        SurfaceNavigationDetailText.Text = Loc.Format(presentation.DetailKey, presentation.DetailArguments);
+        SurfaceEscapeArrow.Visibility = separation.EscapeRelativeTurnDegrees is not null && !separation.IsReady
+            && separation.HasCompleteHistory && active.ColonyRangeMeters > 0
+            && state.HeadingDegrees is not null
+                ? Visibility.Visible : Visibility.Collapsed;
 
-        SurfaceNavigationResult? navigation =
-            SurfaceNavigationCalculator.Calculate(
-                state.Latitude,
-                state.Longitude,
-                state.HeadingDegrees,
-                state.PlanetRadiusMeters,
-                active.LastSampleLatitude,
-                active.LastSampleLongitude);
-
-        if (navigation is null || active.ColonyRangeMeters <= 0)
-        {
-            SurfaceEscapeArrowTransform.Angle = 0;
-            return Loc.Format(
-                "Loc_Exobiology_sample_requirement_format",
-                name,
-                active.Stage,
-                active.ColonyRangeMeters);
-        }
-
-        double remaining = Math.Max(
-            0,
-            active.ColonyRangeMeters - navigation.DistanceMeters);
         SurfaceEscapeArrowTransform.Angle =
-            navigation.EscapeRelativeTurnDegrees;
-
-        return navigation.IsFarEnough(active.ColonyRangeMeters)
-            ? Loc.Format(
-                "Loc_Exobiology_distance_ready_format",
-                name,
-                active.Stage,
-                navigation.DistanceMeters)
-            : Loc.Format(
-                "Loc_Exobiology_distance_remaining_format",
-                name,
-                active.Stage,
-                navigation.DistanceMeters,
-                remaining,
-                active.ColonyRangeMeters)
-              + Environment.NewLine
-              + Loc.Format(
-                  "Loc_EXOBIO_ESCAPE_DIRECTION_FORMAT",
-                  navigation.EscapeBearingDegrees,
-                  FormatRelativeTurn(
-                      navigation.EscapeRelativeTurnDegrees));
+            separation.EscapeRelativeTurnDegrees ?? 0;
+        if (separation.EscapeRelativeTurnDegrees is { } turn)
+            SurfaceNavigationDetailText.Text += Environment.NewLine + Loc.Format(
+                "Loc_EXOBIO_ESCAPE_DIRECTION_FORMAT", separation.EscapeBearingDegrees, FormatRelativeTurn(turn));
+        return Loc.Format(presentation.HeadlineKey, presentation.HeadlineArguments);
     }
 
     private static string FormatRelativeTurn(double degrees)

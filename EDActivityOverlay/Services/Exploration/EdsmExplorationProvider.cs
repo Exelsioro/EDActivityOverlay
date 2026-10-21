@@ -68,7 +68,7 @@ internal sealed class EdsmExplorationProvider(HttpClient httpClient) : IExplorat
             ExplorationValueEstimate localValues = ExplorationValueCalculator.Estimate(
                 type,
                 subtype,
-                terraformingState.Contains("Terraform", StringComparison.OrdinalIgnoreCase),
+                TerraformingStatus.IsPositive(terraformingState),
                 earthMasses,
                 solarMasses);
             long scanValue = localValues.FirstDiscoveryScanValue;
@@ -95,6 +95,7 @@ internal sealed class EdsmExplorationProvider(HttpClient httpClient) : IExplorat
                 EarthMasses = earthMasses,
                 SolarMasses = solarMasses,
                 SurfacePressureAtmospheres = SpanshExplorationProvider.GetDouble(body, "surfacePressure"),
+                SurfacePressureKnown = SpanshExplorationProvider.GetNullableDouble(body, "surfacePressure") is >= 0,
                 ValuesCalculatedLocally = locallyCalculated
             });
         }

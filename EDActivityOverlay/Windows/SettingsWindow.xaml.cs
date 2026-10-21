@@ -16,6 +16,7 @@ using EDActivityOverlay.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
+using System.Windows.Threading;
 using EDActivityOverlay.Utils;
 
 namespace EDActivityOverlay.Windows
@@ -28,6 +29,7 @@ namespace EDActivityOverlay.Windows
         private readonly bool overlayMode;
         private readonly IntPtr targetWindow;
         private bool loadingX52StartupProfiles;
+        private readonly DispatcherTimer applyFeedbackTimer = new() { Interval = TimeSpan.FromSeconds(4) };
 
         public bool IsOverlayMode => overlayMode;
 
@@ -136,6 +138,7 @@ namespace EDActivityOverlay.Windows
             this.overlayMode = overlayMode;
             this.targetWindow = targetWindow;
             InitializeComponent();
+            applyFeedbackTimer.Tick += ClearApplyFeedback;
             ConfigureWindowMode();
             LoadLanguageSettings();
             RefreshLocalizedOptions();
@@ -227,6 +230,22 @@ namespace EDActivityOverlay.Windows
 
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
+            applyFeedbackTimer.Stop();
+            ApplyStatusText.Text = string.Empty;
+            ApplyStatusText.SetResourceReference(TextBlock.ForegroundProperty, "FailureColorBrush");
+            try
+            {
+                ApplySettings();
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error($"Settings apply failed: {ex}");
+                ShowApplyFeedback("Loc_SETTINGS_APPLY_FAILED", false);
+            }
+        }
+
+        private void ApplySettings()
+        {
             // Сначала сохранить ВСЕ значения из UI.
             SaveRouteAutomationSettings();
             SaveHotkeySettings();
@@ -252,9 +271,31 @@ namespace EDActivityOverlay.Windows
             var selectedTheme = ThemeComboBox.SelectedItem as Models.Theme;
             if (selectedTheme != null)
             {
-                ThemeManager.Instance.ApplyTheme(selectedTheme);
+                if (!ThemeManager.Instance.ApplyTheme(selectedTheme))
+                {
+                    ShowApplyFeedback("Loc_SETTINGS_APPLY_FAILED", false);
+                    return;
+                }
             }
 
+            // Setters can skip unchanged values and historically swallow write errors.
+            // Confirm the final complete state is actually persisted before showing success.
+            bool saved = SettingsService.Instance.TrySaveSettings();
+            ShowApplyFeedback(saved ? "Loc_SETTINGS_APPLIED" : "Loc_SETTINGS_APPLY_FAILED", saved);
+        }
+
+        private void ShowApplyFeedback(string messageKey, bool success)
+        {
+            applyFeedbackTimer.Stop();
+            ApplyStatusText.SetResourceReference(TextBlock.TextProperty, messageKey);
+            ApplyStatusText.SetResourceReference(TextBlock.ForegroundProperty,
+                success ? "SuccessColorBrush" : "FailureColorBrush");
+            if (success) applyFeedbackTimer.Start();
+        }
+
+        private void ClearApplyFeedback(object? sender, EventArgs e)
+        {
+            applyFeedbackTimer.Stop();
             ApplyStatusText.Text = string.Empty;
         }
 
@@ -397,9 +438,7 @@ namespace EDActivityOverlay.Windows
             }
             catch
             {
-                ApplyStatusText.Text =
-                    Loc.Get(
-                        "Loc_TRADE_HISTORY_PATH_INVALID");
+                ShowApplyFeedback("Loc_TRADE_HISTORY_PATH_INVALID", false);
 
                 return false;
             }
@@ -511,9 +550,7 @@ namespace EDActivityOverlay.Windows
             }
             catch
             {
-                ApplyStatusText.Text =
-                    Loc.Get(
-                        "Loc_TRADE_HISTORY_PATH_INVALID");
+                ShowApplyFeedback("Loc_TRADE_HISTORY_PATH_INVALID", false);
             }
         }
 
@@ -544,9 +581,7 @@ namespace EDActivityOverlay.Windows
             }
             catch
             {
-                ApplyStatusText.Text =
-                    Loc.Get(
-                        "Loc_DSS_LOG_PATH_INVALID");
+                ShowApplyFeedback("Loc_DSS_LOG_PATH_INVALID", false);
 
                 return false;
             }
@@ -656,9 +691,7 @@ namespace EDActivityOverlay.Windows
             }
             catch
             {
-                ApplyStatusText.Text =
-                    Loc.Get(
-                        "Loc_DSS_LOG_PATH_INVALID");
+                ShowApplyFeedback("Loc_DSS_LOG_PATH_INVALID", false);
             }
         }
 
@@ -1226,6 +1259,8 @@ namespace EDActivityOverlay.Windows
 
         private void SettingsWindow_Closed(object? sender, EventArgs e)
         {
+            applyFeedbackTimer.Stop();
+            applyFeedbackTimer.Tick -= ClearApplyFeedback;
             UpdateService.Instance.Changed -= OnUpdateChanged;
             ExplorationDataService.Instance.DataChanged -= OnExplorationDataChanged;
             X52IntegrationService.Instance.StateChanged -= OnX52StateChanged;

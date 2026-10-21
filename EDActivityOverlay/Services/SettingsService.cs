@@ -35,6 +35,13 @@ namespace EDActivityOverlay.Services
             _settings = LoadSettings();
         }
 
+        // Isolated storage for tests/tools; does not replace the application singleton.
+        internal SettingsService(string settingsFilePath, AppSettings settings)
+        {
+            _settingsFilePath = settingsFilePath;
+            _settings = settings;
+        }
+
         /// <summary>
         /// Load settings from file or create default settings
         /// </summary>
@@ -97,7 +104,10 @@ namespace EDActivityOverlay.Services
         /// <summary>
         /// Save current settings to file
         /// </summary>
-        public void SaveSettings()
+        public void SaveSettings() => TrySaveSettings();
+
+        /// <summary>Reports persistence/application failures to explicit UI save actions.</summary>
+        public bool TrySaveSettings()
         {
             try
             {
@@ -110,10 +120,12 @@ namespace EDActivityOverlay.Services
                 
                 Logger.Logger.Info($"Settings saved to {_settingsFilePath}");
                 SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(_settings));
+                return true;
             }
             catch (Exception ex)
             {
                 Logger.Logger.Error($"Error saving settings: {ex.Message}");
+                return false;
             }
         }
 

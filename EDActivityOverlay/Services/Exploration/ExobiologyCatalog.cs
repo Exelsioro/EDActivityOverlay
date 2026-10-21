@@ -16,11 +16,11 @@ internal static class ExobiologyCatalog
         new("aleoida", 150, 3_385_200, 12_934_900, "aleoid", "aleoida"),
         new("bacterium", 500, 1_000_000, 8_418_000, "bacterium", "bacteria", "bacterial"),
         new("cactoida", 300, 2_483_600, 16_202_800, "cactoid", "cactoida"),
-        new("clypeus", 150, 8_418_000, 16_202_800, "clypeus"),
+        new("clypeus", 150, 8_418_000, 16_202_800, "clypeus", "clepeus"),
         new("concha", 150, 2_352_400, 19_010_800, "concha"),
         new("electricae", 1000, 6_284_600, 6_284_600, "electricae", "electrica"),
-        new("fonticulua", 500, 1_000_000, 20_000_000, "fonticulua"),
-        new("frutexa", 150, 1_632_500, 10_326_000, "frutexa"),
+        new("fonticulua", 500, 1_000_000, 20_000_000, "fonticulua", "fonticulus"),
+        new("frutexa", 150, 1_632_500, 10_326_000, "frutexa", "shrubs"),
         new("fumerola", 100, 6_284_600, 16_202_800, "fumerola"),
         new("fungoida", 300, 1_670_100, 3_703_200, "fungoid", "fungoida"),
         new("osseus", 800, 1_483_000, 12_934_900, "osseus"),
@@ -32,9 +32,8 @@ internal static class ExobiologyCatalog
 
     public static BiologyEstimateSnapshot Estimate(string identifier, string displayName)
     {
-        string searchable = (identifier + " " + displayName).ToLowerInvariant();
-        Entry? match = Entries.FirstOrDefault(entry =>
-            entry.Aliases.Any(alias => searchable.Contains(alias, StringComparison.OrdinalIgnoreCase)));
+        // A journal identifier takes precedence over a translated display name.
+        Entry? match = Resolve(identifier) ?? Resolve(displayName);
         return match is null
             ? new BiologyEstimateSnapshot(displayName, string.Empty, 0, 0, 0)
             : new BiologyEstimateSnapshot(displayName, match.Key, match.Range, match.Min, match.Max);
@@ -42,4 +41,14 @@ internal static class ExobiologyCatalog
 
     public static int GetColonyRange(string identifier, string displayName) =>
         Estimate(identifier, displayName).ColonyRangeMeters;
+
+    // Journal aliases (including Frontier's Clepeus spelling) reviewed against
+    // Observatory Botanist, MIT, Copyright (c) 2021 Jonathan Miller.
+    // Adapted into the existing EDAO catalog; see ThirdPartyLicenses/ObservatoryCore-MIT.txt.
+    internal static string NormalizeGenusIdentity(string value) =>
+        Resolve(value)?.Key ?? value.ToLowerInvariant().Trim(' ', '$', ';');
+
+    private static Entry? Resolve(string value) =>
+        Entries.FirstOrDefault(entry => entry.Aliases.Any(alias =>
+            value.Contains(alias, StringComparison.OrdinalIgnoreCase)));
 }

@@ -10,7 +10,7 @@
     <Color Key="AccentColor" Value="#FF00CCFF" Description="Accent color"/>
     <Color Key="SuccessColor" Value="#FF00FF00" Description="Success color"/>
     <Color Key="FailureColor" Value="#FFFF0000" Description="Failure color"/>
-    <Color Key="SecondaryTextColor" Value="#FF404080" Description="Secondary text color"/>
+    <Color Key="SecondaryTextColor" Value="#FFC0C5E4" Description="Readable secondary text color"/>
     <Color Key="MutedTextColor" Value="#FFB0B0C0" Description="Muted text color"/>
     <Color Key="PrimaryTextColor" Value="#FF0080FF" Description="Primary text color"/>
   </Colors>

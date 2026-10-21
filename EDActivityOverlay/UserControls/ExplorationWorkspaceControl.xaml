@@ -29,7 +29,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
               <TextBlock x:Name="CompactModeText" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource AccentColorBrush}" />
-              <TextBlock x:Name="CompactContextTitleText" Margin="0,2,0,0" FontSize="15" FontWeight="Bold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+              <TextBlock x:Name="CompactContextTitleText" Margin="0,2,0,0" FontSize="15" FontWeight="Bold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" Foreground="{DynamicResource PrimaryTextColorBrush}" />
             </StackPanel>
             <TextBlock x:Name="CompactQueueCountText" Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" TextAlignment="Right" FontSize="9" Foreground="{DynamicResource MutedTextColorBrush}" />
           </Grid>
@@ -67,15 +67,18 @@
                   <Ellipse Stroke="{DynamicResource BorderColorBrush}" StrokeThickness="1" />
                   <Ellipse Width="30" Height="30" Stroke="{DynamicResource MutedTextColorBrush}" StrokeThickness="1" StrokeDashArray="2,2" />
                   <Ellipse Width="4" Height="4" Fill="{DynamicResource PrimaryTextColorBrush}" />
-                  <Path Data="M 25,4 L 20,15 L 25,12 L 30,15 Z" Fill="{DynamicResource AccentColorBrush}" RenderTransformOrigin="0.5,0.5">
-                    <Path.RenderTransform>
-                      <RotateTransform x:Name="SurfaceEscapeArrowTransform" Angle="0" CenterX="25" CenterY="25" />
-                    </Path.RenderTransform>
+                  <Path x:Name="SurfaceEscapeArrow" Width="50" Height="50" Data="M 25,4 L 20,15 L 25,12 L 30,15 Z" Fill="{DynamicResource AccentColorBrush}" RenderTransformOrigin="0.5,0.5">
+                    <Path.RenderTransform>
+                      <RotateTransform x:Name="SurfaceEscapeArrowTransform" Angle="0" />
+                    </Path.RenderTransform>
                   </Path>
                 </Grid>
-                <TextBlock x:Name="SurfaceNavigationText" Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryTextColorBrush}" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <TextBlock x:Name="SurfaceNavigationText" Style="{DynamicResource OverlayActionTextStyle}" />
+                  <TextBlock x:Name="SurfaceNavigationDetailText" Margin="0,4,0,0" Style="{DynamicResource OverlayDetailTextStyle}" />
+                </StackPanel>
               </Grid>
-              <TextBlock x:Name="ExobioBodyProgressText" Margin="0,6,0,0" FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextColorBrush}" />
+              <TextBlock x:Name="ExobioBodyProgressText" Margin="0,8,0,0" Style="{DynamicResource OverlayCaptionTextStyle}" />
             </StackPanel>
           </Border>
           <!-- Desktop composite consumes presentation-only snapshots from the
