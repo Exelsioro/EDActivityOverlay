@@ -65,7 +65,7 @@ public sealed class ExplorationLogService : IJournalDataConsumer, IDisposable
         {
             string rawBodyClass = Text(root, "PlanetClass", Text(root, "StarType"));
             string bodyClass = Text(root, "PlanetClass_Localised", rawBodyClass);
-            bool terraformable = Text(root, "TerraformState").Contains("Terraform", StringComparison.OrdinalIgnoreCase);
+            bool terraformable = TerraformingStatus.IsPositive(Text(root, "TerraformState"));
             if (terraformable || IsNotable(rawBodyClass))
             {
                 Add(journalEvent.Timestamp, ExplorationLogKind.NotableBody, eventSystem, body,

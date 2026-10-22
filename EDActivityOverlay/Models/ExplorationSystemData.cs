@@ -19,6 +19,8 @@ public sealed record ExternalExplorationBodySnapshot(
     public double EarthMasses { get; init; }
     public double SolarMasses { get; init; }
     public double SurfacePressureAtmospheres { get; init; }
+    /// <summary>Distinguishes measured vacuum from an absent field; null for legacy cache entries.</summary>
+    public bool? SurfacePressureKnown { get; init; }
     public bool ValuesCalculatedLocally { get; init; }
 }
 

@@ -90,7 +90,7 @@ public sealed class AdaptiveExplorationHudTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "state.GetActiveOrganicForBody(active.BodyId)",
+            "OrganicSampleNavigation.ResolveActiveSurfaceSample(state)",
             code,
             StringComparison.Ordinal);
     }

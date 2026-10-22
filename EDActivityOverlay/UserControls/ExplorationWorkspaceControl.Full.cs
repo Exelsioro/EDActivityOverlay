@@ -592,7 +592,7 @@ public partial class ExplorationWorkspaceControl
         }
 
         return string.Join(
-            "  вЂў  ",
+            "  \u2022  ",
             parts);
     }
     private static string BuildVisitMarker(
@@ -736,15 +736,15 @@ public partial class ExplorationWorkspaceControl
             Environment.NewLine,
             new[] { visitDetails, discoveryDetails }
                 .Where(value => !string.IsNullOrWhiteSpace(value)));
-        SelectedBodyPhysicalText.Text = string.Join(
-            Environment.NewLine,
+        string[] physicalDetails =
+        [
             Loc.Format("Loc_BODY_TYPE_DETAIL", row.Type),
             Loc.Format("Loc_BODY_DISTANCE_DETAIL", body.DistanceFromArrivalLs),
-            Loc.Format("Loc_BODY_GRAVITY_DETAIL", body.GravityG),
-            Loc.Format("Loc_BODY_TEMPERATURE_DETAIL", body.SurfaceTemperatureKelvin),
-            Loc.Format("Loc_BODY_PRESSURE_DETAIL", body.SurfacePressureAtmospheres),
+            .. BuildPhysicalDetails(body),
             Loc.Format("Loc_BODY_ATMOSPHERE_DETAIL", EmptyAsUnknown(body.Atmosphere)),
-            Loc.Format("Loc_BODY_VOLCANISM_DETAIL", EmptyAsUnknown(body.Volcanism)));
+            Loc.Format("Loc_BODY_VOLCANISM_DETAIL", EmptyAsUnknown(body.Volcanism))
+        ];
+        SelectedBodyPhysicalText.Text = string.Join(Environment.NewLine, physicalDetails);
         SelectedBodyValueText.Text = string.Join(
             Environment.NewLine,
             Loc.Format("Loc_BODY_SCAN_VALUE_DETAIL", body.EstimatedScanValue),
@@ -767,15 +767,7 @@ public partial class ExplorationWorkspaceControl
             Loc.Format(
                 "Loc_BODY_MAPPING_VALUE_DETAIL",
                 body.EstimatedMappingValue),
-            Loc.Format(
-                "Loc_BODY_GRAVITY_DETAIL",
-                body.GravityG),
-            Loc.Format(
-                "Loc_BODY_TEMPERATURE_DETAIL",
-                body.SurfaceTemperatureKelvin),
-            Loc.Format(
-                "Loc_BODY_PRESSURE_DETAIL",
-                body.SurfacePressureAtmospheres),
+            .. BuildPhysicalDetails(body),
             Loc.Format(
                 "Loc_BODY_ATMOSPHERE_DETAIL",
                 EmptyAsUnknown(body.Atmosphere)),
@@ -959,7 +951,7 @@ public partial class ExplorationWorkspaceControl
         return Loc.Format(
             "Loc_EXPLORATION_GLOBAL_STATUS_FORMAT",
             string.Join(
-                "  вЂў  ",
+                "  \u2022  ",
                 parts));
     }
     private static string BuildSelectedBodyBioGuidance(
@@ -1042,35 +1034,35 @@ public partial class ExplorationWorkspaceControl
                     activeOrganic.Stage,
                     activeOrganic.ColonyRangeMeters));
 
-            SurfaceNavigationResult? navigation =
-                SurfaceNavigationCalculator.Calculate(
-                    state.Latitude,
-                    state.Longitude,
-                    state.HeadingDegrees,
-                    state.PlanetRadiusMeters,
-                    activeOrganic.LastSampleLatitude,
-                    activeOrganic.LastSampleLongitude);
+            OrganicSampleSeparation separation = OrganicSampleNavigation.Assess(state, activeOrganic);
+            SurfaceNavigationResult? navigation = separation.NearestSample;
+
+            if (activeOrganic.ColonyRangeMeters <= 0)
+                lines.Add(Loc.Get("Loc_EXOBIO_SPACING_UNKNOWN"));
+            else if (!separation.HasCompleteHistory)
+                lines.Add(Loc.Format("Loc_EXOBIO_SAMPLE_HISTORY_INCOMPLETE_FORMAT",
+                    separation.KnownSampleCount, separation.RequiredSampleCount));
+            else if (navigation is null)
+                lines.Add(Loc.Get("Loc_EXOBIO_POSITION_UNAVAILABLE"));
 
             if (navigation is not null
-                && activeOrganic.ColonyRangeMeters > 0)
+                && activeOrganic.ColonyRangeMeters > 0 && separation.HasCompleteHistory)
             {
                 double remaining = Math.Max(
                     0,
-                    activeOrganic.ColonyRangeMeters
+                    separation.EscapeDistanceMeters ?? activeOrganic.ColonyRangeMeters
                         - navigation.DistanceMeters);
 
                 lines.Add(
-                    navigation.IsFarEnough(
-                        activeOrganic.ColonyRangeMeters)
+                    separation.IsReady
                         ? Loc.Format(
                             "Loc_EXPLORATION_SAMPLE_RANGE_READY_FORMAT",
                             navigation.DistanceMeters)
                         : Loc.Format(
-                            "Loc_EXPLORATION_SAMPLE_RANGE_REMAINING_FORMAT",
+                            "Loc_EXOBIO_NEAREST_SAMPLE_REMAINING_FORMAT",
                             navigation.DistanceMeters,
                             remaining,
-                            activeOrganic.ColonyRangeMeters,
-                            navigation.EscapeBearingDegrees));
+                            activeOrganic.ColonyRangeMeters));
             }
         }
 
@@ -1263,6 +1255,17 @@ public partial class ExplorationWorkspaceControl
 
         DssPatternText.Text = Loc.Get(pattern.StrategyKey) + Environment.NewLine
                               + Loc.Get(pattern.AdjustmentKey);
+    }
+
+    private static IEnumerable<string> BuildPhysicalDetails(ExplorationCatalogBody body)
+    {
+        ExplorationPhysicalMeasurements measurements = ExplorationPhysicalMeasurements.From(body);
+        yield return Format(measurements.GravityG, "Loc_BODY_GRAVITY_DETAIL", "Loc_BODY_GRAVITY_UNKNOWN");
+        yield return Format(measurements.TemperatureKelvin, "Loc_BODY_TEMPERATURE_DETAIL", "Loc_BODY_TEMPERATURE_UNKNOWN");
+        yield return Format(measurements.PressureAtmospheres, "Loc_BODY_PRESSURE_DETAIL", "Loc_BODY_PRESSURE_UNKNOWN");
+
+        static string Format(double? value, string knownKey, string unknownKey) =>
+            value.HasValue ? Loc.Format(knownKey, value.Value) : Loc.Get(unknownKey);
     }
 
     private static string EmptyAsUnknown(string value) =>

@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-beta.5] - 2026-10-22
+
+### Exobiology
+
+- Keep the surface radar available while sampling even without a selected
+  exploration destination. Scope active samples to the current commander,
+  system and body rather than the exploration queue selection.
+- Persist both previous sample positions and check distance from both before
+  declaring sufficient separation. Estimate a direction out of overlapping
+  exclusion zones; this is not the position of a new organism or an optimal path.
+- Correct the radar arrow's rotation pivot. Keep distances available without
+  heading, prefer the scanned body radius, and report missing coordinates,
+  radius or history explicitly instead of inventing readiness.
+- Preserve recorded positions through journal bootstrap without assigning old
+  samples the current position. Normalize organism aliases consistently across
+  spacing, progress and predictions, with third-party attribution included.
+
+### Interface
+
+- Separate the main exobiology action from supporting measurements and sample
+  progress. Add reusable theme-aware text styles and improve compact Trade text.
+- Show full acquisition instructions below the selected Engineering material,
+  preserve selection across inventory refreshes and fix the material-help layout.
+- Improve secondary-text contrast in the built-in Blue, Green and Red themes.
+- Confirm Settings Apply inline for four seconds only after the final state is
+  successfully saved. Keep errors visible, theme-aware and separate from buttons;
+  no modal theme-applied message is shown. New text supports English and Russian.
+
+### Exploration correctness
+
+- Replace corrupted discovery/mapping status separators.
+- Show missing physical measurements as no data instead of measured zeroes.
+  Preserve explicitly measured vacuum and do not overwrite it with community
+  pressure; legacy unmarked zeroes remain unknown until refreshed or scanned.
+- Recognize explicit positive terraforming states across the catalog, providers,
+  Journal, value estimates, log and notifications. Negative descriptions such as
+  Not terraformable no longer match just because they contain Terraform.
+- Accept absent/null optional numeric provider fields without failing the request.
+
+### Verification and beta limitations
+
+- 950 .NET tests and four update-catalog publisher tests pass locally; targeted
+  WPF rendering covers RU/EN, Compact/Minimal, narrow widgets and DPI scaling.
+- The changed surface-sampling behavior still needs a fresh in-game smoke run.
+  Autonomous rendering does not verify controller input or live VR behavior.
+- Existing optional DSS and Galaxy Map automation remain experimental; VR mode
+  disables DSS recognition. The installer is not Authenticode-signed.
+
 ## [1.3.0-beta.4] - 2026-10-19
 
 ### Update visibility

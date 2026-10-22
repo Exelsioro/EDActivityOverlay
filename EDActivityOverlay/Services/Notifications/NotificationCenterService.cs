@@ -571,7 +571,7 @@ public sealed class NotificationCenterService : IJournalDataConsumer, IDisposabl
             || planetClass.Contains("Earth-like", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_EarthLike_Format";
         if (planetClass.Contains("Water world", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_WaterWorld_Format";
         if (planetClass.Contains("Ammonia world", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_AmmoniaWorld_Format";
-        if (terraformState.Contains("Terraform", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_Terraformable_Format";
+        if (TerraformingStatus.IsPositive(terraformState)) return "Loc_Notification_Terraformable_Format";
         if (starType.Equals("N", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_NeutronStar_Format";
         if (starType.Equals("H", StringComparison.OrdinalIgnoreCase)
             || starType.Contains("BlackHole", StringComparison.OrdinalIgnoreCase)) return "Loc_Notification_BlackHole_Format";

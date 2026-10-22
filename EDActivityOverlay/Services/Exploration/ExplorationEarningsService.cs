@@ -242,7 +242,7 @@ public sealed class ExplorationEarningsService : IJournalDataConsumer, IDisposab
             string starType = String(root, "StarType");
             string bodyClass = String(root, "PlanetClass", starType);
             string bodyType = string.IsNullOrWhiteSpace(starType) ? "Planet" : "Star";
-            bool terraformable = String(root, "TerraformState").Contains("Terraform", StringComparison.OrdinalIgnoreCase);
+            bool terraformable = TerraformingStatus.IsPositive(String(root, "TerraformState"));
             var estimate = ExplorationValueCalculator.Estimate(
                 bodyType, bodyClass, terraformable,
                 Double(root, "MassEM"), Double(root, "StellarMass"));

@@ -227,15 +227,8 @@ public sealed class ExobiologyPredictionService
         .Replace("  ", " ", StringComparison.Ordinal)
         .Trim();
 
-    internal static string NormalizeGenusIdentity(string value)
-    {
-        string normalized = value.ToLowerInvariant();
-        foreach (string token in new[] { "bacterial", "bacterium", "aleoida", "cactoida", "clypeus", "concha", "electricae", "fonticulua", "frutexa", "fumerola", "fungoida", "osseus", "recepta", "stratum", "tubus", "tussock" })
-        {
-            if (normalized.Contains(token, StringComparison.Ordinal)) return token == "bacterial" ? "bacterium" : token;
-        }
-        return normalized.Trim(' ', '$', ';');
-    }
+    internal static string NormalizeGenusIdentity(string value) =>
+        ExobiologyCatalog.NormalizeGenusIdentity(value);
 
     private static int ParseColonyRange(string fileName)
     {

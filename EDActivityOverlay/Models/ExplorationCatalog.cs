@@ -89,6 +89,7 @@ public sealed record ExplorationCatalogBody(
     public bool FootfallStatusKnown { get; init; }
     public bool WasFootfalled { get; init; }
     public double SurfacePressureAtmospheres { get; init; }
+    public bool? SurfacePressureKnown { get; init; }
     public int LastProbesUsed { get; init; }
     public int EfficiencyTarget { get; init; }
     public bool IsValuable => Highlights.HasFlag(ExplorationBodyHighlights.Valuable);

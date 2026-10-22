@@ -66,9 +66,11 @@ public sealed class ExplorationQueueBioGuidanceTests
             StringComparison.Ordinal);
 
         Assert.Contains(
-            "SurfaceNavigationCalculator.Calculate(",
+            "OrganicSampleNavigation.Assess(state, activeOrganic)",
             code,
             StringComparison.Ordinal);
+
+        Assert.Contains("separation.HasCompleteHistory", code, StringComparison.Ordinal);
 
         Assert.Contains(
             "ExobiologyPredictionService.Instance.Predict(",

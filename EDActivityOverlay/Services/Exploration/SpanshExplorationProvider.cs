@@ -43,7 +43,7 @@ internal sealed class SpanshExplorationProvider(HttpClient httpClient) : IExplor
                 ExplorationValueEstimate localValues = ExplorationValueCalculator.Estimate(
                     type,
                     subtype,
-                    terraformingState.Contains("Terraform", StringComparison.OrdinalIgnoreCase),
+                    TerraformingStatus.IsPositive(terraformingState),
                     earthMasses,
                     solarMasses);
                 bool locallyCalculated = scanValue <= 0 || type.Equals("Planet", StringComparison.OrdinalIgnoreCase) && mappingValue <= 0;
@@ -71,6 +71,7 @@ internal sealed class SpanshExplorationProvider(HttpClient httpClient) : IExplor
                     EarthMasses = earthMasses,
                     SolarMasses = solarMasses,
                     SurfacePressureAtmospheres = GetDouble(body, "surface_pressure"),
+                    SurfacePressureKnown = GetNullableDouble(body, "surface_pressure") is >= 0,
                     ValuesCalculatedLocally = locallyCalculated
                 });
             }
@@ -114,10 +115,12 @@ internal sealed class SpanshExplorationProvider(HttpClient httpClient) : IExplor
         element.TryGetProperty(property, out JsonElement value) && value.TryGetInt32(out int result) ? result : fallback;
 
     internal static double GetDouble(JsonElement element, string property, double fallback = 0) =>
-        element.TryGetProperty(property, out JsonElement value) && value.TryGetDouble(out double result) ? result : fallback;
+        GetNullableDouble(element, property) ?? fallback;
 
     internal static double? GetNullableDouble(JsonElement element, string property) =>
-        element.TryGetProperty(property, out JsonElement value) && value.TryGetDouble(out double result) ? result : null;
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out double result)
+        && double.IsFinite(result) ? result : null;
 
     internal static bool GetBoolean(JsonElement element, string property) =>
         element.TryGetProperty(property, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False && value.GetBoolean();

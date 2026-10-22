@@ -228,7 +228,8 @@ public partial class EngineeringWorkspaceControl : UserControl, IDisposable
         EngineersGrid.ItemsSource = engineerRows;
         EngineersGrid.SelectedItem = engineerRows.FirstOrDefault(engineer => engineer.Name == selectedEngineerName)
             ?? engineerRows.FirstOrDefault();
-        AdviceGrid.ItemsSource = value.Advice.Select(advice =>
+        string? selectedAdviceMaterialId = (AdviceGrid.SelectedItem as AdviceRow)?.Advice.MaterialId;
+        AdviceRow[] adviceRows = value.Advice.Select(advice =>
         {
             AcquisitionOption best = advice.Options.OrderBy(option => option.Priority).First();
             AcquisitionOption? destination = advice.Options
@@ -243,6 +244,9 @@ public partial class EngineeringWorkspaceControl : UserControl, IDisposable
                 destination?.SystemName,
                 advice);
         }).ToArray();
+        AdviceGrid.ItemsSource = adviceRows;
+        AdviceGrid.SelectedItem = adviceRows.FirstOrDefault(row =>
+            row.Advice.MaterialId.Equals(selectedAdviceMaterialId, StringComparison.OrdinalIgnoreCase));
         ApplyInventoryFilter();
     }
 

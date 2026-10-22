@@ -82,6 +82,8 @@ public sealed record ExplorationBodySnapshot(
     public double GravityG { get; init; }
     public double SurfaceTemperatureKelvin { get; init; }
     public double SurfacePressureAtmospheres { get; init; }
+    /// <summary>Null for legacy data: only positive pressure can then be assumed known.</summary>
+    public bool? SurfacePressureKnown { get; init; }
     public double RadiusMeters { get; init; }
     public string Atmosphere { get; init; } = string.Empty;
     public string Volcanism { get; init; } = string.Empty;
@@ -112,6 +114,12 @@ public sealed record BiologyEstimateSnapshot(
     long MinimumValue,
     long MaximumValue);
 
+public sealed record OrganicSampleLocation(
+    int SampleNumber,
+    double Latitude,
+    double Longitude,
+    DateTimeOffset CollectedUtc);
+
 public sealed record OrganicScanProgressSnapshot(
     string Commander,
     long SystemAddress,
@@ -131,6 +139,9 @@ public sealed record OrganicScanProgressSnapshot(
     public string GenusKey { get; init; } = string.Empty;
     public string SpeciesKey { get; init; } = string.Empty;
     public string VariantKey { get; init; } = string.Empty;
+    /// <summary>Known positions in the current sampling sequence, never inferred from a replayed Status.json.</summary>
+    public IReadOnlyList<OrganicSampleLocation> SampleLocations { get; init; } =
+        Array.Empty<OrganicSampleLocation>();
 }
 
 public sealed partial record GameStateSnapshot
