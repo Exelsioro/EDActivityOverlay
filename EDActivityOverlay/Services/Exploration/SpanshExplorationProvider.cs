@@ -109,10 +109,12 @@ internal sealed class SpanshExplorationProvider(HttpClient httpClient) : IExplor
             : fallback;
 
     internal static long GetInt64(JsonElement element, string property, long fallback = 0) =>
-        element.TryGetProperty(property, out JsonElement value) && value.TryGetInt64(out long result) ? result : fallback;
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out long result) ? result : fallback;
 
     internal static int GetInt32(JsonElement element, string property, int fallback = 0) =>
-        element.TryGetProperty(property, out JsonElement value) && value.TryGetInt32(out int result) ? result : fallback;
+        element.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int result) ? result : fallback;
 
     internal static double GetDouble(JsonElement element, string property, double fallback = 0) =>
         GetNullableDouble(element, property) ?? fallback;

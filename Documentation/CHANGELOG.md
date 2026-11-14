@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0-beta.6] - 2026-11-14
+
+### Fixed
+
+- Keep exploration data available when Spansh or EDSM returns null or an
+  unexpected type for optional integer fields. Preserve valid integer values,
+  use the existing defaults for invalid fields, and calculate missing estimates
+  locally instead of failing the entire provider request.
+- Add regression coverage for missing/null fields, wrong JSON types, fractional
+  and overflowing numbers, integer boundaries and complete provider responses.
+
+### Maintenance
+
+- Update the GitHub Actions used to deploy the support site and update catalog.
+  The application release publication mechanism is unchanged.
+
 ## [1.3.0-beta.5] - 2026-10-22
 
 ### Exobiology
